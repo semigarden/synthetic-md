@@ -1,0 +1,30 @@
+.editor {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    min-height: calc(100vh - 2rem);
+    padding: 1rem 1.5rem;
+
+    .text {
+        flex: 1;
+        resize: none;
+        border: 1px solid #ccc;
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+        outline: none;
+        text-decoration: none;
+        min-height: calc(100vh - 4rem);
+    }
+
+    .preview {
+        flex: 1;
+        border: 1px solid #ccc;
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+        outline: none;
+        text-decoration: none;
+        min-height: calc(100vh - 4rem);
+        background-color: #2b2a33;
+    }
+}

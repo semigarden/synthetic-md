@@ -1,8 +1,8 @@
-import Markdown from '@/components/Markdown'
+import Editor from '@/components/Editor'
 
 function App() {
   return (
-    <Markdown />
+    <Editor />
   )
 }
 
