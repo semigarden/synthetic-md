@@ -11,6 +11,11 @@ export default defineConfig(({ mode }) => {
     // Library build configuration
     return {
       plugins: [react()],
+      resolve: {
+        alias: {
+          '@': resolve(__dirname, 'src'),
+        },
+      },
       build: {
         lib: {
           entry: resolve(__dirname, 'src/lib.ts'),
@@ -40,5 +45,10 @@ export default defineConfig(({ mode }) => {
       port: 4444,
     },
     plugins: [react()],
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, 'src'),
+      },
+    },
   }
 })
