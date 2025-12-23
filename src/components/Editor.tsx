@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react"
 import styles from "../styles/Editor.module.scss"
 import useStore from "../hooks/useStore"
-import { renderMarkdown } from "../utils/renderMarkdown"
+import { useMarkdownEditor } from "../hooks/useMarkdownEditor"
 
 const Editor: React.FC = () => {
   const { loadText, saveText } = useStore()
+  const { render } = useMarkdownEditor()
   const [text, setText] = useState('')
   const hasLoadedRef = useRef(false)
 
@@ -42,7 +43,7 @@ const Editor: React.FC = () => {
       />
       <div
         className={styles.preview}
-        dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }}
+        dangerouslySetInnerHTML={{ __html: render(text) }}
       />
     </div>
   )

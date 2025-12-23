@@ -7,4 +7,3 @@ const renderMarkdown = (markdown: string) => {
 }
 
 export { renderMarkdown }
-export default renderMarkdown
