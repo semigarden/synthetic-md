@@ -18,7 +18,7 @@ const SyntheticText: React.FC<{
   useEffect(() => {
     if (divRef.current && !isEditingRef.current) {
       const document = parseBlock(markdownText || '')
-      const html = renderBlock(document).replace(/\n/g, '<br />')
+      const html = renderBlock(document)
   
       divRef.current.innerHTML = html
     }
