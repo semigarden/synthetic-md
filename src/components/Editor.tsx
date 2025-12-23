@@ -33,8 +33,6 @@ const Editor: React.FC = () => {
 
   const document = parseBlock(text)
 
-  console.log(JSON.stringify(document, null, 2))
-
   return (
     <div className={styles.editor}>
       <textarea
