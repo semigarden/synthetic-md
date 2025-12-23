@@ -6,6 +6,7 @@ import type {
     Document,
     Heading,
     HTMLBlock,
+    LineBreak,
     List,
     ListItem,
     Paragraph,
@@ -22,9 +23,11 @@ interface BlockContext {
     type: string
     node: Block
     parent: BlockContext | null
+    startIndex: number
+    rawText: string
     canContinue(line: LineState): boolean
-    addLine(text: string): void
-    finalize(): void
+    addLine(text: string, originalLine: string): void
+    finalize(endIndex: number): void
 }
 
 class LineState {
@@ -107,17 +110,19 @@ function parseLinkReferenceDefinition(
 function tryOpenBlock(
     line: LineState,
     parent: BlockContext,
+    startIndex: number,
 ): BlockContext | null {
     return (
-        tryOpenHeading(line, parent) ??
-        tryOpenCodeBlock(line, parent) ??
-        tryOpenBlockQuote(line, parent) ??
-        tryOpenList(line, parent) ??
-        tryOpenThematicBreak(line, parent) ??
-        tryOpenHTMLBlock(line, parent) ??
-        tryOpenSetextHeading(line, parent) ??
-        tryOpenParagraph(line, parent) ??
-        tryOpenIndentedCodeBlock(line, parent) ??
+        tryOpenHeading(line, parent, startIndex) ??
+        tryOpenCodeBlock(line, parent, startIndex) ??
+        tryOpenBlockQuote(line, parent, startIndex) ??
+        tryOpenList(line, parent, startIndex) ??
+        tryOpenThematicBreak(line, parent, startIndex) ??
+        tryOpenHTMLBlock(line, parent, startIndex) ??
+        tryOpenSetextHeading(line, parent, startIndex) ??
+        tryOpenLineBreak(line, parent, startIndex) ??
+        tryOpenParagraph(line, parent, startIndex) ??
+        tryOpenIndentedCodeBlock(line, parent, startIndex) ??
         null
     )
 }
@@ -125,6 +130,7 @@ function tryOpenBlock(
 function tryOpenHeading(
     line: LineState,
     parent: BlockContext,
+    startIndex: number,
 ): BlockContext | null {
     let count = 0
 
@@ -138,25 +144,31 @@ function tryOpenHeading(
 
     if (line.peek() === " ") line.advance(1)
 
+    const originalLine = line.text
     const node: Heading = {
         type: "heading",
         level: count,
         children: [],
+        rawText: "",
+        startIndex: 0,
+        endIndex: 0,
     }
 
-    let rawText = ""
+    let rawText = originalLine
 
     return {
         type: "heading",
         node,
         parent,
+        startIndex,
+        rawText: "",
         canContinue() {
             return false
         },
-        addLine(text) {
-            rawText += (rawText ? " " : "") + text
+        addLine(text, originalLine) {
+            rawText += (rawText ? "\n" : "") + originalLine
         },
-        finalize() {
+        finalize(endIndex) {
             let doc: any = parent
             while (doc && doc.type !== "document") {
                 doc = doc.parent
@@ -166,7 +178,10 @@ function tryOpenHeading(
                       | Map<string, LinkReference>
                       | undefined)
                 : undefined
-            node.children = parseInline(rawText.trim(), linkRefs)
+            node.children = parseInline(rawText.trim(), linkRefs, node.startIndex)
+            node.rawText = rawText
+            node.startIndex = startIndex
+            node.endIndex = endIndex
         },
     }
 }
@@ -174,6 +189,7 @@ function tryOpenHeading(
 function tryOpenSetextHeading(
     line: LineState,
     parent: BlockContext,
+    startIndex: number,
 ): BlockContext | null {
     if (!isContainerBlock(parent.node)) return null
 
@@ -189,26 +205,68 @@ function tryOpenSetextHeading(
     return null
 }
 
+function tryOpenLineBreak(
+    line: LineState,
+    parent: BlockContext,
+    startIndex: number,
+): BlockContext | null {
+    if (!isContainerBlock(parent.node)) return null
+    if (!line.isBlank()) return null
+
+    const originalLine = line.text
+    const node: LineBreak = {
+        type: "lineBreak",
+        rawText: originalLine,
+        startIndex: 0,
+        endIndex: 0,
+    }
+
+    return {
+        type: "lineBreak",
+        node,
+        parent,
+        startIndex,
+        rawText: originalLine,
+        canContinue() {
+            return false
+        },
+        addLine() {},
+        finalize(endIndex) {
+            node.rawText = originalLine
+            node.startIndex = startIndex
+            node.endIndex = endIndex
+        },
+    }
+}
+
 function tryOpenParagraph(
     line: LineState,
     parent: BlockContext,
+    startIndex: number,
 ): BlockContext | null {
     if (!isContainerBlock(parent.node)) return null
     if (parent.type === "paragraph") return null
     if (line.isBlank()) return null
 
+    const originalLine = line.text
     const node: Paragraph = {
         type: "paragraph",
         children: [],
+        rawText: "",
+        startIndex: 0,
+        endIndex: 0,
     }
 
-    const lines: Array<{ text: string; hardBreak: boolean }> = []
-    let rawText = ""
+    const lines: Array<{ text: string; hardBreak: boolean; originalLine: string; lineStartIndex: number }> = []
+    let rawText = originalLine
+    let currentLineIndex = startIndex
 
     return {
         type: "paragraph",
         node,
         parent,
+        startIndex,
+        rawText: "",
         canContinue(nextLine) {
             if (nextLine.isBlank()) return false
 
@@ -234,7 +292,7 @@ function tryOpenParagraph(
                 }
             }
 
-            if (wouldOpenBlock(nextLine, parent)) return false
+            if (wouldOpenBlock(nextLine, parent, 0)) return false
 
             if (parent.type === "listItem" || parent.type === "list") {
                 const savedPos = nextLine.pos
@@ -251,7 +309,7 @@ function tryOpenParagraph(
 
             return false
         },
-        addLine(text) {
+        addLine(text, originalLine) {
             let hardBreak = false
             let lineText = text
             if (text.endsWith("\\")) {
@@ -261,10 +319,12 @@ function tryOpenParagraph(
                 lineText = text.slice(0, -2)
                 hardBreak = true
             }
-            lines.push({ text: lineText, hardBreak })
-            rawText += (rawText ? " " : "") + lineText
+            const lineStartIndex = currentLineIndex
+            lines.push({ text: lineText, hardBreak, originalLine, lineStartIndex })
+            rawText += (rawText ? "\n" : "") + originalLine
+            currentLineIndex += originalLine.length + 1 // +1 for newline
         },
-        finalize() {
+        finalize(endIndex) {
             let doc: any = parent
             while (doc && doc.type !== "document") {
                 doc = doc.parent
@@ -275,14 +335,17 @@ function tryOpenParagraph(
                       | undefined)
                 : undefined
             node.children = parseInlineWithBreaks(lines, linkRefs)
+            node.rawText = rawText
+            node.startIndex = startIndex
+            node.endIndex = endIndex
         },
-        rawText: () => rawText,
-    } as BlockContext & { rawText: () => string }
+    }
 }
 
 function tryOpenBlockQuote(
     line: LineState,
     parent: BlockContext,
+    startIndex: number,
 ): BlockContext | null {
     if (!isContainerBlock(parent.node)) return null
     if (line.peek() !== ">") return null
@@ -290,17 +353,24 @@ function tryOpenBlockQuote(
     line.advance(1)
     if (line.peek() === " ") line.advance(1)
 
+    const originalLine = line.text
     const node: BlockQuote = {
         type: "blockQuote",
         children: [],
+        rawText: "",
+        startIndex: 0,
+        endIndex: 0,
     }
 
     let previousLineHadMarker = true
+    let rawText = originalLine
 
     return {
         type: "blockQuote",
         node,
         parent,
+        startIndex,
+        rawText: "",
         canContinue(nextLine) {
             if (nextLine.isBlank()) {
                 previousLineHadMarker = false
@@ -315,16 +385,22 @@ function tryOpenBlockQuote(
             }
             return false
         },
-        addLine(_text) {
-            previousLineHadMarker = _text.trimStart().startsWith(">")
+        addLine(_text, originalLine) {
+            previousLineHadMarker = originalLine.trimStart().startsWith(">")
+            rawText += "\n" + originalLine
         },
-        finalize() {},
+        finalize(endIndex) {
+            node.rawText = rawText
+            node.startIndex = startIndex
+            node.endIndex = endIndex
+        },
     }
 }
 
 function tryOpenThematicBreak(
     line: LineState,
     parent: BlockContext,
+    startIndex: number,
 ): BlockContext | null {
     if (!isContainerBlock(parent.node)) return null
 
@@ -333,27 +409,39 @@ function tryOpenThematicBreak(
     const match = text.match(/^([*\-_])(?:\s*\1){2,}\s*$/)
     if (!match) return null
 
+    const originalLine = line.text
     const node: ThematicBreak = {
         type: "thematicBreak",
+        rawText: "",
+        startIndex: 0,
+        endIndex: 0,
     }
 
     line.advance(text.length)
+    const endIndex = startIndex + originalLine.length
 
     return {
         type: "thematicBreak",
         node,
         parent,
+        startIndex,
+        rawText: originalLine,
         canContinue() {
             return false
         },
         addLine() {},
-        finalize() {},
+        finalize(endIndex) {
+            node.rawText = originalLine
+            node.startIndex = startIndex
+            node.endIndex = endIndex
+        },
     }
 }
 
 function tryOpenCodeBlock(
     line: LineState,
     parent: BlockContext,
+    startIndex: number,
 ): BlockContext | null {
     if (!isContainerBlock(parent.node)) return null
 
@@ -364,18 +452,25 @@ function tryOpenCodeBlock(
     const fence = match[1]
     const language = match[2] || ""
 
+    const originalLine = line.text
     const node: CodeBlock = {
         type: "codeBlock",
         language,
         code: "",
+        rawText: "",
+        startIndex: 0,
+        endIndex: 0,
     }
 
     line.advance(text.length)
+    let rawText = originalLine
 
     return {
         type: "codeBlock",
         node,
         parent,
+        startIndex,
+        rawText: "",
         canContinue(nextLine) {
             const remaining = nextLine.remaining()
             const fenceChar = fence[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -383,11 +478,15 @@ function tryOpenCodeBlock(
                 new RegExp(`^${fenceChar}{${fence.length},}\\s*$`),
             )
         },
-        addLine(text) {
+        addLine(text, originalLine) {
             node.code += (node.code ? "\n" : "") + text
+            rawText += "\n" + originalLine
         },
-        finalize() {
+        finalize(endIndex) {
             node.code = node.code.trimEnd()
+            node.rawText = rawText
+            node.startIndex = startIndex
+            node.endIndex = endIndex
         },
     }
 }
@@ -395,6 +494,7 @@ function tryOpenCodeBlock(
 function tryOpenIndentedCodeBlock(
     line: LineState,
     parent: BlockContext,
+    startIndex: number,
 ): BlockContext | null {
     if (!isContainerBlock(parent.node)) return null
 
@@ -408,16 +508,24 @@ function tryOpenIndentedCodeBlock(
         return null
     }
 
+    const originalLine = line.text
     const node: CodeBlock = {
         type: "codeBlock",
         language: "",
         code: "",
+        rawText: "",
+        startIndex: 0,
+        endIndex: 0,
     }
+
+    let rawText = originalLine
 
     return {
         type: "codeBlock",
         node,
         parent,
+        startIndex,
+        rawText: "",
         canContinue(nextLine) {
             if (nextLine.isBlank()) {
                 return true
@@ -438,15 +546,19 @@ function tryOpenIndentedCodeBlock(
             }
             return false
         },
-        addLine(text) {
+        addLine(text, originalLine) {
             const lineState = new LineState(text)
             const indent = lineState.countIndent()
             const indentToRemove = Math.min(4, indent)
             const content = text.slice(indentToRemove)
             node.code += (node.code ? "\n" : "") + content
+            rawText += "\n" + originalLine
         },
-        finalize() {
+        finalize(endIndex) {
             node.code = node.code.trimEnd()
+            node.rawText = rawText
+            node.startIndex = startIndex
+            node.endIndex = endIndex
         },
     }
 }
@@ -454,6 +566,7 @@ function tryOpenIndentedCodeBlock(
 function tryOpenHTMLBlock(
     line: LineState,
     parent: BlockContext,
+    startIndex: number,
 ): BlockContext | null {
     if (!isContainerBlock(parent.node)) return null
 
@@ -462,25 +575,37 @@ function tryOpenHTMLBlock(
         /^<(script|pre|style|textarea|iframe|object|embed|applet|noembed|noscript|form|fieldset|math|svg|table|hr|br|p|div|h[1-6]|ul|ol|dl|li|blockquote|address|article|aside|details|figcaption|figure|footer|header|hgroup|main|nav|section|summary)(\s|>|\/)/i
     if (!htmlBlockPattern.test(text)) return null
 
+    const originalLine = line.text
     const node: HTMLBlock = {
         type: "htmlBlock",
         html: "",
+        rawText: "",
+        startIndex: 0,
+        endIndex: 0,
     }
+
+    let rawText = originalLine
 
     return {
         type: "htmlBlock",
         node,
         parent,
+        startIndex,
+        rawText: "",
         canContinue(nextLine) {
             if (nextLine.isBlank()) return false
             const remaining = nextLine.remaining().trim()
             return remaining.startsWith("<") || remaining.length > 0
         },
-        addLine(text) {
+        addLine(text, originalLine) {
             node.html += (node.html ? "\n" : "") + decodeHTMLEntity(text)
+            rawText += "\n" + originalLine
         },
-        finalize() {
+        finalize(endIndex) {
             node.html = node.html.trim()
+            node.rawText = rawText
+            node.startIndex = startIndex
+            node.endIndex = endIndex
         },
     }
 }
@@ -488,6 +613,7 @@ function tryOpenHTMLBlock(
 function tryOpenListItem(
     line: LineState,
     parent: BlockContext,
+    startIndex: number,
 ): BlockContext | null {
     if (parent.type !== "list") return null
 
@@ -508,13 +634,23 @@ function tryOpenListItem(
     const markerIndent = indent
     const maxContentIndent = markerIndent + 4
 
-    const node: ListItem = { type: "listItem", children: [] }
+    const originalLine = line.text
+    const node: ListItem = { 
+        type: "listItem", 
+        children: [],
+        rawText: "",
+        startIndex: 0,
+        endIndex: 0,
+    }
     let previousLineHadContent = false
+    let rawText = originalLine
 
     return {
         type: "listItem",
         node,
         parent,
+        startIndex,
+        rawText: "",
         canContinue(nextLine) {
             if (nextLine.isBlank()) {
                 previousLineHadContent = false
@@ -573,26 +709,38 @@ function tryOpenListItem(
             nextLine.pos = savedNextPos
             return false
         },
-        addLine(text) {
+        addLine(text, originalLine) {
             previousLineHadContent = true
             const lineIndent = new LineState(text).countIndent()
             const indentToRemove = Math.min(lineIndent, maxContentIndent)
             const content = text.slice(indentToRemove)
+            
+            // Calculate where content starts in original line
+            const contentStartInLine = indentToRemove
+            const lineStartInText = startIndex + rawText.length
 
             if (
                 node.children.length === 0 ||
                 node.children[node.children.length - 1].type !== "paragraph"
             ) {
-                const para: Paragraph = { type: "paragraph", children: [] }
+                const para: Paragraph = { 
+                    type: "paragraph", 
+                    children: [],
+                    rawText: "",
+                    startIndex: 0,
+                    endIndex: 0,
+                }
                 const paraAny = para as any
                 paraAny.rawText = content
+                paraAny._paraStartIndex = lineStartInText + contentStartInLine
                 node.children.push(para)
             } else {
                 const lastPara = node.children[node.children.length - 1] as any
                 lastPara.rawText = (lastPara.rawText || "") + " " + content
             }
+            rawText += "\n" + originalLine
         },
-        finalize() {
+        finalize(endIndex) {
             let doc: any = parent
             while (doc && doc.type !== "document") {
                 doc = doc.parent
@@ -607,14 +755,20 @@ function tryOpenListItem(
                 if (child.type === "paragraph") {
                     const para = child as any
                     if (para.rawText !== undefined) {
+                        const paraStartIndex = para._paraStartIndex || startIndex
                         para.children = parseInline(
                             para.rawText.trim(),
                             linkRefs,
+                            paraStartIndex,
                         )
                         delete para.rawText
+                        delete para._paraStartIndex
                     }
                 }
             }
+            node.rawText = rawText
+            node.startIndex = startIndex
+            node.endIndex = endIndex
         },
     }
 }
@@ -622,6 +776,7 @@ function tryOpenListItem(
 function tryOpenList(
     line: LineState,
     parent: BlockContext,
+    startIndex: number,
 ): BlockContext | null {
     const savedPos = line.pos
     const indent = line.countIndent()
@@ -645,14 +800,26 @@ function tryOpenList(
 
     line.pos = savedPos
 
-    const node: List = { type: "list", children: [], ordered, start }
+    const originalLine = line.text
+    const node: List = { 
+        type: "list", 
+        children: [], 
+        ordered, 
+        start,
+        rawText: "",
+        startIndex: 0,
+        endIndex: 0,
+    }
 
     const baseIndent = indent
+    let rawText = originalLine
 
     return {
         type: "list",
         node,
         parent,
+        startIndex,
+        rawText: "",
         canContinue(nextLine) {
             const savedNextPos = nextLine.pos
             const nextIndent = nextLine.countIndent()
@@ -676,13 +843,19 @@ function tryOpenList(
             nextLine.pos = savedNextPos
             return canStartItem
         },
-        addLine() {},
-        finalize() {},
+        addLine(_text, originalLine) {
+            rawText += "\n" + originalLine
+        },
+        finalize(endIndex) {
+            node.rawText = rawText
+            node.startIndex = startIndex
+            node.endIndex = endIndex
+        },
     }
 }
 
-function closeBlock(block: BlockContext) {
-    block.finalize()
+function closeBlock(block: BlockContext, endIndex: number) {
+    block.finalize(endIndex)
 
     if (block.parent && isContainerBlock(block.parent.node)) {
         block.parent.node.children.push(block.node)
@@ -693,15 +866,15 @@ function isContainerBlock(node: Block): node is Block & ContainerBlock {
     return "children" in node
 }
 
-function wouldOpenBlock(line: LineState, parent: BlockContext) {
+function wouldOpenBlock(line: LineState, parent: BlockContext, startIndex: number = 0) {
     return (
-        tryOpenHeading(line, parent) ??
-        tryOpenCodeBlock(line, parent) ??
-        tryOpenBlockQuote(line, parent) ??
-        tryOpenList(line, parent) ??
-        tryOpenThematicBreak(line, parent) ??
-        tryOpenHTMLBlock(line, parent) ??
-        tryOpenIndentedCodeBlock(line, parent) ??
+        tryOpenHeading(line, parent, startIndex) ??
+        tryOpenCodeBlock(line, parent, startIndex) ??
+        tryOpenBlockQuote(line, parent, startIndex) ??
+        tryOpenList(line, parent, startIndex) ??
+        tryOpenThematicBreak(line, parent, startIndex) ??
+        tryOpenHTMLBlock(line, parent, startIndex) ??
+        tryOpenIndentedCodeBlock(line, parent, startIndex) ??
         null
     )
 }
@@ -732,6 +905,9 @@ function renderBlock(block: Block): string {
 
         case "htmlBlock":
             return (block as HTMLBlock).html
+
+        case "lineBreak":
+            return "<br />"
 
         case "list":
             const list = block as List
@@ -767,18 +943,26 @@ function parseBlock(text: string): Block {
         type: "document",
         node: document,
         parent: null,
+        startIndex: 0,
+        rawText: "",
         canContinue: () => true,
         addLine: () => {},
-        finalize: () => {},
+        finalize: (_endIndex: number) => {},
     }
 
     const openBlocks: BlockContext[] = [documentBlock]
     const linkReferences = new Map<string, LinkReference>()
 
     const lines = text.split("\n")
+    let currentPos = 0
+
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
         const rawLine = lines[lineIndex]
+        const lineStartPos = currentPos
         const line = new LineState(rawLine)
+        
+        // Calculate end position for this line (including newline if not last line)
+        const lineEndPos = lineStartPos + rawLine.length + (lineIndex < lines.length - 1 ? 1 : 0)
 
         const isAtDocumentLevel =
             openBlocks.length === 1 && openBlocks[0].type === "document"
@@ -789,6 +973,7 @@ function parseBlock(text: string): Block {
                     url: definition.url,
                     title: definition.title,
                 })
+                currentPos = lineEndPos
                 continue
             }
         }
@@ -808,12 +993,15 @@ function parseBlock(text: string): Block {
                     const level = setextMatch[1][0] === "=" ? 1 : 2
                     const para = lastBlock.node as Paragraph
 
-                    lastBlock.finalize()
+                    lastBlock.finalize(lineEndPos)
 
                     const heading: Heading = {
                         type: "heading",
                         level,
                         children: para.children || [],
+                        rawText: para.rawText + "\n" + rawLine,
+                        startIndex: para.startIndex,
+                        endIndex: lineEndPos,
                     }
 
                     openBlocks.pop()
@@ -825,6 +1013,7 @@ function parseBlock(text: string): Block {
                         }
                         parent.node.children.push(heading)
                     }
+                    currentPos = lineEndPos
                     continue
                 }
             }
@@ -841,7 +1030,8 @@ function parseBlock(text: string): Block {
                     }
                 }
                 while (openBlocks.length > i) {
-                    closeBlock(openBlocks.pop()!)
+                    const blockToClose = openBlocks.pop()!
+                    closeBlock(blockToClose, lineEndPos)
                 }
                 break
             }
@@ -851,7 +1041,7 @@ function parseBlock(text: string): Block {
             const parent = openBlocks[openBlocks.length - 1]
 
             if (parent.type === "list") {
-                const newItem = tryOpenListItem(line, parent)
+                const newItem = tryOpenListItem(line, parent, lineStartPos)
                 if (newItem) {
                     openBlocks.push(newItem)
                     break
@@ -859,26 +1049,29 @@ function parseBlock(text: string): Block {
             }
 
             if (parent.type === "listItem") {
-                const newList = tryOpenList(line, parent)
+                const newList = tryOpenList(line, parent, lineStartPos)
                 if (newList) {
                     openBlocks.push(newList)
                     continue
                 }
             }
 
-            const newBlock = tryOpenBlock(line, parent)
+            const newBlock = tryOpenBlock(line, parent, lineStartPos)
             if (!newBlock) break
             openBlocks.push(newBlock)
         }
 
         if (!closedCodeBlock) {
             const deepestBlock = openBlocks[openBlocks.length - 1]
-            deepestBlock.addLine(line.remaining())
+            deepestBlock.addLine(line.remaining(), rawLine)
         }
+
+        currentPos = lineEndPos
     }
 
     while (openBlocks.length > 1) {
-        closeBlock(openBlocks.pop()!)
+        const blockToClose = openBlocks.pop()!
+        closeBlock(blockToClose, currentPos)
     }
 
     ;(document as any).__linkReferences = linkReferences
@@ -887,19 +1080,30 @@ function parseBlock(text: string): Block {
 }
 
 function parseInlineWithBreaks(
-    lines: Array<{ text: string; hardBreak: boolean }>,
+    lines: Array<{ text: string; hardBreak: boolean; originalLine: string; lineStartIndex: number }>,
     linkReferences?: Map<string, LinkReference>,
 ): Inline[] {
     const result: Inline[] = []
+    let currentOffset = 0
 
     for (let i = 0; i < lines.length; i++) {
-        const { text, hardBreak } = lines[i]
+        const { text, hardBreak, originalLine, lineStartIndex } = lines[i]
         if (text.length > 0) {
-            result.push(...parseInline(text, linkReferences))
+            const inlineStart = lineStartIndex + (originalLine.length - text.length)
+            const inlines = parseInline(text, linkReferences, inlineStart)
+            result.push(...inlines)
+            currentOffset = inlineStart + text.length
         }
 
         if (i < lines.length - 1) {
-            result.push({ type: hardBreak ? "HardBreak" : "SoftBreak" })
+            const breakStart = currentOffset
+            const breakEnd = breakStart + (hardBreak ? 2 : 1) // "  " or " "
+            result.push({ 
+                type: hardBreak ? "HardBreak" : "SoftBreak",
+                rawText: hardBreak ? "  " : " ",
+                startIndex: breakStart,
+                endIndex: breakEnd,
+            })
         }
     }
 
@@ -1016,6 +1220,7 @@ function parseLinkDestinationAndTitle(
 function parseInline(
     text: string,
     linkReferences?: Map<string, LinkReference>,
+    startOffset: number = 0,
 ): Inline[] {
     const result: Inline[] = []
     const delimiterStack: Delimiter[] = []
@@ -1026,9 +1231,15 @@ function parseInline(
         if (end > start) {
             const textContent = text.slice(start, end)
             if (textContent.length > 0) {
+                const rawText = textContent
+                const startIndex = startOffset + start
+                const endIndex = startOffset + end
                 result.push({
                     type: "Text",
                     value: decodeHTMLEntity(textContent),
+                    rawText,
+                    startIndex,
+                    endIndex,
                 })
             }
         }
@@ -1070,7 +1281,16 @@ function parseInline(
             const escaped = text[pos + 1]
             if (/[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(escaped)) {
                 addText(textStart, pos)
-                result.push({ type: "Text", value: escaped })
+                const rawText = text.slice(pos, pos + 2)
+                const startIndex = startOffset + pos
+                const endIndex = startOffset + pos + 2
+                result.push({ 
+                    type: "Text", 
+                    value: escaped,
+                    rawText,
+                    startIndex,
+                    endIndex,
+                })
                 pos += 2
                 textStart = pos
                 continue
@@ -1103,7 +1323,16 @@ function parseInline(
                             pos + backtickCount,
                             searchPos,
                         )
-                        result.push({ type: "CodeSpan", value: codeContent })
+                        const rawText = text.slice(pos, searchPos + backtickCount)
+                        const startIndex = startOffset + pos
+                        const endIndex = startOffset + searchPos + backtickCount
+                        result.push({ 
+                            type: "CodeSpan", 
+                            value: codeContent,
+                            rawText,
+                            startIndex,
+                            endIndex,
+                        })
                         pos = searchPos + backtickCount
                         textStart = pos
                         found = true
@@ -1123,7 +1352,16 @@ function parseInline(
                 const content = text.slice(pos + 1, end)
                 if (/^https?:\/\/|^ftp:\/\//i.test(content)) {
                     addText(textStart, pos)
-                    result.push({ type: "Autolink", url: content })
+                    const rawText = text.slice(pos, end + 1)
+                    const startIndex = startOffset + pos
+                    const endIndex = startOffset + end + 1
+                    result.push({ 
+                        type: "Autolink", 
+                        url: content,
+                        rawText,
+                        startIndex,
+                        endIndex,
+                    })
                     pos = end + 1
                     textStart = pos
                     continue
@@ -1134,7 +1372,16 @@ function parseInline(
                     )
                 ) {
                     addText(textStart, pos)
-                    result.push({ type: "Autolink", url: "mailto:" + content })
+                    const rawText = text.slice(pos, end + 1)
+                    const startIndex = startOffset + pos
+                    const endIndex = startOffset + end + 1
+                    result.push({ 
+                        type: "Autolink", 
+                        url: "mailto:" + content,
+                        rawText,
+                        startIndex,
+                        endIndex,
+                    })
                     pos = end + 1
                     textStart = pos
                     continue
@@ -1186,7 +1433,16 @@ function parseInline(
                 ]
                 if (inlineTags.includes(tagName)) {
                     addText(textStart, pos)
-                    result.push({ type: "HTML", html: fullMatch })
+                    const rawText = fullMatch
+                    const startIndex = startOffset + pos
+                    const endIndex = startOffset + pos + fullMatch.length
+                    result.push({ 
+                        type: "HTML", 
+                        html: fullMatch,
+                        rawText,
+                        startIndex,
+                        endIndex,
+                    })
                     pos += fullMatch.length
                     textStart = pos
                     continue
@@ -1210,12 +1466,18 @@ function parseInline(
                     )
                     if (linkInfo) {
                         addText(textStart, pos)
+                        const rawText = text.slice(pos, linkInfo.end)
+                        const startIndex = startOffset + pos
+                        const endIndex = startOffset + linkInfo.end
                         result.push({
                             type: "Image",
                             url: linkInfo.url,
                             alt: altText,
                             title: linkInfo.title,
                             children: [],
+                            rawText,
+                            startIndex,
+                            endIndex,
                         })
                         pos = linkInfo.end
                         textStart = pos
@@ -1249,12 +1511,18 @@ function parseInline(
                     const ref = linkReferences.get(refLabel)
                     if (ref) {
                         addText(textStart, pos)
+                        const rawText = text.slice(pos, refEnd)
+                        const startIndex = startOffset + pos
+                        const endIndex = startOffset + refEnd
                         result.push({
                             type: "Image",
                             url: ref.url,
                             alt: altText,
                             title: ref.title,
                             children: [],
+                            rawText,
+                            startIndex,
+                            endIndex,
                         })
                         pos = refEnd
                         textStart = pos
@@ -1276,20 +1544,30 @@ function parseInline(
                     )
                     if (linkInfo) {
                         addText(textStart, pos)
+                        const linkStartIndex = startOffset + pos + 1
                         const linkChildren =
                             linkText.trim() === ""
                                 ? [
                                       {
                                           type: "Text",
                                           value: linkInfo.url,
+                                          rawText: linkInfo.url,
+                                          startIndex: linkStartIndex,
+                                          endIndex: linkStartIndex + linkInfo.url.length,
                                       } as Inline,
                                   ]
-                                : parseInline(linkText, linkReferences)
+                                : parseInline(linkText, linkReferences, linkStartIndex)
+                        const rawText = text.slice(pos, linkInfo.end)
+                        const startIndex = startOffset + pos
+                        const endIndex = startOffset + linkInfo.end
                         result.push({
                             type: "Link",
                             url: linkInfo.url,
                             title: linkInfo.title,
                             children: linkChildren,
+                            rawText,
+                            startIndex,
+                            endIndex,
                         })
                         pos = linkInfo.end
                         textStart = pos
@@ -1326,15 +1604,28 @@ function parseInline(
                     const ref = linkReferences.get(refLabel)
                     if (ref) {
                         addText(textStart, pos)
+                        const linkStartIndex = startOffset + pos + 1
                         const linkChildren =
                             linkText.trim() === ""
-                                ? [{ type: "Text", value: ref.url } as Inline]
-                                : parseInline(linkText, linkReferences)
+                                ? [{ 
+                                    type: "Text", 
+                                    value: ref.url,
+                                    rawText: ref.url,
+                                    startIndex: linkStartIndex,
+                                    endIndex: linkStartIndex + ref.url.length,
+                                } as Inline]
+                                : parseInline(linkText, linkReferences, linkStartIndex)
+                        const rawText = text.slice(pos, refEnd)
+                        const startIndex = startOffset + pos
+                        const endIndex = startOffset + refEnd
                         result.push({
                             type: "Link",
                             url: ref.url,
                             title: ref.title,
                             children: linkChildren,
+                            rawText,
+                            startIndex,
+                            endIndex,
                         })
                         pos = refEnd
                         textStart = pos
@@ -1356,9 +1647,15 @@ function parseInline(
 
             if (canOpen || canClose) {
                 addText(textStart, pos)
+                const rawText = type.repeat(length)
+                const startIndex = startOffset + pos
+                const endIndex = startOffset + pos + length
                 const textNode: Inline = {
                     type: "Text",
-                    value: type.repeat(length),
+                    value: rawText,
+                    rawText,
+                    startIndex,
+                    endIndex,
                 }
                 result.push(textNode)
 
@@ -1436,21 +1733,44 @@ function processEmphasis(stack: Delimiter[], nodes: Inline[]) {
         const endIdx = closer.pos
         const children = nodes.slice(startIdx, endIdx)
 
+        // Calculate rawText, startIndex, and endIndex
+        const openerNode = nodes[opener.pos]
+        const closerNode = nodes[closer.pos]
+        const openerRawText = openerNode && openerNode.type === "Text" 
+            ? openerNode.rawText.slice(0, emphasisLength)
+            : opener.type.repeat(emphasisLength)
+        const closerRawText = closerNode && closerNode.type === "Text"
+            ? closerNode.rawText.slice(0, emphasisLength)
+            : closer.type.repeat(emphasisLength)
+        
+        const firstChild = children[0]
+        const lastChild = children[children.length - 1]
+        const startIndex = openerNode ? openerNode.startIndex : (firstChild ? firstChild.startIndex : 0)
+        const endIndex = closerNode ? (closerNode.startIndex + emphasisLength) : (lastChild ? lastChild.endIndex : 0)
+        
+        // Build rawText from opener + children rawText + closer
+        let rawText = openerRawText
+        for (const child of children) {
+            rawText += child.rawText
+        }
+        rawText += closerRawText
+
         const emphasisNode: Inline = isStrong
-            ? { type: "Strong", children }
-            : { type: "Emphasis", children }
+            ? { type: "Strong", children, rawText, startIndex, endIndex }
+            : { type: "Emphasis", children, rawText, startIndex, endIndex }
 
         const openerRemove = emphasisLength
         const closerRemove = emphasisLength
 
         let openerRemoved = false
 
-        const openerNode = nodes[opener.pos]
         if (openerNode && openerNode.type === "Text") {
             const openerText = openerNode as any
             const remaining = openerText.value.slice(openerRemove)
             if (remaining.length > 0) {
                 openerText.value = remaining
+                openerText.rawText = openerText.rawText.slice(openerRemove)
+                openerText.startIndex += emphasisLength
             } else {
                 nodes.splice(opener.pos, 1)
                 openerRemoved = true
@@ -1461,12 +1781,13 @@ function processEmphasis(stack: Delimiter[], nodes: Inline[]) {
             }
         }
 
-        const closerNode = nodes[closer.pos]
         if (closerNode && closerNode.type === "Text") {
             const closerText = closerNode as any
             const remaining = closerText.value.slice(closerRemove)
             if (remaining.length > 0) {
                 closerText.value = remaining
+                closerText.rawText = closerText.rawText.slice(closerRemove)
+                closerText.startIndex += emphasisLength
             } else {
                 nodes.splice(closer.pos, 1)
                 for (let j = 0; j < stack.length; j++) {

@@ -1,0 +1,25 @@
+@mixin colors {    
+    --color-background:       #110f16;
+    --color-background-area:  #181424;
+    --color-border:           #2a2340;
+    --color-text:             #d4cfee;
+}
+
+.syntheticText {
+    @include colors;
+
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+
+    // background-color: var(--color-background);
+    // color: var(--color-text);
+
+    resize: none;
+    border: none;
+    outline: none;
+
+    white-space: pre-wrap;
+}
