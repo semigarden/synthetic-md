@@ -87,7 +87,7 @@ function tryOpenParagraph(
             const lineStartIndex = currentLineIndex
             lines.push({ text: lineText, hardBreak, originalLine, lineStartIndex })
             rawText += (rawText ? "\n" : "") + originalLine
-            currentLineIndex += originalLine.length + 1 // +1 for newline
+            currentLineIndex += originalLine.length + 1
         },
         finalize(endIndex) {
             let doc: BlockContext | null = parent

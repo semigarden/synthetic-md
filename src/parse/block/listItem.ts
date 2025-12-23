@@ -109,8 +109,7 @@ function tryOpenListItem(
             const lineIndent = new LineState(text).countIndent()
             const indentToRemove = Math.min(lineIndent, maxContentIndent)
             const content = text.slice(indentToRemove)
-            
-            // Calculate where content starts in original line
+
             const contentStartInLine = indentToRemove
             const lineStartInText = startIndex + rawText.length
 

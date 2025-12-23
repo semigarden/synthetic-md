@@ -490,7 +490,7 @@ function parseInlineWithBreaks(
 
         if (i < lines.length - 1) {
             const breakStart = currentOffset
-            const breakEnd = breakStart + (hardBreak ? 2 : 1) // "  " or " "
+            const breakEnd = breakStart + (hardBreak ? 2 : 1)
             result.push({ 
                 type: hardBreak ? "HardBreak" : "SoftBreak",
                 rawText: hardBreak ? "  " : " ",

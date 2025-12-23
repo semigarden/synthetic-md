@@ -49,7 +49,6 @@ function processEmphasis(stack: Delimiter[], nodes: Inline[]) {
         const endIdx = closer.pos
         const children = nodes.slice(startIdx, endIdx)
 
-        // Calculate rawText, startIndex, and endIndex
         const openerNode = nodes[opener.pos]
         const closerNode = nodes[closer.pos]
         const openerRawText = openerNode && openerNode.type === "Text" 
@@ -64,7 +63,6 @@ function processEmphasis(stack: Delimiter[], nodes: Inline[]) {
         const startIndex = openerNode ? openerNode.startIndex : (firstChild ? firstChild.startIndex : 0)
         const endIndex = closerNode ? (closerNode.startIndex + emphasisLength) : (lastChild ? lastChild.endIndex : 0)
         
-        // Build rawText from opener + children rawText + closer
         let rawText = openerRawText
         for (const child of children) {
             rawText += child.rawText
@@ -124,11 +122,6 @@ function processEmphasis(stack: Delimiter[], nodes: Inline[]) {
         for (let j = 0; j < stack.length; j++) {
             if (stack[j].pos >= insertPos + childrenCount) {
                 stack[j].pos += netChange
-            } else if (
-                stack[j].pos > insertPos &&
-                stack[j].pos < insertPos + childrenCount
-            ) {
-                // Stack position is within the replaced range, skip
             }
         }
 

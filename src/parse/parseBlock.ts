@@ -41,8 +41,7 @@ function parseBlock(text: string): Block {
         const rawLine = lines[lineIndex]
         const lineStartPos = currentPos
         const line = new LineState(rawLine)
-        
-        // Calculate end position for this line (including newline if not last line)
+
         const lineEndPos = lineStartPos + rawLine.length + (lineIndex < lines.length - 1 ? 1 : 0)
 
         const isAtDocumentLevel =
