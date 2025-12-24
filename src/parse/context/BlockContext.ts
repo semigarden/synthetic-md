@@ -46,6 +46,19 @@ function isContainerBlock(node: Block): node is Block & ContainerBlock {
     return "children" in node
 }
 
+const LEAF_BLOCK_TYPES = new Set([
+    "paragraph",
+    "heading",
+    "codeBlock",
+    "thematicBreak",
+    "htmlBlock",
+    "lineBreak",
+])
+
+function isLeafBlockType(type: string): boolean {
+    return LEAF_BLOCK_TYPES.has(type)
+}
+
 function wouldOpenBlock(line: LineState, parent: BlockContext, startIndex: number = 0) {
     return (
         tryOpenHeading(line, parent, startIndex) ??
@@ -59,4 +72,4 @@ function wouldOpenBlock(line: LineState, parent: BlockContext, startIndex: numbe
     )
 }
 
-export { tryOpenBlock, closeBlock, isContainerBlock, wouldOpenBlock }
+export { tryOpenBlock, closeBlock, isContainerBlock, isLeafBlockType, wouldOpenBlock }

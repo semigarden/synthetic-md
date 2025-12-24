@@ -11,14 +11,18 @@ type Inline =
     | HardBreak
 
 interface Text {
+    id: string
     type: "Text"
     value: string
     rawText: string
+    pureText: string
+    synthText: string
     startIndex: number
     endIndex: number
 }
 
 interface Emphasis {
+    id: string
     type: "Emphasis"
     children: Inline[]
     rawText: string
@@ -27,6 +31,7 @@ interface Emphasis {
 }
 
 interface Strong {
+    id: string
     type: "Strong"
     children: Inline[]
     rawText: string
@@ -35,6 +40,7 @@ interface Strong {
 }
 
 interface CodeSpan {
+    id: string
     type: "CodeSpan"
     value: string
     rawText: string
@@ -43,6 +49,7 @@ interface CodeSpan {
 }
 
 interface Link {
+    id: string
     type: "Link"
     url: string
     title?: string
@@ -53,6 +60,7 @@ interface Link {
 }
 
 interface Image {
+    id: string
     type: "Image"
     url: string
     alt: string
@@ -64,6 +72,7 @@ interface Image {
 }
 
 interface SoftBreak {
+    id: string
     type: "SoftBreak"
     rawText: string
     startIndex: number
@@ -71,6 +80,7 @@ interface SoftBreak {
 }
 
 interface HardBreak {
+    id: string
     type: "HardBreak"
     rawText: string
     startIndex: number
@@ -78,6 +88,7 @@ interface HardBreak {
 }
 
 interface Autolink {
+    id: string
     type: "Autolink"
     url: string
     rawText: string
@@ -86,6 +97,7 @@ interface Autolink {
 }
 
 interface HTML {
+    id: string
     type: "HTML"
     html: string
     rawText: string

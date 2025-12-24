@@ -1,7 +1,8 @@
 import { LineState } from "../context/LineState"
-import { isContainerBlock } from "../context/BlockContext"
+import { isContainerBlock, isLeafBlockType } from "../context/BlockContext"
 import type { BlockContext } from "../../types"
 import type { ThematicBreak } from "../../types/block"
+import { uuid } from "../../utils"
 
 function tryOpenThematicBreak(
     line: LineState,
@@ -9,6 +10,7 @@ function tryOpenThematicBreak(
     startIndex: number,
 ): BlockContext | null {
     if (!isContainerBlock(parent.node)) return null
+    if (isLeafBlockType(parent.type)) return null
 
     const text = line.remaining()
 
@@ -17,7 +19,9 @@ function tryOpenThematicBreak(
 
     const originalLine = line.text
     const node: ThematicBreak = {
+        id: uuid(),
         type: "thematicBreak",
+        children: [],
         rawText: "",
         startIndex: 0,
         endIndex: 0,

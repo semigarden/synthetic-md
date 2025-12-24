@@ -5,6 +5,11 @@ interface ContainerBlock<T extends string = string> {
   children: Block[]
 }
 
+interface ContainerInline<T extends string = string> {
+  type: T
+  children: Inline[]
+}
+
 type Block =
   | Document
   | Paragraph
@@ -18,34 +23,41 @@ type Block =
   | LineBreak
 
 interface Document extends ContainerBlock<'document'> {
+  id: string
   type: 'document'
+  startIndex: number
+  endIndex: number
   children: Block[]
 }
 
-interface Paragraph {
+interface Paragraph extends ContainerInline<'paragraph'> {
+  id: string
   type: 'paragraph'
   rawText: string
   startIndex: number
   endIndex: number
-  children: Inline[]
 }
 
-interface Heading {
+interface Heading extends ContainerInline<'heading'> {
+  id: string
   type: 'heading'
   level: number
   rawText: string
+  pureText: string
+  synthText: string
   startIndex: number
   endIndex: number
-  children: Inline[]
 }
 
 interface BlockQuote extends ContainerBlock<'blockQuote'> {
+  id: string
   rawText: string
   startIndex: number
   endIndex: number
 }
 
 interface List extends ContainerBlock<'list'> {
+  id: string
   ordered: boolean
   start?: number
   tight?: boolean
@@ -55,13 +67,15 @@ interface List extends ContainerBlock<'list'> {
 }
 
 interface ListItem extends ContainerBlock<'listItem'> {
+  id: string
   checked?: boolean
   rawText: string
   startIndex: number
   endIndex: number
 }
 
-interface CodeBlock {
+interface CodeBlock extends ContainerInline<'codeBlock'> {
+  id: string
   type: 'codeBlock'
   language: string
   code: string
@@ -71,14 +85,18 @@ interface CodeBlock {
 }
 
 interface ThematicBreak {
+  id: string
   type: 'thematicBreak'
+  children: Block[]
   rawText: string
   startIndex: number
   endIndex: number
 }
 
 interface HTMLBlock {
+  id: string
   type: 'htmlBlock'
+  children: Block[]
   html: string
   rawText: string
   startIndex: number
@@ -86,7 +104,9 @@ interface HTMLBlock {
 }
 
 interface LineBreak {
+  id: string
   type: 'lineBreak'
+  children: Block[]
   rawText: string
   startIndex: number
   endIndex: number

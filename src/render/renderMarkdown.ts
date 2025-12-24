@@ -2,8 +2,8 @@ import { parseBlock } from "../parse/parseBlock"
 import { renderBlock } from "../render/renderBlock"
 
 const renderMarkdown = (markdown: string) => {
-    const document = parseBlock(markdown)
-    return renderBlock(document)
+    const ast = parseBlock(markdown)
+    return renderBlock(ast, { cursor: 0, vision: "pure" })
 }
 
 export { renderMarkdown }

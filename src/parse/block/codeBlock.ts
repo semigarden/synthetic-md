@@ -1,7 +1,8 @@
 import type { BlockContext } from "../../types"
 import type { LineState } from "../context/LineState"
 import type { CodeBlock } from "../../types/block"
-import { isContainerBlock } from "../context/BlockContext"
+import { isContainerBlock, isLeafBlockType } from "../context/BlockContext"
+import { uuid } from "../../utils"
 
 function tryOpenCodeBlock(
     line: LineState,
@@ -9,6 +10,7 @@ function tryOpenCodeBlock(
     startIndex: number,
 ): BlockContext | null {
     if (!isContainerBlock(parent.node)) return null
+    if (isLeafBlockType(parent.type)) return null
 
     const text = line.remaining()
     const match = text.match(/^([`~]{3,})(\w*)\s*$/)
@@ -19,7 +21,9 @@ function tryOpenCodeBlock(
 
     const originalLine = line.text
     const node: CodeBlock = {
+        id: uuid(),
         type: "codeBlock",
+        children: [],
         language,
         code: "",
         rawText: "",

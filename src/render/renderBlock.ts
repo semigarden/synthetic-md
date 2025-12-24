@@ -2,19 +2,28 @@ import type { Block, CodeBlock, HTMLBlock, List, ListItem } from "../types/block
 import { renderInline } from "./renderInline"
 import { escape } from "../utils/escape"
 
-function renderBlock(block: Block): string {
+type Perspective = {
+    cursor: number | null
+    vision: "pure" | "synthetic"
+}
+
+function renderBlock(block: Block, perspective: Perspective): string {
     switch (block.type) {
         case "document":
-            return block.children.map(renderBlock).join("")
+            return block.children.map((child) => renderBlock(child, perspective)).join("")
 
         case "heading":
-            return `<h${block.level}>${block.children.map(renderInline).join("")}</h${block.level}>`
+            const tag = perspective.vision === "synthetic"
+                ? `h${block.level}`
+                : "span"
+
+            return `<${tag}>${block.children.map((child) => renderInline(child, perspective)).join("")}</${tag}>`
 
         case "paragraph":
-            return `<p>${block.children.map(renderInline).join("")}</p>`
+            return `<p>${block.children.map((child) => renderInline(child, perspective)).join("")}</p>`
 
         case "blockQuote":
-            return `<blockquote>${block.children.map(renderBlock).join("")}</blockquote>`
+            return `<blockquote>${block.children.map((child) => renderBlock(child, perspective)).join("")}</blockquote>`
 
         case "thematicBreak":
             return `<hr />`
@@ -40,11 +49,11 @@ function renderBlock(block: Block): string {
                 list.ordered && list.start !== undefined && list.start !== 1
                     ? ` start="${list.start}"`
                     : ""
-            return `<${tag}${startAttr}>${list.children.map(renderBlock).join("")}</${tag}>`
+            return `<${tag}${startAttr}>${list.children.map((child) => renderBlock(child, perspective)).join("")}</${tag}>`
         }
 
         case "listItem":
-            return `<li>${(block as ListItem).children.map(renderBlock).join("")}</li>`
+            return `<li>${(block as ListItem).children.map((child) => renderBlock(child, perspective)).join("")}</li>`
 
         default:
             return ""

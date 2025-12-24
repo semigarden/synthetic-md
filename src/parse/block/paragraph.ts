@@ -1,8 +1,9 @@
 import { LineState } from "../context/LineState"
-import { isContainerBlock, wouldOpenBlock } from "../context/BlockContext"
+import { isContainerBlock, isLeafBlockType, wouldOpenBlock } from "../context/BlockContext"
 import { parseInlineWithBreaks } from "../parseInline"
 import type { Paragraph, Document } from "../../types/block"
 import type { BlockContext, LinkReference } from "../../types"
+import { uuid } from "../../utils"
 
 function tryOpenParagraph(
     line: LineState,
@@ -10,11 +11,12 @@ function tryOpenParagraph(
     startIndex: number,
 ): BlockContext | null {
     if (!isContainerBlock(parent.node)) return null
-    if (parent.type === "paragraph") return null
+    if (isLeafBlockType(parent.type)) return null
     if (line.isBlank()) return null
 
     const originalLine = line.text
     const node: Paragraph = {
+        id: uuid(),
         type: "paragraph",
         children: [],
         rawText: "",

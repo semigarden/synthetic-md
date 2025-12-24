@@ -3,6 +3,7 @@ import { parseInline } from "../parseInline"
 import type { BlockContext } from "../../types"
 import type { LinkReference } from "../../types"
 import type { ListItem, Paragraph, Document } from "../../types/block"
+import { uuid } from "../../utils"
 
 
 function tryOpenListItem(
@@ -31,6 +32,7 @@ function tryOpenListItem(
 
     const originalLine = line.text
     const node: ListItem = { 
+        id: uuid(),
         type: "listItem", 
         children: [],
         rawText: "",
@@ -118,6 +120,7 @@ function tryOpenListItem(
                 node.children[node.children.length - 1].type !== "paragraph"
             ) {
                 const para: Paragraph & { rawText?: string; _paraStartIndex?: number } = { 
+                    id: uuid(),
                     type: "paragraph", 
                     children: [],
                     rawText: "",

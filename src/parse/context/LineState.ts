@@ -29,6 +29,10 @@ class LineState {
         return this.text.slice(this.pos, this.pos + n)
     }
 
+    currentIndex() {
+        return this.pos
+    }
+
     advance(n: number) {
         this.pos += n
     }

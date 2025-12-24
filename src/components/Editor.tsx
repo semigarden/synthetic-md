@@ -43,7 +43,7 @@ const Editor: React.FC = () => {
       />
       <div
         className={styles.preview}
-        dangerouslySetInnerHTML={{ __html: render(text) }}
+        dangerouslySetInnerHTML={{ __html: render(text, { cursor: 0, vision: "synthetic" }) }}
       />
     </div>
   )

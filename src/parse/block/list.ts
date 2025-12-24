@@ -1,6 +1,7 @@
 import { LineState } from "../context/LineState"
 import type { BlockContext } from "../../types"
 import type { List } from "../../types/block"
+import { uuid } from "../../utils"
 
 function tryOpenList(
     line: LineState,
@@ -31,6 +32,7 @@ function tryOpenList(
 
     const originalLine = line.text
     const node: List = { 
+        id: uuid(),
         type: "list", 
         children: [], 
         ordered, 

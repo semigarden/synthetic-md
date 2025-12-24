@@ -1,5 +1,6 @@
 import type { Delimiter } from "../../types"
 import type { Inline, Text } from "../../types/inline"
+import { uuid } from "../../utils"
 
 function processEmphasis(stack: Delimiter[], nodes: Inline[]) {
     let current = 0
@@ -70,8 +71,8 @@ function processEmphasis(stack: Delimiter[], nodes: Inline[]) {
         rawText += closerRawText
 
         const emphasisNode: Inline = isStrong
-            ? { type: "Strong", children, rawText, startIndex, endIndex }
-            : { type: "Emphasis", children, rawText, startIndex, endIndex }
+            ? { id: uuid(), type: "Strong", children, rawText, startIndex, endIndex }
+            : { id: uuid(), type: "Emphasis", children, rawText, startIndex, endIndex }
 
         const openerRemove = emphasisLength
         const closerRemove = emphasisLength

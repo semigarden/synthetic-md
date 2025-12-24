@@ -1,8 +1,9 @@
 import { LineState } from "../context/LineState"
-import { isContainerBlock } from "../context/BlockContext"
+import { isContainerBlock, isLeafBlockType } from "../context/BlockContext"
 import { decodeHTMLEntity } from "../../utils/htmlEntities"
 import type { BlockContext } from "../../types"
 import type { HTMLBlock } from "../../types/block"
+import { uuid } from "../../utils"
 
 function tryOpenHTMLBlock(
     line: LineState,
@@ -10,6 +11,7 @@ function tryOpenHTMLBlock(
     startIndex: number,
 ): BlockContext | null {
     if (!isContainerBlock(parent.node)) return null
+    if (isLeafBlockType(parent.type)) return null
 
     const text = line.remaining().trim()
     const htmlBlockPattern =
@@ -18,7 +20,9 @@ function tryOpenHTMLBlock(
 
     const originalLine = line.text
     const node: HTMLBlock = {
+        id: uuid(),
         type: "htmlBlock",
+        children: [],
         html: "",
         rawText: "",
         startIndex: 0,

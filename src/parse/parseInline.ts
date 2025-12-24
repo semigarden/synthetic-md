@@ -3,6 +3,7 @@ import { processEmphasis } from "./inline/emphasis"
 import { decodeHTMLEntity } from "../utils/htmlEntities"
 import type { LinkReference, Delimiter } from "../types"
 import type { Inline } from "../types/inline"
+import { uuid } from "../utils"
 
 function parseInline(
     text: string,
@@ -22,9 +23,12 @@ function parseInline(
                 const startIndex = startOffset + start
                 const endIndex = startOffset + end
                 result.push({
+                    id: uuid(),
                     type: "Text",
                     value: decodeHTMLEntity(textContent),
                     rawText,
+                    pureText: textContent,
+                    synthText: textContent,
                     startIndex,
                     endIndex,
                 })
@@ -72,9 +76,12 @@ function parseInline(
                 const startIndex = startOffset + pos
                 const endIndex = startOffset + pos + 2
                 result.push({ 
+                    id: uuid(),
                     type: "Text", 
                     value: escaped,
                     rawText,
+                    pureText: rawText,
+                    synthText: rawText,
                     startIndex,
                     endIndex,
                 })
@@ -114,6 +121,7 @@ function parseInline(
                         const startIndex = startOffset + pos
                         const endIndex = startOffset + searchPos + backtickCount
                         result.push({ 
+                            id: uuid(),
                             type: "CodeSpan", 
                             value: codeContent,
                             rawText,
@@ -143,6 +151,7 @@ function parseInline(
                     const startIndex = startOffset + pos
                     const endIndex = startOffset + end + 1
                     result.push({ 
+                        id: uuid(),
                         type: "Autolink", 
                         url: content,
                         rawText,
@@ -163,6 +172,7 @@ function parseInline(
                     const startIndex = startOffset + pos
                     const endIndex = startOffset + end + 1
                     result.push({ 
+                        id: uuid(),
                         type: "Autolink", 
                         url: "mailto:" + content,
                         rawText,
@@ -224,6 +234,7 @@ function parseInline(
                     const startIndex = startOffset + pos
                     const endIndex = startOffset + pos + fullMatch.length
                     result.push({ 
+                        id: uuid(),
                         type: "HTML", 
                         html: fullMatch,
                         rawText,
@@ -257,6 +268,7 @@ function parseInline(
                         const startIndex = startOffset + pos
                         const endIndex = startOffset + linkInfo.end
                         result.push({
+                            id: uuid(),
                             type: "Image",
                             url: linkInfo.url,
                             alt: altText,
@@ -302,6 +314,7 @@ function parseInline(
                         const startIndex = startOffset + pos
                         const endIndex = startOffset + refEnd
                         result.push({
+                            id: uuid(),
                             type: "Image",
                             url: ref.url,
                             alt: altText,
@@ -336,6 +349,7 @@ function parseInline(
                             linkText.trim() === ""
                                 ? [
                                       {
+                                          id: uuid(),
                                           type: "Text",
                                           value: linkInfo.url,
                                           rawText: linkInfo.url,
@@ -348,6 +362,7 @@ function parseInline(
                         const startIndex = startOffset + pos
                         const endIndex = startOffset + linkInfo.end
                         result.push({
+                            id: uuid(),
                             type: "Link",
                             url: linkInfo.url,
                             title: linkInfo.title,
@@ -395,6 +410,7 @@ function parseInline(
                         const linkChildren =
                             linkText.trim() === ""
                                 ? [{ 
+                                    id: uuid(),
                                     type: "Text", 
                                     value: ref.url,
                                     rawText: ref.url,
@@ -406,6 +422,7 @@ function parseInline(
                         const startIndex = startOffset + pos
                         const endIndex = startOffset + refEnd
                         result.push({
+                            id: uuid(),
                             type: "Link",
                             url: ref.url,
                             title: ref.title,
@@ -438,9 +455,12 @@ function parseInline(
                 const startIndex = startOffset + pos
                 const endIndex = startOffset + pos + length
                 const textNode: Inline = {
+                    id: uuid(),
                     type: "Text",
                     value: rawText,
                     rawText,
+                    pureText: rawText,
+                    synthText: rawText,
                     startIndex,
                     endIndex,
                 }
@@ -492,6 +512,7 @@ function parseInlineWithBreaks(
             const breakStart = currentOffset
             const breakEnd = breakStart + (hardBreak ? 2 : 1)
             result.push({ 
+                id: uuid(),
                 type: hardBreak ? "HardBreak" : "SoftBreak",
                 rawText: hardBreak ? "  " : " ",
                 startIndex: breakStart,

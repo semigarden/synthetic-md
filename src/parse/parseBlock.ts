@@ -12,12 +12,15 @@ import type {
     Heading,
     Paragraph,
 } from "../types/block"
-
+import { uuid } from "../utils"
 
 function parseBlock(text: string): Block {
     const document: Document = {
+        id: uuid(),
         type: "document",
         children: [],
+        startIndex: 0,
+        endIndex: 0,
     }
 
     const documentBlock: BlockContext = {
@@ -76,10 +79,13 @@ function parseBlock(text: string): Block {
                     lastBlock.finalize(lineEndPos)
 
                     const heading: Heading = {
+                        id: uuid(),
                         type: "heading",
                         level,
                         children: para.children || [],
                         rawText: para.rawText + "\n" + rawLine,
+                        pureText: para.rawText.trim(),
+                        synthText: para.rawText.trim(),
                         startIndex: para.startIndex,
                         endIndex: lineEndPos,
                     }
@@ -117,15 +123,22 @@ function parseBlock(text: string): Block {
             }
         }
 
+        // after refactor improve loop safeguard
+        let loopCounter = 0
         while (true) {
+            if (++loopCounter > 100) {
+                console.error("1. Potential infinite loop detected", JSON.stringify(openBlocks, null, 2))
+                break
+            }
+
             const parent = openBlocks[openBlocks.length - 1]
 
             if (parent.type === "list") {
                 const newItem = tryOpenListItem(line, parent, lineStartPos)
                 if (newItem) {
                     openBlocks.push(newItem)
-                    break
                 }
+                break
             }
 
             if (parent.type === "listItem") {
@@ -149,7 +162,13 @@ function parseBlock(text: string): Block {
         currentPos = lineEndPos
     }
 
-    while (openBlocks.length > 1) {
+    // after refactor improve loop safeguard
+    let loopLimit = 0
+    while (openBlocks.length > 1 && loopLimit > 0) {
+        if (++loopLimit > 100) {
+            console.error("2. Potential infinite loop detected", JSON.stringify(openBlocks, null, 2))
+            break
+        }
         const blockToClose = openBlocks.pop()!
         closeBlock(blockToClose, currentPos)
     }

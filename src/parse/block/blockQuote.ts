@@ -2,6 +2,7 @@ import { isContainerBlock } from "../context/BlockContext"
 import { LineState } from "../context/LineState"
 import type { BlockContext } from "../../types"
 import type { BlockQuote } from "../../types/block"
+import { uuid } from "../../utils"
 
 function tryOpenBlockQuote(
     line: LineState,
@@ -16,6 +17,7 @@ function tryOpenBlockQuote(
 
     const originalLine = line.text
     const node: BlockQuote = {
+        id: uuid(),
         type: "blockQuote",
         children: [],
         rawText: "",

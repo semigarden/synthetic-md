@@ -1,7 +1,8 @@
-import { isContainerBlock } from "../context/BlockContext"
+import { isContainerBlock, isLeafBlockType } from "../context/BlockContext"
 import { LineState } from "../context/LineState"
 import type { BlockContext } from "../../types"
 import type { CodeBlock } from "../../types/block"
+import { uuid } from "../../utils"
 
 function tryOpenIndentedCodeBlock(
     line: LineState,
@@ -9,6 +10,7 @@ function tryOpenIndentedCodeBlock(
     startIndex: number,
 ): BlockContext | null {
     if (!isContainerBlock(parent.node)) return null
+    if (isLeafBlockType(parent.type)) return null
 
     const indent = line.countIndent()
     if (indent < 4) return null
@@ -22,7 +24,9 @@ function tryOpenIndentedCodeBlock(
 
     const originalLine = line.text
     const node: CodeBlock = {
+        id: uuid(),
         type: "codeBlock",
+        children: [],
         language: "",
         code: "",
         rawText: "",
