@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect, useCallback, useState } from "react"
+import React, { useRef, useLayoutEffect, useCallback, useState, useEffect } from "react"
 import styles from "../styles/Synth.module.scss"
 
 type TextBuffer = {
@@ -58,113 +58,62 @@ const Synth: React.FC<{
     cursor: 0,
   });
 
+  useEffect(() => {
+    setBuffer((prev) => {
+      if (value !== prev.text) {
+        return {
+          text: value,
+          cursor: Math.min(prev.cursor, value.length),
+        };
+      }
+      return prev;
+    });
+  }, [value]);
+
   const blocks = parseBlocks(buffer.text);
   const activeBlockIndex = findActiveBlock(blocks, buffer.cursor);
   const activeBlock = blocks[activeBlockIndex];
 
   const updateCaretPosition = useCallback(() => {
-    if (!caretRef.current || !containerRef.current || activeBlockIndex === -1) {
-      if (caretRef.current) {
-        caretRef.current.style.display = "none";
-      }
-      return;
-    }
-
-    const blockEl = containerRef.current.querySelector(
-      `[data-block-index="${activeBlockIndex}"]`
-    ) as HTMLElement;
-    if (!blockEl) return;
-
-    const localOffset = buffer.cursor - activeBlock.start;
-    
-    const contentEl = blockEl.firstElementChild || blockEl;
-    
-    const walker = document.createTreeWalker(
-      contentEl,
-      NodeFilter.SHOW_TEXT,
-      null
-    );
-    
-    let charCount = 0;
-    let targetNode: Text | null = null;
-    let targetOffset = 0;
-    
-    let node = walker.nextNode();
-    while (node) {
-      const textNode = node as Text;
-      const nodeLength = textNode.textContent?.length || 0;
-      
-      if (charCount + nodeLength >= localOffset) {
-        targetNode = textNode;
-        targetOffset = localOffset - charCount;
-        break;
-      }
-      
-      charCount += nodeLength;
-      node = walker.nextNode();
-    }
-    
-    if (!targetNode) {
-      const allTextNodes: Text[] = [];
-      const textWalker = document.createTreeWalker(
-        contentEl,
-        NodeFilter.SHOW_TEXT,
-        null
-      );
-      while (textWalker.nextNode()) {
-        allTextNodes.push(textWalker.currentNode as Text);
-      }
-      
-      if (allTextNodes.length > 0) {
-        targetNode = allTextNodes[allTextNodes.length - 1];
-        targetOffset = targetNode.textContent?.length || 0;
-      } else {
-        const range = document.createRange();
-        range.selectNodeContents(contentEl);
-        range.collapse(false);
-        const rect = range.getBoundingClientRect();
-        const blockRect = blockEl.getBoundingClientRect();
-        
-        caretRef.current.style.display = "block";
-        caretRef.current.style.left = `${rect.left - blockRect.left}px`;
-        caretRef.current.style.top = `${rect.top - blockRect.top}px`;
-        caretRef.current.style.height = `${rect.height || 20}px`;
+    if (!caretRef.current || !containerRef.current || activeBlockIndex === -1 || !activeBlock) {
+        if (caretRef.current) {
+            caretRef.current.style.display = "none";
+        }
         return;
       }
-    }
     
-    const marker = document.createTextNode("\u200B");
-    const parent = targetNode.parentNode;
-    if (!parent) return;
+      const blockEl = containerRef.current.querySelector(
+        `[data-block-index="${activeBlockIndex}"]`
+      ) as HTMLElement;
+      if (!blockEl) return;
     
-    const textBefore = targetNode.textContent?.slice(0, targetOffset) || "";
-    const textAfter = targetNode.textContent?.slice(targetOffset) || "";
+      const localOffset = buffer.cursor - activeBlock.start;
+      const textBeforeCursor = activeBlock.text.slice(0, localOffset);
     
-    targetNode.textContent = textBefore;
-    const afterNode = document.createTextNode(textAfter);
+      const measurer = document.createElement("span");
+      measurer.style.visibility = "hidden";
+      measurer.style.position = "absolute";
+      measurer.style.top = "0";
+      measurer.style.left = "0";
+      measurer.style.whiteSpace = "pre-wrap";
+      measurer.style.wordBreak = "break-word";
+      measurer.style.font = window.getComputedStyle(blockEl).font;
+      measurer.style.lineHeight = window.getComputedStyle(blockEl).lineHeight;
+      measurer.style.letterSpacing = window.getComputedStyle(blockEl).letterSpacing;
+      measurer.textContent = textBeforeCursor || "\u200B";
     
-    if (targetNode.nextSibling) {
-      parent.insertBefore(marker, targetNode.nextSibling);
-      parent.insertBefore(afterNode, marker.nextSibling);
-    } else {
-      parent.appendChild(marker);
-      parent.appendChild(afterNode);
-    }
+      const contentWrapper = blockEl.querySelector("span") || blockEl;
+      contentWrapper.appendChild(measurer);
     
-    const range = document.createRange();
-    range.setStartBefore(marker);
-    range.setEndBefore(marker);
-    const rect = range.getBoundingClientRect();
-    const blockRect = blockEl.getBoundingClientRect();
+      const measurerRect = measurer.getBoundingClientRect();
+      const blockRect = blockEl.getBoundingClientRect();
     
-    targetNode.textContent = (textBefore + textAfter);
-    marker.remove();
-    afterNode.remove();
+      measurer.remove();
     
-    caretRef.current.style.display = "block";
-    caretRef.current.style.left = `${rect.left - blockRect.left}px`;
-    caretRef.current.style.top = `${rect.top - blockRect.top}px`;
-    caretRef.current.style.height = `${rect.height || 20}px`;
+      caretRef.current.style.display = "block";
+      caretRef.current.style.left = `${measurerRect.right - blockRect.left}px`;
+      caretRef.current.style.top = `${measurerRect.top - blockRect.top}px`;
+      caretRef.current.style.height = `${measurerRect.height || 20}px`;
   }, [buffer.cursor, activeBlockIndex, activeBlock?.text, activeBlock?.start]);
 
   useLayoutEffect(() => {
@@ -223,7 +172,6 @@ const Synth: React.FC<{
         e.preventDefault();
         newCursor++;
       } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-        // printable character
         e.preventDefault();
         newText =
           buffer.text.slice(0, newCursor) + e.key + buffer.text.slice(newCursor);
@@ -245,6 +193,10 @@ const Synth: React.FC<{
   const renderActiveBlock = (block: Block) => {
     const localCursor = buffer.cursor - block.start;
     const tokens = tokenizeBlock(block.text);
+
+    if (tokens.length === 0) {
+      return <span>{"\u200B"}</span>;
+    }
 
     let charCount = 0;
     return tokens.map((token, i) => {
@@ -299,7 +251,7 @@ const Synth: React.FC<{
             }}
           >
             {isActive ? (
-              <span style={{ fontWeight: "bold" }}>
+              <span style={{ display: "inline" }}>
                 {renderActiveBlock(block)}
               </span>
             ) : (
@@ -321,6 +273,11 @@ function parseBlocks(text: string): Block[] {
   const lines = text.split("\n");
   const blocks: Block[] = [];
   let offset = 0;
+  
+  if (lines.length === 0 || (lines.length === 1 && lines[0] === "")) {
+    return [{ type: "paragraph", text: "", start: 0, end: 0 }];
+  }
+  
   for (const line of lines) {
     const lineStart = offset;
     const lineEnd = offset + line.length;
@@ -355,8 +312,10 @@ function renderBlock(block: Block): React.ReactNode {
           <div>{content}</div>
         </div>
       );
+    case "line-break":
+      return <p style={{ margin: "8px 0", minHeight: "1.2em" }}>{content || "\u200B"}</p>;
     default:
-      return <p style={{ margin: "8px 0" }}>{content}</p>;
+      return <p style={{ margin: "8px 0", minHeight: "1.2em" }}>{content || "\u200B"}</p>;
   }
 }
 
