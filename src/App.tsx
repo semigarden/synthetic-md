@@ -1,5 +1,5 @@
 import Editor from '@/components/Editor'
-import { SyntheticText } from './components/SyntheticText'
+import { Synthetic } from './synthetic/Synthetic'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import useStore from './hooks/useStore'
 
@@ -40,7 +40,7 @@ function App() {
 
   return (
     // <Editor />
-    <SyntheticText text={text} onChange={onChange} value={text} />
+    <Synthetic text={text} onChange={onChange} value={text} />
   )
 }
 
