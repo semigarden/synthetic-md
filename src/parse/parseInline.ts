@@ -139,9 +139,13 @@ function parseInline(
                 }
             }
             if (found) continue
+            // If no matching backtick found, treat as regular character and advance
+            pos++
+            continue
         }
 
         if (text[pos] === "<") {
+            let matched = false
             const end = text.indexOf(">", pos + 1)
             if (end !== -1) {
                 const content = text.slice(pos + 1, end)
@@ -160,9 +164,8 @@ function parseInline(
                     })
                     pos = end + 1
                     textStart = pos
-                    continue
-                }
-                if (
+                    matched = true
+                } else if (
                     /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
                         content,
                     )
@@ -181,71 +184,76 @@ function parseInline(
                     })
                     pos = end + 1
                     textStart = pos
-                    continue
+                    matched = true
                 }
             }
-        }
-
-        if (text[pos] === "<") {
-            const htmlTagMatch = text
-                .slice(pos)
-                .match(/^<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/)
-            if (htmlTagMatch) {
-                const fullMatch = htmlTagMatch[0]
-                const tagName = htmlTagMatch[2].toLowerCase()
-                const inlineTags = [
-                    "a",
-                    "abbr",
-                    "acronym",
-                    "b",
-                    "bdo",
-                    "big",
-                    "br",
-                    "button",
-                    "cite",
-                    "code",
-                    "dfn",
-                    "em",
-                    "i",
-                    "img",
-                    "input",
-                    "kbd",
-                    "label",
-                    "map",
-                    "object",
-                    "output",
-                    "q",
-                    "samp",
-                    "script",
-                    "select",
-                    "small",
-                    "span",
-                    "strong",
-                    "sub",
-                    "sup",
-                    "textarea",
-                    "time",
-                    "tt",
-                    "var",
-                ]
-                if (inlineTags.includes(tagName)) {
-                    addText(textStart, pos)
-                    const rawText = fullMatch
-                    const startIndex = startOffset + pos
-                    const endIndex = startOffset + pos + fullMatch.length
-                    result.push({ 
-                        id: uuid(),
-                        type: "HTML", 
-                        html: fullMatch,
-                        rawText,
-                        startIndex,
-                        endIndex,
-                    })
-                    pos += fullMatch.length
-                    textStart = pos
-                    continue
+            
+            if (!matched) {
+                const htmlTagMatch = text
+                    .slice(pos)
+                    .match(/^<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/)
+                if (htmlTagMatch) {
+                    const fullMatch = htmlTagMatch[0]
+                    const tagName = htmlTagMatch[2].toLowerCase()
+                    const inlineTags = [
+                        "a",
+                        "abbr",
+                        "acronym",
+                        "b",
+                        "bdo",
+                        "big",
+                        "br",
+                        "button",
+                        "cite",
+                        "code",
+                        "dfn",
+                        "em",
+                        "i",
+                        "img",
+                        "input",
+                        "kbd",
+                        "label",
+                        "map",
+                        "object",
+                        "output",
+                        "q",
+                        "samp",
+                        "script",
+                        "select",
+                        "small",
+                        "span",
+                        "strong",
+                        "sub",
+                        "sup",
+                        "textarea",
+                        "time",
+                        "tt",
+                        "var",
+                    ]
+                    if (inlineTags.includes(tagName)) {
+                        addText(textStart, pos)
+                        const rawText = fullMatch
+                        const startIndex = startOffset + pos
+                        const endIndex = startOffset + pos + fullMatch.length
+                        result.push({ 
+                            id: uuid(),
+                            type: "HTML", 
+                            html: fullMatch,
+                            rawText,
+                            startIndex,
+                            endIndex,
+                        })
+                        pos += fullMatch.length
+                        textStart = pos
+                        matched = true
+                    }
                 }
             }
+            
+            if (matched) continue
+            // If no HTML/autolink pattern matched, treat as regular character and advance
+            pos++
+            continue
         }
 
         if (
@@ -330,6 +338,9 @@ function parseInline(
                     }
                 }
             }
+            // If no matching ] found or no valid image pattern, treat as regular characters and advance
+            pos++
+            continue
         }
 
         if (text[pos] === "[") {
@@ -437,6 +448,9 @@ function parseInline(
                     }
                 }
             }
+            // If no matching ] found or no valid link pattern, treat as regular character and advance
+            pos++
+            continue
         }
 
         if (text[pos] === "*" || text[pos] === "_") {

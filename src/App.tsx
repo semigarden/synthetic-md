@@ -1,5 +1,5 @@
 import Editor from '@/components/Editor'
-import { Synth } from './synthetic/Synth'
+import SyntheticText from './synthetic/S'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import useStore from './hooks/useStore'
 
@@ -33,13 +33,13 @@ function App() {
     }
   }, [text, saveText])
 
-  const onChange = useCallback((e: any) => {
-    setText(e.target.value)
+  const onChange = useCallback((e: React.ChangeEvent<HTMLDivElement>) => {
+    setText(e.currentTarget.innerText)
   }, [])
 
   return (
     // <Editor />
-    <Synth value={text} onChange={onChange} />
+    <SyntheticText value={text} onChange={onChange} />
   )
 }
 
