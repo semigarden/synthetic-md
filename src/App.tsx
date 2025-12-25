@@ -34,7 +34,6 @@ function App() {
   }, [text, saveText])
 
   const onChange = useCallback((e: any) => {
-    console.log(e.target.value)
     setText(e.target.value)
   }, [])
 

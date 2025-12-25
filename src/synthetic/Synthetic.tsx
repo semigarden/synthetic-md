@@ -81,42 +81,73 @@ const Synthetic: React.FC<{
         }
       }, [activeBlock?.start, bufferRef.current.text])
   
-    const onBlockInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
-      if (!activeRef.current || !activeBlock) return
-  
-      const newText = activeRef.current.textContent ?? ""
-      const oldText = lastCommittedTextRef.current ?? activeBlock.text
-  
-      const sel = window.getSelection()
-      const range = sel?.rangeCount ? sel.getRangeAt(0) : null
-  
-      let cursor = 0
-      if (range && activeRef.current.contains(range.startContainer)) {
-        const preRange = range.cloneRange()
-        preRange.setStart(activeRef.current, 0)
-        preRange.setEnd(range.startContainer, range.startOffset)
-        const localOffset = preRange.toString().length
-        cursor = activeBlock.start + localOffset
-      } else {
-        const delta = newText.length - oldText.length
-        cursor = bufferRef.current.selection.start + delta
-      }
-  
-      const before = bufferRef.current.text.slice(0, activeBlock.start)
-      const after = bufferRef.current.text.slice(activeBlock.end)
-      bufferRef.current.text = before + newText + after
-      bufferRef.current.selection = { start: cursor, end: cursor }
-      lastCommittedTextRef.current = newText
-  
-      onChange?.({
-        ...e,
-        target: { ...e.currentTarget, value: bufferRef.current.text },
-        currentTarget: { ...e.currentTarget, value: bufferRef.current.text },
-      } as React.ChangeEvent<HTMLDivElement>)
-  
-      forceRender(x => x + 1)
-    }, [activeBlock, onChange])
+      const onBlockInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
+        if (!activeRef.current || !activeBlock) return;
+      
+        const newText = activeRef.current.textContent ?? "";
+      
+        const { start: localStart, end: localEnd } = readSelection(activeRef.current);
+      
+        const globalStart = activeBlock.start + localStart;
+        const globalEnd = activeBlock.start + localEnd;
+      
+        const before = bufferRef.current.text.slice(0, activeBlock.start);
+        const after = bufferRef.current.text.slice(activeBlock.end);
+        bufferRef.current.text = before + newText + after;
+      
+        bufferRef.current.selection = {
+          start: globalStart,
+          end: globalEnd,
+        };
+      
+        lastCommittedTextRef.current = newText;
+      
+        onChange?.({
+          ...e,
+          target: { ...e.currentTarget, value: bufferRef.current.text },
+          currentTarget: { ...e.currentTarget, value: bufferRef.current.text },
+        } as React.ChangeEvent<HTMLDivElement>);
+      
+        forceRender(x => x + 1);
+      }, [activeBlock, onChange]);
 
+      const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key !== "Enter" || !activeRef.current || !activeBlock) return;
+      
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return;
+      
+        const range = sel.getRangeAt(0);
+        if (!activeRef.current.contains(range.startContainer)) return;
+      
+        e.preventDefault();
+      
+        const preRange = document.createRange();
+        preRange.setStart(activeRef.current, 0);
+        preRange.setEnd(range.startContainer, range.startOffset);
+        const localCursor = preRange.toString().length;
+      
+        const currentText = activeRef.current.textContent ?? "";
+        const beforeText = currentText.slice(0, localCursor);
+        const afterText = currentText.slice(localCursor);
+      
+        const beforeBlock = bufferRef.current.text.slice(0, activeBlock.start);
+        const afterBlock = bufferRef.current.text.slice(activeBlock.end);
+        const newFullText = beforeBlock + beforeText + "\n" + afterText + afterBlock;
+      
+        bufferRef.current.text = newFullText;
+      
+        const newCursorPos = activeBlock.start + beforeText.length + 1; // +1 for \n
+        bufferRef.current.selection = { start: newCursorPos, end: newCursorPos };
+      
+        onChange?.({
+          ...e,
+          target: { value: newFullText } as any,
+          currentTarget: { value: newFullText } as any,
+        } as React.ChangeEvent<HTMLDivElement>);
+      
+        forceRender(x => x + 1);
+      }, [activeBlock, onChange]);
   
     return (
       <div 
@@ -132,6 +163,7 @@ const Synthetic: React.FC<{
                 contentEditable
                 suppressContentEditableWarning
                 onInput={onBlockInput}
+                onKeyDown={onKeyDown}
                 style={{ whiteSpace: "pre-wrap", outline: "none" }}
                 data-start={block.start}
                 data-end={block.end}
@@ -143,21 +175,36 @@ const Synthetic: React.FC<{
   
           return (
             <div
-              key={block.start}
-              onMouseDown={(e) => {
-                e.preventDefault()
-              
+                key={block.start}
+                onMouseDown={(e) => {
+                e.preventDefault();
+
+                const target = e.target as HTMLElement;
+                if (!(target instanceof HTMLElement)) return;
+
+                const blockEl = target.closest('[data-start]') as HTMLElement;
+                if (!blockEl) return;
+
+                const clickX = e.clientX;
+                const clickY = e.clientY;
+
+                const localOffset = getCaretCharacterOffset(blockEl, clickX, clickY);
+
+                const clampedOffset = Math.max(0, Math.min(localOffset, block.text.length));
+
+                const globalPos = block.start + clampedOffset;
+
                 bufferRef.current.selection = {
-                  start: block.start,
-                  end: block.start,
-                }
-              
-                forceRender(x => x + 1)
-              }}
-              data-start={block.start}
-              data-end={block.end}
+                    start: globalPos,
+                    end: globalPos,
+                };
+
+                forceRender(x => x + 1);
+                }}
+                data-start={block.start}
+                data-end={block.end}
             >
-              {renderInline(block.text)}
+                {renderInline(block.text)}
             </div>
           )
         })}
@@ -236,6 +283,33 @@ function parseBlocks(text: string): Block[] {
     return result
   }
 
+  function getCaretCharacterOffset(element: HTMLElement, clientX: number, clientY: number): number {
+    let offset = 0;
+  
+    if (typeof document.caretRangeFromPoint === "function") {
+      const range = document.caretRangeFromPoint(clientX, clientY);
+      if (range && element.contains(range.startContainer)) {
+        const preCaretRange = document.createRange();
+        preCaretRange.setStart(element, 0);
+        preCaretRange.setEnd(range.startContainer, range.startOffset);
+        offset = preCaretRange.toString().length;
+        return offset;
+      }
+    }
+  
+    if ((document as any).caretPositionFromPoint) {
+      const pos = (document as any).caretPositionFromPoint(clientX, clientY);
+      if (pos && element.contains(pos.offsetNode)) {
+        const preCaretRange = document.createRange();
+        preCaretRange.setStart(element, 0);
+        preCaretRange.setEnd(pos.offsetNode, pos.offset);
+        offset = preCaretRange.toString().length;
+        return offset;
+      }
+    }
+  
+    return element.textContent?.length ?? 0;
+  }
   
 
 function readSelection(root: HTMLElement): { start: number; end: number } {
