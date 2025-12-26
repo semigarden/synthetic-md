@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { InlineContext } from './useSynth';
+import styles from '../styles/Synth.module.scss';
 
 const Inline: React.FC<{
   inline: InlineContext;
@@ -39,12 +40,14 @@ const Inline: React.FC<{
   return (
     <span
       ref={ref}
+      className={styles.inline}
       contentEditable
       suppressContentEditableWarning
       tabIndex={0}
       onFocus={onFocus}
       onBlur={onBlur}
       onInput={onInput}
+      data-type={inline.type}
       style={{
         outline: focused ? "1px solid #4af" : "none",
         whiteSpace: "pre-wrap",
