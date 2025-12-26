@@ -3,8 +3,6 @@ import SyntheticText from './synthetic/S'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import useStore from './hooks/useStore'
 
-
-
 function App() {
   const { loadText, saveText } = useStore()
   const [text, setText] = useState('')

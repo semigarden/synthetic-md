@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import styles from '../styles/SyntheticText.module.scss'
-import type { InlineContext } from './Block'
+import styles from '../styles/Synth.module.scss'
+import type { InlineContext } from './useSynth'
 
 const Inline: React.FC<{
     className?: string;
@@ -70,9 +70,7 @@ const Inline: React.FC<{
 
         setFocus(false)
         setSelection(null)
-        if (text !== inline.pure) {
-            onEdit(inline, text)
-        }
+        onEdit(inline, text)
     }, [text, inline, onEdit])
 
     const onKeyDown = useCallback(
@@ -128,7 +126,7 @@ const Inline: React.FC<{
               : text.slice(0, start) + e.key + text.slice(end);
     
             setText(newText);
-            // onEdit(inline, newText); // optional: notify on every change
+            // onEdit(inline, newText)
     
             setSelection({ start: (selection?.start || start) + 1, end: (selection?.start || start) + 1 });
             return;
@@ -159,13 +157,13 @@ const Inline: React.FC<{
             }
     
             setText(newText);
-            // onEdit(inline, newText);
+            // onEdit(inline, newText)
             setSelection({ start: newCursorPos, end: newCursorPos });
           }
         },
-        [text, selection, inline, onEdit]
+        [text, selection, inline]
     );
-    console.log("text", JSON.stringify(inline, null, 2), text)
+    // console.log("text", JSON.stringify(inline, null, 2), text)
 
     return (
         <span ref={inlineRef} className={`${styles.inline} ${className}`}

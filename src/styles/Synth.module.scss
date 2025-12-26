@@ -31,8 +31,9 @@
 .caret {
     position: absolute;
     width: 1px;
+    height: 1em;
     background-color: #fff;
-    display: none;
+    // display: none;
     animation: blink 1s step-end infinite;
     pointer-events: none;
     z-index: 10;
