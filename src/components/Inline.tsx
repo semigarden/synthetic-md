@@ -4,9 +4,11 @@ import styles from '../styles/Synth.module.scss';
 
 const Inline: React.FC<{
   inline: InlineContext;
+  synth: any;
   onEdit?: (inline: InlineContext, text: string) => void;
   onMergePrev?: (inline: InlineContext) => void;
-}> = ({ inline, onEdit, onMergePrev }) => {
+  onSplitBlock?: (inlineBlockId: string, inlineStart: number, caretOffset: number) => void;
+}> = ({ inline, synth, onEdit, onMergePrev, onSplitBlock }) => {
   const ref = useRef<HTMLSpanElement>(null);
   const [focused, setFocused] = useState(false);
 
@@ -45,6 +47,29 @@ const Inline: React.FC<{
 
   const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLSpanElement>) => {
     if (!ref.current) return;
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+
+      const range = sel.getRangeAt(0);
+      let caretOffset = 0;
+
+      if (range.endContainer.nodeType === Node.TEXT_NODE) {
+        caretOffset = range.endOffset;
+      } else {
+        caretOffset = ref.current.textContent?.length ?? 0;
+      }
+
+      const blockEl = ref.current?.closest('[data-block-id]');
+      if (!blockEl) return;
+
+      console.log("blockEl", blockEl)
+
+      onSplitBlock?.(inline.blockId, inline.start, caretOffset);
+    }
   
     if (e.key === "Backspace") {
       const sel = window.getSelection();
@@ -65,7 +90,6 @@ const Inline: React.FC<{
 
       e.preventDefault();
       onMergePrev?.(inline);
-      console.log("onKeyDown", ref.current.textContent)
     }
   }, [inline, onEdit, onMergePrev]);
 
@@ -93,6 +117,7 @@ const Inline: React.FC<{
       onBlur={onBlur}
       onInput={onInput}
       onKeyDown={onKeyDown}
+      data-block-id={inline.blockId}
       data-type={inline.type}
       style={{
         outline: focused ? "1px solid #4af" : "none",

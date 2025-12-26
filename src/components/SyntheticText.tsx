@@ -122,6 +122,43 @@ const SyntheticText: React.FC<{
         });
     };
 
+    const onSplitBlock = (inlineBlockId: string, inlineStart: number, caretOffset: number) => {
+        const index = blocks.findIndex(b => b.id === inlineBlockId);
+        if (index === -1) return;
+
+        const block = blocks[index];
+
+        const caret = inlineStart + caretOffset;
+        const isAtStart = caret === 0;
+        const isAtEnd   = caret === block.text.length;
+
+        let newText: string;
+
+        if (isAtStart || isAtEnd) {
+            newText =
+                value.slice(0, block.start) +
+                (isAtStart
+                    ? "\n\n" + block.text
+                    : block.text + "\n\n") +
+                value.slice(block.end);
+        } else {
+            newText =
+                value.slice(0, block.start) +
+                block.text.slice(0, caret) +
+                "\n" +
+                block.text.slice(caret) +
+                value.slice(block.end);
+        }
+
+        if (!newText.endsWith("\n")) {
+            newText += "\n";
+        }
+
+        const event = {
+            target: { value: newText },
+        } as unknown as React.ChangeEvent<HTMLDivElement>
+        onChange?.(event)
+    }
 
     return (
         <div
@@ -136,6 +173,7 @@ const SyntheticText: React.FC<{
                     block={block}
                     onBlockEdit={onBlockEdit}
                     onMergePrev={onMergePrev}
+                    onSplitBlock={onSplitBlock}
                 />
             ))}
         </div>

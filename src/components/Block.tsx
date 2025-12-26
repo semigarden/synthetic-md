@@ -9,12 +9,14 @@ const Block: React.FC<{
     block: BlockContext;
     onBlockEdit?: (block: BlockContext, text: string) => void;
     onMergePrev?: (inline: InlineContext) => void;
+    onSplitBlock?: (inlineBlockId: string, inlineStart: number, caretOffset: number) => void;
 }> = ({
     className = "",
     synth,
     block,
     onBlockEdit = (_block: BlockContext, _text: string) => {},
     onMergePrev = (_inline: InlineContext) => {},
+    onSplitBlock = (_inlineBlockId: string, _inlineStart: number, _caretOffset: number) => {},
 }) => {
     const inlines = synth.parseInline(block)
 
@@ -27,6 +29,7 @@ const Block: React.FC<{
 
     return (
         <div className={`${styles.block} ${className}`}
+            data-block-id={block.id}
             data-start={block.start}
             data-end={block.end}
             style={{
@@ -40,7 +43,7 @@ const Block: React.FC<{
             }}
         >
             {inlines.map((inline: InlineContext) => (
-                <Inline key={inline.id} inline={inline} onEdit={onInlineEdit} onMergePrev={onMergePrev} />
+                <Inline key={inline.id} inline={inline} synth={synth} onEdit={onInlineEdit} onMergePrev={onMergePrev} onSplitBlock={onSplitBlock} />
             ))}
         </div>
     )

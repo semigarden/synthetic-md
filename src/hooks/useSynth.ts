@@ -66,9 +66,12 @@ function useSynth() {
             : offset + line.length + 1;
     
         const type = line.trim() === "" ? "empty" : detectType(line);
-    
-        // collapse consecutive empty paragraphs
-        if (line === "" && nextBlocks.at(-1)?.text === "") {
+
+        if (
+          line === "" &&
+          nextBlocks.at(-1)?.text === "" &&
+          !text.includes("\n\n")
+        ) {
           offset = end;
           continue;
         }
