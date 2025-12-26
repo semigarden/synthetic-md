@@ -14,7 +14,7 @@ const Block: React.FC<{
     block,
     onBlockEdit = (_block: BlockContext, _text: string) => {},
 }) => {
-    const inlines = synth.parseInlines(block)
+    const inlines = synth.parseInline(block)
 
     const onInlineEdit = (inline: InlineContext, text: string) => {
         const newText = block.text.slice(0, inline.start) + text + block.text.slice(inline.end)
@@ -22,20 +22,25 @@ const Block: React.FC<{
         onBlockEdit(block, newText)
     }
 
+    console.log("inlines", JSON.stringify(inlines, null, 2))
+
     return (
-        <p className={`${styles.block} ${className}`}
+        <div className={`${styles.block} ${className}`}
             data-start={block.start}
             data-end={block.end}
-            contentEditable
-            suppressContentEditableWarning
             style={{
                 minHeight: '1em',
+            }}
+            onClick={() => {
+                if (inlines.length === 0) return;
+                const firstInlineEl = document.getElementById(inlines[0].id);
+                if (firstInlineEl) (firstInlineEl as HTMLElement).focus();
             }}
         >
             {inlines.map((inline: InlineContext) => (
                 <Inline key={inline.id} inline={inline} onEdit={onInlineEdit} />
             ))}
-        </p>
+        </div>
     )
 }
 

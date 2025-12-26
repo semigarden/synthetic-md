@@ -65,7 +65,7 @@ function useSynth() {
             ? text.length
             : offset + line.length + 1;
     
-        const type = line === "" ? "paragraph" : detectType(line);
+        const type = line.trim() === "" ? "empty" : detectType(line);
     
         // collapse consecutive empty paragraphs
         if (line === "" && nextBlocks.at(-1)?.text === "") {
@@ -219,6 +219,51 @@ function useSynth() {
         return next;
     }
 
+    function parseInline(block: BlockContext): InlineContext[] {
+      if (block.text === "") {
+        return [{
+          id: `empty-${block.id}`,
+          blockId: block.id,
+          type: "text",
+          pure: "",
+          synthetic: "",
+          start: 0,
+          end: 0
+        }];
+      }
+
+      switch (block.type) {
+        case "paragraph":
+        case "heading":
+        case "block-quote":
+        case "list-item":
+          return parseInlines(block);
+    
+        case "empty":
+          return [{
+            id: `empty-${block.id}`,
+            blockId: block.id,
+            type: "text",
+            pure: "",
+            synthetic: "",
+            start: 0,
+            end: 0
+          }];
+    
+        default:
+          return [{
+            id: `fallback-${block.id}`,
+            blockId: block.id,
+            type: "text",
+            pure: block.text,
+            synthetic: block.text,
+            start: 0,
+            end: block.text.length
+          }];
+      }
+    }
+    
+
     const save = ((inline: InlineContext, blockId: string, text: string) => {
         const block = allBlocks.current.find((b: BlockContext) => b.id === blockId)
         console.log("newText", blockId, JSON.stringify(allBlocks.current, null, 2))
@@ -260,10 +305,13 @@ function useSynth() {
     return {
         parseBlocks,
         parseInlines,
+        parseInline,
+        detectType,
         save,
         setPureText,
         rangeFromMouse,
         rangeToOffset,
+        inlineCache,
     } as const
 }
 

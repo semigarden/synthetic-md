@@ -7,13 +7,7 @@ const Inline: React.FC<{
   onEdit?: (inline: InlineContext, text: string) => void;
 }> = ({ inline, onEdit }) => {
   const ref = useRef<HTMLSpanElement>(null);
-
   const [focused, setFocused] = useState(false);
-  const [text, setText] = useState(inline.pure);
-
-  useLayoutEffect(() => {
-    setText(inline.pure);
-  }, [inline.pure]);
 
   useLayoutEffect(() => {
     if (!ref.current || focused) return;
@@ -35,7 +29,7 @@ const Inline: React.FC<{
 
   const onInput = useCallback(() => {
     if (!ref.current) return;
-    setText(ref.current.textContent ?? "");
+    console.log("onInput", ref.current.textContent)
     // onEdit?.(inline, ref.current.textContent ?? "");
   }, []);
 
@@ -43,6 +37,7 @@ const Inline: React.FC<{
     <span
       ref={ref}
       className={styles.inline}
+      id={inline.id}
       contentEditable
       suppressContentEditableWarning
       tabIndex={0}

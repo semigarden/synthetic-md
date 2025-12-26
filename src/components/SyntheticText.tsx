@@ -1,7 +1,7 @@
 import React, { useRef } from 'react'
 import styles from '../styles/Synth.module.scss'
 import Block from './Block'
-import useSynth, { type BlockContext } from '../hooks/useSynth'
+import useSynth, { type BlockContext, type InlineContext } from '../hooks/useSynth'
 
 
 const SyntheticText: React.FC<{
@@ -28,7 +28,33 @@ const SyntheticText: React.FC<{
             },
         } as unknown as React.ChangeEvent<HTMLDivElement>
         onChange?.(event)
+        // const newType = newText.trim() === "" ? "empty" : synth.detectType(newText);
+
+        // const newBlock: BlockContext = {
+        //     ...block,
+        //     text: newText,
+        //     type: newType,
+        //     end: block.start + newText.length,
+        // };
+
+        // // re-generate inlines based on new type
+        // const newInlines = newType === "empty"
+        //     ? [{
+        //         id: `empty-${block.id}`,
+        //         blockId: block.id,
+        //         type: "text",
+        //         pure: "",
+        //         synthetic: "",
+        //         start: 0,
+        //         end: 0
+        //     }]
+        //     : synth.parseInlines(newBlock);
+
+        // // update inline cache
+        // synth.inlineCache.set(newBlock.id, newInlines as InlineContext[]);
     }
+
+    // console.log("blocks", JSON.stringify(blocks, null, 2))
 
 
     return (
