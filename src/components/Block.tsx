@@ -31,10 +31,12 @@ const Block: React.FC<{
             style={{
                 minHeight: '1em',
             }}
-            onClick={() => {
+            onClick={(e) => {
+                e.stopPropagation();
                 if (inlines.length === 0) return;
                 const firstInlineEl = document.getElementById(inlines[0].id);
-                if (firstInlineEl && firstInlineEl.innerText === "") (firstInlineEl as HTMLElement).focus();
+                console.log("onClick", JSON.stringify(block, null, 2), firstInlineEl?.innerText)
+                if (firstInlineEl) (firstInlineEl as HTMLElement).focus();
             }}
         >
             {inlines.map((inline: InlineContext) => (

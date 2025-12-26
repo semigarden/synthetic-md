@@ -71,6 +71,7 @@ const SyntheticText: React.FC<{
 
     const onClick = (e: React.MouseEvent) => {
         // If click happened inside an inline, do nothing
+        console.log("onClick s", e.target)
         const target = e.target as HTMLElement;
         if (target.closest(`.${styles.inline}`)) return;
     
