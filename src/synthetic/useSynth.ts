@@ -12,7 +12,6 @@ export interface BlockContext {
     end: number
 }
 
-
 export type InlineType = "text" | "strong" | "em" | "code" | "link" | "image" | "autolink" | "html" | "softbreak" | "hardbreak"
 
 export interface InlineContext {
@@ -25,23 +24,12 @@ export interface InlineContext {
     end: number,
 }
 
+
 function useSynth() {
     const { saveText } = useStore()
 
-    const allBlocks = useRef<BlockContext[]>([])
-    const pureText = useRef<string>("")
-  
-    function parseBlocks(text: string): BlockContext[] {
-        const lines = text.split("\n");
-        const blocks: BlockContext[] = [];
-        let offset = 0;
-      
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          const start = offset;
-          const end = offset + line.length + 1; // +1 for \n (except last line)
-      
-          let type: BlockType = "paragraph";
+    function detectType(line: string): BlockType {
+        let type: BlockType = "paragraph";
       
           if (line.trim() === "") {
             type = "empty";
@@ -52,124 +40,174 @@ function useSynth() {
           } else if (line.match(/^\s*[-*+]\s/)) {
             type = "list-item";
           }
+
+        return type;
+    }
+
+    const inlineCache = useRef(new Map<string, InlineContext[]>()).current;
+
+    const allBlocks = useRef<BlockContext[]>([])
+    const pureText = useRef<string>("")
+  
+    function parseBlocks(text: string): BlockContext[] {
+        const prev = allBlocks.current;
+        const lines = text.split("\n");
       
-          blocks.push({
-            id: uuid(),
-            type,
+        let offset = 0;
+        const nextBlocks: BlockContext[] = [];
+      
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const start = offset;
+          const end = i === lines.length - 1
+            ? text.length
+            : offset + line.length + 1;
+      
+            const prevBlock = prev.find(
+                b => b.start === start && b.type === detectType(line)
+              );
+      
+          nextBlocks.push({
+            id: prevBlock?.id ?? uuid(),
+            type: detectType(line),
             text: line,
             start,
-            end: i === lines.length - 1 ? text.length : end, // last block ends at full length
+            end,
           });
       
           offset = end;
         }
       
-        if (blocks.length === 0) {
-          blocks.push({
-            id: uuid(),
-            type: "empty",
-            text: "",
-            start: 0,
-            end: 0,
-          });
-        }
-
-        allBlocks.current = blocks;
-      
-        return blocks;
+        allBlocks.current = nextBlocks;
+        pureText.current = text;
+        return nextBlocks;
     }
 
     function parseInlines(block: BlockContext): InlineContext[] {
-        const { text, id: blockId } = block;
-    
-        const inlines: InlineContext[] = [];
+        const prev = inlineCache.get(block.id) ?? [];
+        const next: InlineContext[] = [];
+      
         let i = 0;
-    
-        while (i < text.length) {
-            // 1. Code spans: `code`
-            if (text[i] === "`") {
-                const end = text.indexOf("`", i + 1);
-                if (end !== -1) {
-                    inlines.push({
-                        id: uuid(),
-                        type: "code",
-                        blockId: blockId,
-                        synthetic: text.slice(i + 1, end),
-                        pure: text.slice(i, end + 1),
-                        start: i,
-                        end: end + 1,
-                    });
-                    i = end + 1;
-                    continue;
-                }
+        let reuseIndex = 0;
+      
+        const reuse = (
+          type: InlineType,
+          start: number,
+          end: number,
+          synthetic: string,
+          pure: string
+        ): InlineContext => {
+          const candidate = prev[reuseIndex];
+      
+          if (
+            candidate &&
+            candidate.type === type &&
+            candidate.start === start &&
+            candidate.end === end
+          ) {
+            reuseIndex++;
+            return {
+              ...candidate,
+              synthetic,
+              pure,
+            };
+          }
+      
+          reuseIndex++;
+          return {
+            id: uuid(),
+            type,
+            blockId: block.id,
+            synthetic,
+            pure,
+            start,
+            end,
+          };
+        };
+      
+        while (i < block.text.length) {
+          const text = block.text;
+      
+          // code span
+          if (text[i] === "`") {
+            const end = text.indexOf("`", i + 1);
+            if (end !== -1) {
+              next.push(
+                reuse(
+                  "code",
+                  i,
+                  end + 1,
+                  text.slice(i + 1, end),
+                  text.slice(i, end + 1)
+                )
+              );
+              i = end + 1;
+              continue;
             }
-    
-            // 2. Bold: **
-            if (text.slice(i, i + 2) === "**") {
-                const end = text.indexOf("**", i + 2);
-                if (end !== -1) {
-                    inlines.push({
-                        id: uuid(),
-                        type: "strong",
-                        blockId: blockId,
-                        synthetic: text.slice(i + 2, end),
-                        pure: text.slice(i, end + 2),
-                        start: i,
-                        end: end + 2,
-                    });
-                    i = end + 2;
-                    continue;
-                }
+          }
+      
+          // strong **
+          if (text.slice(i, i + 2) === "**") {
+            const end = text.indexOf("**", i + 2);
+            if (end !== -1) {
+              next.push(
+                reuse(
+                  "strong",
+                  i,
+                  end + 2,
+                  text.slice(i + 2, end),
+                  text.slice(i, end + 2)
+                )
+              );
+              i = end + 2;
+              continue;
             }
-    
-            // 3. Italic: * (but not part of **)
-            if (text[i] === "*" && (i === 0 || text[i - 1] !== "*")) {
-                const end = text.indexOf("*", i + 1);
-                if (end !== -1 && text.slice(i + 1, end).trim().length > 0) {
-                    inlines.push({
-                        id: uuid(),
-                        type: "em",
-                        blockId: blockId,
-                        synthetic: text.slice(i + 1, end),
-                        pure: text.slice(i, end + 1),
-                        start: i,
-                        end: end + 1,
-                    });
-                    i = end + 1;
-                    continue;
-                }
+          }
+      
+          // em *
+          if (text[i] === "*" && text[i - 1] !== "*") {
+            const end = text.indexOf("*", i + 1);
+            if (end !== -1) {
+              next.push(
+                reuse(
+                  "em",
+                  i,
+                  end + 1,
+                  text.slice(i + 1, end),
+                  text.slice(i, end + 1)
+                )
+              );
+              i = end + 1;
+              continue;
             }
-    
-            let next = text.length;
-            for (const delim of ["**", "*", "`"]) {
-                const pos = text.indexOf(delim, i + 1);
-                if (pos !== -1 && pos < next) {
-                    next = pos;
-                }
-            }
-    
-            if (next > i) {
-                const content = text.slice(i, next);
-                if (content.length > 0) {
-                    inlines.push({
-                        id: uuid(),
-                        type: "text",
-                        blockId: blockId,
-                        synthetic: content,
-                        pure: content,
-                        start: i,
-                        end: next,
-                    });
-                }
-                i = next;
-            } else {
-                i++;
-            }
+          }
+      
+          // plain text
+          let nextDelim = text.length;
+          for (const d of ["**", "*", "`"]) {
+            const p = text.indexOf(d, i + 1);
+            if (p !== -1 && p < nextDelim) nextDelim = p;
+          }
+      
+          if (nextDelim > i) {
+            next.push(
+              reuse(
+                "text",
+                i,
+                nextDelim,
+                text.slice(i, nextDelim),
+                text.slice(i, nextDelim)
+              )
+            );
+            i = nextDelim;
+          } else {
+            i++;
+          }
         }
-    
-        return inlines;
+      
+        inlineCache.set(block.id, next);
+        return next;
     }
-    
 
     const save = ((inline: InlineContext, blockId: string, text: string) => {
         const block = allBlocks.current.find((b: BlockContext) => b.id === blockId)
@@ -216,7 +254,7 @@ function useSynth() {
         setPureText,
         rangeFromMouse,
         rangeToOffset,
-    }
+    } as const
 }
 
 export default useSynth;

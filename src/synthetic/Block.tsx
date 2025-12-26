@@ -1,21 +1,20 @@
-import React, { useState } from 'react'
+import React from 'react'
 import styles from '../styles/Synth.module.scss'
 import Inline from './Inline'
 import type { BlockContext, InlineContext } from './useSynth'
-import useSynth from './useSynth'
 
 const Block: React.FC<{
     className?: string;
+    synth: any;
     block: BlockContext;
     onBlockEdit?: (block: BlockContext, text: string) => void;
 }> = ({
     className = "",
+    synth,
     block,
-    onBlockEdit = (block: BlockContext, text: string) => {},
+    onBlockEdit = (_block: BlockContext, _text: string) => {},
 }) => {
-    const { parseInlines } = useSynth()
-
-    const inlines = parseInlines(block)
+    const inlines = synth.parseInlines(block)
 
     const onInlineEdit = (inline: InlineContext, text: string) => {
         console.log("onEdit", inline, text)
@@ -34,7 +33,7 @@ const Block: React.FC<{
                 minHeight: '1em',
             }}
         >
-            {inlines.map((inline) => (
+            {inlines.map((inline: InlineContext) => (
                 <Inline key={inline.id} inline={inline} onEdit={onInlineEdit} />
             ))}
         </p>

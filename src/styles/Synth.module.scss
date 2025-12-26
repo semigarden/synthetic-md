@@ -50,6 +50,28 @@
         padding: 0 2px;
         min-height: 1.2em;
     }
+
+    // Formatting styles when not focused (semantic HTML is lost but DOM is stable)
+    &[data-type="strong"]:not(.focus) {
+        font-weight: bold;
+    }
+
+    &[data-type="em"]:not(.focus) {
+        font-style: italic;
+    }
+
+    &[data-type="code"]:not(.focus) {
+        font-family: monospace;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 2px 4px;
+        border-radius: 2px;
+    }
+
+    &[data-type="link"]:not(.focus) {
+        color: #4a9eff;
+        text-decoration: underline;
+        cursor: pointer;
+    }
 }
 
 .blink {

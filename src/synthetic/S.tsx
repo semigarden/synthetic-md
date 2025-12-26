@@ -13,9 +13,9 @@ const SyntheticText: React.FC<{
     value,
     onChange = () => {},
 }) => {
-    const { parseBlocks } = useSynth()
+    const synth = useSynth()
     const syntheticRef = useRef<HTMLDivElement>(null)
-    const blocks = parseBlocks(value)
+    const blocks = synth.parseBlocks(value)
 
     // console.log("blocks", value, JSON.stringify(blocks, null, 2))
 
@@ -35,7 +35,7 @@ const SyntheticText: React.FC<{
         <div ref={syntheticRef} className={`${styles.syntheticText} ${className}`}
         >
             {blocks.map((block) => (
-                <Block key={block.id} block={block} onBlockEdit={onBlockEdit} />
+                <Block key={block.id} synth={synth} block={block} onBlockEdit={onBlockEdit} />
             ))}
         </div>
     )
