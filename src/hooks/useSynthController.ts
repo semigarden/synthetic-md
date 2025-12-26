@@ -1,27 +1,25 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef } from "react";
 
 import { createSynthEngine, type SynthEngine } from "./createSynthEngine";
 
 export function useSynthController(value: string) {
     const engineRef = useRef<SynthEngine>(null);
-    if (!engineRef.current) {
-        engineRef.current = createSynthEngine();
-    }
-
-    const engine = engineRef.current;
-    const [, forceRender] = useState(0);
 
     const caretRef = useRef<{
         inlineId: string;
         offset: number;
     } | null>(null);
 
-    useLayoutEffect(() => {
-        engine.receiveText(value);
-        forceRender(x => x + 1);
-    }, [value]);
+    if (!engineRef.current) {
+        engineRef.current = createSynthEngine();
+    }
+
+    const engine = engineRef.current;
+
+    engine.sync(value);
 
     function saveCaret(inlineId: string, offset: number) {
+        console.log("saveCaret", inlineId, offset)
         caretRef.current = { inlineId, offset };
     }
 
@@ -30,8 +28,10 @@ export function useSynthController(value: string) {
         if (!caret) return;
 
         const el = document.getElementById(caret.inlineId);
-        if (!el) return;
+        console.log("restoreCaret", caret.inlineId, el)
 
+        if (!el) return;
+        
         const node = el.firstChild ?? el;
         const range = document.createRange();
         range.setStart(node, Math.min(caret.offset, node.textContent?.length ?? 0));
@@ -45,9 +45,12 @@ export function useSynthController(value: string) {
     }
 
     return {
-        blocks: engine.getBlocks(),
+        blocks: engine.blocks,
         getInlines: engine.getInlines,
         applyInlineEdit: engine.applyInlineEdit,
+        syncExternalValue(value: string) {
+            engine.sync(value);
+        },
         saveCaret,
         restoreCaret,
     };

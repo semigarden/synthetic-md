@@ -1,4 +1,4 @@
-import React, { useLayoutEffect } from 'react'
+import React, { useEffect, useLayoutEffect } from 'react'
 import styles from '../styles/Synth.module.scss'
 import Inline from './Inline'
 import { useSynthController } from '../hooks/useSynthController'
