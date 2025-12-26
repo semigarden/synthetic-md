@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { uuid } from "../utils";
-import useStore from "../hooks/useStore";
+import useStore from "./useStore";
 
 export type BlockType = "paragraph" | "heading" | "block-quote" | "list-item" | "empty";
 

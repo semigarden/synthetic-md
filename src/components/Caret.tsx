@@ -2,8 +2,8 @@ import React from 'react'
 import styles from '../styles/Synth.module.scss'
 
 export type Caret = {
-    offset: number        // linear text offset
-    anchor?: number       // for selection
+    offset: number
+    anchor?: number
 }
 
 const Caret: React.FC<{ caret: Caret | null, text: string, onKeyDown?: (e: React.KeyboardEvent<HTMLSpanElement>) => void }> = ({ caret, text, onKeyDown }) => {

@@ -1,7 +1,7 @@
 import React from 'react'
 import styles from '../styles/Synth.module.scss'
 import Inline from './Inline'
-import type { BlockContext, InlineContext } from './useSynth'
+import type { BlockContext, InlineContext } from '../hooks/useSynth'
 
 const Block: React.FC<{
     className?: string;
@@ -17,12 +17,9 @@ const Block: React.FC<{
     const inlines = synth.parseInlines(block)
 
     const onInlineEdit = (inline: InlineContext, text: string) => {
-        console.log("onEdit", inline, text)
         const newText = block.text.slice(0, inline.start) + text + block.text.slice(inline.end)
 
         onBlockEdit(block, newText)
-
-        // console.log("newText", newText)
     }
 
     return (

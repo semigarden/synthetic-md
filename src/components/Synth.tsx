@@ -2,7 +2,6 @@ import React, { useRef, useEffect } from "react"
 import { useMarkdownEditor } from "../hooks/useMarkdownEditor"
 import styles from "../styles/SyntheticText.module.scss"
 import type { SyntheticTextProps } from "../types"
-import { parseBlock } from "../parse/parseBlock"
 
 const SyntheticText: React.FC<SyntheticTextProps> = ({
     className = "",
@@ -54,7 +53,7 @@ const SyntheticText: React.FC<SyntheticTextProps> = ({
 
     const handleBlur = () => {
         if (divRef.current) {
-            divRef.current.innerHTML = render(markdownText)
+            divRef.current.innerHTML = render(markdownText, { vision: "synthetic", cursor: null } )
         }
 
         isEditingRef.current = false

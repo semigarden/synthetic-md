@@ -1,5 +1,5 @@
 import Editor from '@/components/Editor'
-import SyntheticText from './synthetic/S'
+import SyntheticText from './components/SyntheticText'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import useStore from './hooks/useStore'
 
