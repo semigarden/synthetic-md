@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { InlineContext } from '../hooks/useSynth';
 import styles from '../styles/Synth.module.scss';
 
@@ -12,30 +12,32 @@ const Inline: React.FC<{
   const [text, setText] = useState(inline.pure);
 
   useLayoutEffect(() => {
-    if (!ref.current) return;
+    setText(inline.pure);
+  }, [inline.pure]);
+
+  useLayoutEffect(() => {
+    if (!ref.current || focused) return;
     ref.current.textContent = inline.synthetic;
-  }, []);
+  }, [inline.synthetic, focused]);
 
   const onFocus = useCallback(() => {
     setFocused(true);
     if (!ref.current) return;
-    ref.current.textContent = text;
-    placeCaretAtEnd(ref.current);
-  }, [text]);
-
+    ref.current.textContent = inline.pure;
+  }, [inline.pure]);
+  
   const onBlur = useCallback(() => {
     setFocused(false);
     if (!ref.current) return;
-    ref.current.textContent = inline.synthetic;
-    onEdit?.(inline, text);
-  }, [inline.synthetic, text, onEdit]);
+    onEdit?.(inline, ref.current.textContent ?? ""); // commit edits
+    ref.current.textContent = inline.synthetic; // render synthetic after committing
+  }, [inline.synthetic, inline, onEdit]);
 
   const onInput = useCallback(() => {
     if (!ref.current) return;
-    const next = ref.current.textContent ?? "";
-    setText(next);
-    // onEdit?.(inline, next);
-  }, [inline, onEdit]);
+    setText(ref.current.textContent ?? "");
+    // onEdit?.(inline, ref.current.textContent ?? "");
+  }, []);
 
   return (
     <span
@@ -57,12 +59,3 @@ const Inline: React.FC<{
 };
 
 export default Inline;
-
-function placeCaretAtEnd(el: HTMLElement) {
-  const range = document.createRange();
-  range.selectNodeContents(el);
-  range.collapse(false);
-  const sel = window.getSelection();
-  sel?.removeAllRanges();
-  sel?.addRange(range);
-}

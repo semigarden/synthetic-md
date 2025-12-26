@@ -50,37 +50,47 @@ function useSynth() {
     const pureText = useRef<string>("")
   
     function parseBlocks(text: string): BlockContext[] {
-        const prev = allBlocks.current;
-        const lines = text.split("\n");
-      
-        let offset = 0;
-        const nextBlocks: BlockContext[] = [];
-      
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          const start = offset;
-          const end = i === lines.length - 1
+      const prev = allBlocks.current;
+      const lines = text.split("\n");
+    
+      let offset = 0;
+      const nextBlocks: BlockContext[] = [];
+    
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+    
+        const start = offset;
+        const end =
+          i === lines.length - 1
             ? text.length
             : offset + line.length + 1;
-      
-            const prevBlock = prev.find(
-                b => b.start === start && b.type === detectType(line)
-              );
-      
-          nextBlocks.push({
-            id: prevBlock?.id ?? uuid(),
-            type: detectType(line),
-            text: line,
-            start,
-            end,
-          });
-      
+    
+        const type = line === "" ? "paragraph" : detectType(line);
+    
+        // collapse consecutive empty paragraphs
+        if (line === "" && nextBlocks.at(-1)?.text === "") {
           offset = end;
+          continue;
         }
-      
-        allBlocks.current = nextBlocks;
-        pureText.current = text;
-        return nextBlocks;
+    
+        const prevBlock = prev.find(
+          b => b.start === start && b.type === type
+        );
+    
+        nextBlocks.push({
+          id: prevBlock?.id ?? uuid(),
+          type,
+          text: line,
+          start,
+          end,
+        });
+    
+        offset = end;
+      }
+    
+      allBlocks.current = nextBlocks;
+      pureText.current = text;
+      return nextBlocks;
     }
 
     function parseInlines(block: BlockContext): InlineContext[] {

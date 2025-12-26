@@ -26,6 +26,8 @@ const Block: React.FC<{
         <p className={`${styles.block} ${className}`}
             data-start={block.start}
             data-end={block.end}
+            contentEditable
+            suppressContentEditableWarning
             style={{
                 minHeight: '1em',
             }}
