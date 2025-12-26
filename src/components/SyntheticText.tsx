@@ -56,12 +56,56 @@ const SyntheticText: React.FC<{
 
     // console.log("blocks", JSON.stringify(blocks, null, 2))
 
+    function placeCaretAtEnd(el: HTMLElement) {
+        const range = document.createRange();
+        const sel = window.getSelection();
+        const node = el.firstChild ?? el;
+      
+        const len = node.textContent?.length ?? 0;
+        range.setStart(node, len);
+        range.collapse(true);
+      
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+    }
+
+    const onClick = (e: React.MouseEvent) => {
+        // If click happened inside an inline, do nothing
+        const target = e.target as HTMLElement;
+        if (target.closest(`.${styles.inline}`)) return;
+    
+        // Find last block
+        const lastBlock = blocks.at(-1);
+        if (!lastBlock) return;
+    
+        const inlines = synth.parseInline(lastBlock);
+        const lastInline = inlines.at(-1);
+        if (!lastInline) return;
+    
+        const el = document.getElementById(lastInline.id);
+        if (!el) return;
+    
+        el.focus();
+    
+        requestAnimationFrame(() => {
+          placeCaretAtEnd(el);
+        });
+      };
+
 
     return (
-        <div ref={syntheticRef} className={`${styles.syntheticText} ${className}`}
+        <div
+            ref={syntheticRef}
+            className={`${styles.syntheticText} ${className}`}
+            onClick={onClick}
         >
             {blocks.map((block: BlockContext) => (
-                <Block key={block.id} synth={synth} block={block} onBlockEdit={onBlockEdit} />
+                <Block
+                    key={block.id}
+                    synth={synth}
+                    block={block}
+                    onBlockEdit={onBlockEdit}
+                />
             ))}
         </div>
     )
