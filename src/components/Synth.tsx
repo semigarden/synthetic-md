@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react"
-import { useMarkdownEditor } from "../hooks/useMarkdownEditor"
+import { useMarkdownEditor } from "../oldHooks/useMarkdownEditor"
 import styles from "../styles/SyntheticText.module.scss"
 import type { SyntheticTextProps } from "../types"
 

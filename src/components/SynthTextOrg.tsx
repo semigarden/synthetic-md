@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef } from 'react'
 import styles from '../styles/Synth.module.scss'
 import Block from './Block'
-import useSynth, { type BlockContext, type InlineContext } from '../hooks/useSynth'
+import useSynth, { type BlockContext, type InlineContext } from '../oldHooks/useSynth'
 import { useSynthController } from '../hooks/useSynthController'
 
 const SyntheticText: React.FC<{

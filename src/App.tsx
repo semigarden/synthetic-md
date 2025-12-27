@@ -1,6 +1,7 @@
-import SyntheticText, { type SyntheticTextRef } from './components/SyntheticText'
+import SyntheticText from './components/SyntheticText'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import useStore from './hooks/useStore'
+import { type SyntheticTextRef } from './hooks/useSynthController'
 
 function App() {
   const { loadText, saveText } = useStore();

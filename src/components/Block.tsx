@@ -1,7 +1,7 @@
 import React from 'react'
 import styles from '../styles/Synth.module.scss'
 import Inline from './Inline'
-import type { BlockContext, InlineContext } from '../hooks/useSynth'
+import type { BlockContext, InlineContext } from '../oldHooks/useSynth'
 
 const Block: React.FC<{
     className?: string;

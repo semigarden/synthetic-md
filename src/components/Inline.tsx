@@ -1,5 +1,5 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from "react";
-import type { InlineContext } from '../hooks/useSynth';
+import type { InlineContext } from '../oldHooks/useSynth';
 import styles from '../styles/Synth.module.scss';
 
 const Inline: React.FC<{

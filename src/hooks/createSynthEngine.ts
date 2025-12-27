@@ -1,11 +1,83 @@
 import { uuid } from "../utils";
 
-export type BlockType =
-  | "paragraph"
-  | "heading"
-  | "block-quote"
-  | "list-item"
-  | "empty";
+interface BlockType<T extends string = string> {
+    id: string
+    type: T
+    text: string
+    start: number
+    end: number
+}
+
+type Block =
+    | Document
+    | Paragraph
+    | Heading
+    | BlockQuote
+    | Code
+    | List
+    | ListItem
+    | ThematicBreak
+    | Table
+    | TableRow
+    | TableCell
+    | HTML
+    | Footnote
+    | TaskListItem
+
+interface Document extends BlockType<'document'> {
+    children: Block[]
+}
+
+interface Paragraph extends BlockType<'paragraph'> {
+}
+
+interface Heading extends BlockType<'heading'> {    start: number
+    level: number
+}
+
+interface BlockQuote extends BlockType<'blockQuote'> {
+}
+
+interface Code extends BlockType<'code'> {
+    language: string
+    code: string
+}
+
+interface List extends BlockType<'list'> {
+    ordered: boolean
+}
+
+interface ListItem extends BlockType<'listItem'> {
+}
+
+interface ThematicBreak extends BlockType<'thematicBreak'> {
+}
+
+interface Table extends BlockType<'table'> {
+}
+
+interface TableRow extends BlockType<'tableRow'> {
+}
+
+interface TableCell extends BlockType<'tableCell'> {
+}
+
+interface HTML extends BlockType<'html'> {
+}
+
+interface Footnote extends BlockType<'footnote'> {
+}
+
+interface TaskListItem extends BlockType<'taskListItem'> {
+}
+
+
+// export type BlockType =
+//   | "paragraph"
+//   | "heading"
+//   | "block-quote"
+//   | "list-item"
+//   | "empty";
 
 export type InlineType =
   | "text"
@@ -23,17 +95,9 @@ export interface InlineContext {
   end: number;
 }
 
-export interface BlockContext {
-  id: string;
-  type: BlockType;
-  text: string;
-  start: number;
-  end: number;
-}
-
 export function createSynthEngine() {
     let sourceText = "";
-    let blocks: BlockContext[] = [];
+    let blocks: Block[] = [];
     let inlines = new Map<string, InlineContext[]>();
 
     function sync(nextText: string) {
@@ -42,7 +106,7 @@ export function createSynthEngine() {
         const prevBlocks = blocks;
         const lines = nextText.split("\n");
         let offset = 0;
-        const nextBlocks: BlockContext[] = [];
+        const nextBlocks: Block[] = [];
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
@@ -53,21 +117,62 @@ export function createSynthEngine() {
             const prevBlock = prevBlocks.find(b => b.start === start && b.type === type);
             const blockId = prevBlock?.id ?? uuid();
 
-            nextBlocks.push({
-                id: blockId,
-                type,
-                text: line,
-                start,
-                end,
-            });
+            switch (type) {
+                case "paragraph":
+                    nextBlocks.push({
+                        id: blockId,
+                        type: "paragraph",
+                        text: line,
+                        start,
+                        end,
+                    });
+                    break;
+                case "heading":
+                    nextBlocks.push({
+                        id: blockId,
+                        type: "heading",
+                        level: 0,
+                        text: line,
+                        start,
+                        end,
+                    });
+                    break;
+                case "blockQuote":
+                    nextBlocks.push({
+                        id: blockId,
+                        type: "blockQuote",
+                        text: line,
+                        start,
+                        end,
+                    });
+                    break;
+                case "listItem":
+                    nextBlocks.push({
+                        id: blockId,
+                        type: "listItem",
+                        text: line,
+                        start,
+                        end,
+                    });
+                    break;
+                default:
+                    nextBlocks.push({
+                        id: blockId,
+                        type: "paragraph",
+                        text: line,
+                        start,
+                        end,
+                    });
+                    break;
+            }
 
             offset = end;
         }
 
         if (sourceText.length === 0 && (nextBlocks.length === 0 || nextBlocks[nextBlocks.length - 1].text !== "")) {
-            const emptyBlock: BlockContext = {
+            const emptyBlock: Paragraph = {
                 id: uuid(),
-                type: "empty",
+                type: "paragraph",
                 text: "",
                 start: nextText.length,
                 end: nextText.length,
@@ -92,15 +197,15 @@ export function createSynthEngine() {
         }
     }
 
-    function detectType(line: string): BlockType {
-        if (line.trim() === "") return "empty";
+    function detectType(line: string): Block["type"] {
+        if (line.trim() === "") return "paragraph";
         if (line.startsWith("# ")) return "heading";
-        if (line.startsWith("> ")) return "block-quote";
-        if (/^\s*[-*+]\s/.test(line)) return "list-item";
+        if (line.startsWith("> ")) return "blockQuote";
+        if (/^\s*[-*+]\s/.test(line)) return "listItem";
         return "paragraph";
     }
 
-    function parseInlines(block: BlockContext): InlineContext[] {
+    function parseInlines(block: Block): InlineContext[] {
         const next: InlineContext[] = [];
         let i = 0;
         const text = block.text;
@@ -122,7 +227,7 @@ export function createSynthEngine() {
 
         let loopIndex = 0;
         while (i < text.length) {
-            if (++loopIndex > 100) {
+            if (++loopIndex > 1000) {
                 console.error("Potential infinite loop detected", JSON.stringify(text, null, 2))
                 break;
             }
@@ -249,7 +354,7 @@ export function createSynthEngine() {
         return blocks;
     }
     
-    function getInlines(block: BlockContext) {
+    function getInlines(block: Block) {
         let current = inlines.get(block.id);
         if (!current || current.length === 0) {
             current = parseInlines(block);

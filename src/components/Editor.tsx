@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import styles from "../styles/Editor.module.scss"
 import useStore from "../hooks/useStore"
-import { useMarkdownEditor } from "../hooks/useMarkdownEditor"
+import { useMarkdownEditor } from "../oldHooks/useMarkdownEditor"
 
 const Editor: React.FC = () => {
   const { loadText, saveText } = useStore()
