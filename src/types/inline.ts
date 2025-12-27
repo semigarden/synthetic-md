@@ -1,120 +1,118 @@
-type Inline =
-    | Text
-    | Emphasis
-    | Strong
-    | CodeSpan
-    | Link
-    | Image
-    | Autolink
-    | HTML
-    | SoftBreak
-    | HardBreak
-
-interface Text {
+interface InlineBase {
     id: string
+    type: string
+    rawText: string
+    startIndex: number
+    endIndex: number
+}
+
+interface Text extends InlineBase {
     type: "Text"
     value: string
-    rawText: string
     pureText: string
     synthText: string
-    startIndex: number
-    endIndex: number
 }
 
-interface Emphasis {
-    id: string
-    type: "Emphasis"
-    children: Inline[]
-    rawText: string
-    startIndex: number
-    endIndex: number
-}
-
-interface Strong {
-    id: string
-    type: "Strong"
-    children: Inline[]
-    rawText: string
-    startIndex: number
-    endIndex: number
-}
-
-interface CodeSpan {
-    id: string
+interface CodeSpan extends InlineBase {
     type: "CodeSpan"
     value: string
-    rawText: string
-    startIndex: number
-    endIndex: number
 }
 
-interface Link {
-    id: string
+interface Emphasis extends InlineBase {
+    type: "Emphasis"
+    children: Inline[]
+    delimiter: "*" | "_"
+}
+
+interface Strong extends InlineBase {
+    type: "Strong"
+    children: Inline[]
+    delimiter: "**" | "__"
+}
+
+interface Link extends InlineBase {
     type: "Link"
     url: string
     title?: string
     children: Inline[]
-    rawText: string
-    startIndex: number
-    endIndex: number
 }
 
-interface Image {
-    id: string
+interface Image extends InlineBase {
     type: "Image"
     url: string
     alt: string
     title?: string
-    children: Inline[]
-    rawText: string
-    startIndex: number
-    endIndex: number
 }
 
-interface SoftBreak {
-    id: string
-    type: "SoftBreak"
-    rawText: string
-    startIndex: number
-    endIndex: number
-}
-
-interface HardBreak {
-    id: string
-    type: "HardBreak"
-    rawText: string
-    startIndex: number
-    endIndex: number
-}
-
-interface Autolink {
-    id: string
+interface Autolink extends InlineBase {
     type: "Autolink"
     url: string
-    rawText: string
-    startIndex: number
-    endIndex: number
 }
 
-interface HTML {
-    id: string
+interface HTML extends InlineBase {
     type: "HTML"
     html: string
-    rawText: string
-    startIndex: number
-    endIndex: number
 }
 
+interface HardBreak extends InlineBase {
+    type: "HardBreak"
+}
+
+interface SoftBreak extends InlineBase {
+    type: "SoftBreak"
+}
+
+interface Entity extends InlineBase {
+    type: "Entity"
+    decoded: string
+}
+
+interface Strikethrough extends InlineBase {
+    type: "Strikethrough"
+    children: Inline[]
+}
+
+interface FootnoteRef extends InlineBase {
+    type: "FootnoteRef"
+    label: string
+}
+
+interface Emoji extends InlineBase {
+    type: "Emoji"
+    name: string
+}
+
+type Inline =
+    | Text
+    | CodeSpan
+    | Emphasis
+    | Strong
+    | Link
+    | Image
+    | Autolink
+    | HTML
+    | HardBreak
+    | SoftBreak
+    | Entity
+    | Strikethrough
+    | FootnoteRef
+    | Emoji
+
 export type {
+    InlineBase,
     Inline,
     Text,
+    CodeSpan,
     Emphasis,
     Strong,
-    CodeSpan,
     Link,
     Image,
     Autolink,
     HTML,
-    SoftBreak,
     HardBreak,
+    SoftBreak,
+    Entity,
+    Strikethrough,
+    FootnoteRef,
+    Emoji,
 }

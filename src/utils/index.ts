@@ -10,8 +10,4 @@ function uuid(): string {
     })
 }
 
-function inlineId(blockId: string, start: number, end: number): string {
-    return `${blockId}-${start}-${end}`
-}
-
-export { uuid, inlineId }
+export { uuid }

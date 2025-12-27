@@ -36,38 +36,54 @@ function parseInline(
         }
     }
 
-    const canBeOpener = (pos: number, type: "*" | "_"): boolean => {
-        if (pos >= text.length) return false
-        const prev = pos > 0 ? text[pos - 1] : " "
-        const next = pos + 1 < text.length ? text[pos + 1] : " "
+    /**
+     * A left-flanking delimiter run is a delimiter run that is:
+     * (1) not followed by a Unicode whitespace character, and
+     * (2a) not followed by a Unicode punctuation character, or
+     * (2b) followed by a Unicode punctuation character and
+     *      preceded by a Unicode whitespace character or a Unicode punctuation character.
+     */
+    const isLeftFlanking = (pos: number, runLength: number): boolean => {
+        const afterRun = pos + runLength
+        if (afterRun >= text.length) return false
+        const charAfter = text[afterRun]
+        const charBefore = pos > 0 ? text[pos - 1] : " "
 
-        if (type === "*") {
-            return (
-                !/\s/.test(next) &&
-                (next !== "*" ||
-                    (pos + 2 < text.length && !/\s/.test(text[pos + 2])))
-            )
-        } else {
-            return !/[a-zA-Z0-9]/.test(prev) && /[a-zA-Z0-9]/.test(next)
+        // Not followed by whitespace
+        if (/\s/.test(charAfter)) return false
+        
+        // Not followed by punctuation, OR preceded by whitespace/punctuation
+        if (/[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(charAfter)) {
+            return /\s/.test(charBefore) || /[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(charBefore)
         }
+        return true
     }
 
-    const canBeCloser = (pos: number, type: "*" | "_"): boolean => {
-        if (pos <= 0) return false
-        const prev = pos > 0 ? text[pos - 1] : " "
-        const next = pos + 1 < text.length ? text[pos + 1] : " "
+    /**
+     * A right-flanking delimiter run is a delimiter run that is:
+     * (1) not preceded by a Unicode whitespace character, and
+     * (2a) not preceded by a Unicode punctuation character, or
+     * (2b) preceded by a Unicode punctuation character and
+     *      followed by a Unicode whitespace character or a Unicode punctuation character.
+     */
+    const isRightFlanking = (pos: number, runLength: number): boolean => {
+        if (pos === 0) return false
+        const charBefore = text[pos - 1]
+        const charAfter = pos + runLength < text.length ? text[pos + runLength] : " "
 
-        if (type === "*") {
-            return (
-                !/\s/.test(prev) &&
-                (prev !== "*" || (pos - 2 >= 0 && !/\s/.test(text[pos - 2])))
-            )
-        } else {
-            return /[a-zA-Z0-9]/.test(prev) && !/[a-zA-Z0-9]/.test(next)
+        // Not preceded by whitespace
+        if (/\s/.test(charBefore)) return false
+        
+        // Not preceded by punctuation, OR followed by whitespace/punctuation
+        if (/[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(charBefore)) {
+            return /\s/.test(charAfter) || /[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(charAfter)
         }
+        return true
     }
 
     while (pos < text.length) {
+        // Backslash escapes
+        // Any ASCII punctuation character may be backslash-escaped
         if (text[pos] === "\\" && pos + 1 < text.length) {
             const escaped = text[pos + 1]
             if (/[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(escaped)) {
@@ -80,7 +96,7 @@ function parseInline(
                     type: "Text", 
                     value: escaped,
                     rawText,
-                    pureText: rawText,
+                    pureText: escaped,
                     synthText: rawText,
                     startIndex,
                     endIndex,
@@ -89,15 +105,49 @@ function parseInline(
                 textStart = pos
                 continue
             }
+            // Hard line break: backslash at end of line
+            if (escaped === "\n") {
+                addText(textStart, pos)
+                result.push({
+                    id: uuid(),
+                    type: "HardBreak",
+                    rawText: "\\\n",
+                    startIndex: startOffset + pos,
+                    endIndex: startOffset + pos + 2,
+                })
+                pos += 2
+                textStart = pos
+                continue
+            }
         }
 
+        // Entity references
+        if (text[pos] === "&") {
+            const entityMatch = text.slice(pos).match(/^&(?:#[xX]([0-9a-fA-F]{1,6});|#(\d{1,7});|([a-zA-Z][a-zA-Z0-9]{1,31});)/)
+            if (entityMatch) {
+                addText(textStart, pos)
+                const entityRaw = entityMatch[0]
+                const decoded = decodeHTMLEntity(entityRaw)
+                result.push({
+                    id: uuid(),
+                    type: "Entity",
+                    decoded,
+                    rawText: entityRaw,
+                    startIndex: startOffset + pos,
+                    endIndex: startOffset + pos + entityRaw.length,
+                })
+                pos += entityRaw.length
+                textStart = pos
+                continue
+            }
+        }
+
+        // Code spans
+        // Backtick strings of any length can be used
         if (text[pos] === "`") {
             addText(textStart, pos)
             let backtickCount = 1
-            while (
-                pos + backtickCount < text.length &&
-                text[pos + backtickCount] === "`"
-            ) {
+            while (pos + backtickCount < text.length && text[pos + backtickCount] === "`") {
                 backtickCount++
             }
 
@@ -106,27 +156,31 @@ function parseInline(
             while (searchPos < text.length) {
                 if (text[searchPos] === "`") {
                     let closeCount = 1
-                    while (
-                        searchPos + closeCount < text.length &&
-                        text[searchPos + closeCount] === "`"
-                    ) {
+                    while (searchPos + closeCount < text.length && text[searchPos + closeCount] === "`") {
                         closeCount++
                     }
                     if (closeCount === backtickCount) {
-                        const codeContent = text.slice(
-                            pos + backtickCount,
-                            searchPos,
-                        )
+                        // Extract and normalize code content
+                        let codeContent = text.slice(pos + backtickCount, searchPos)
+                        // Line endings are converted to spaces
+                        codeContent = codeContent.replace(/\n/g, " ")
+                        // If string begins AND ends with space and has non-space content,
+                        // strip one leading and trailing space
+                        if (codeContent.length > 0 && 
+                            codeContent[0] === " " && 
+                            codeContent[codeContent.length - 1] === " " && 
+                            codeContent.trim().length > 0) {
+                            codeContent = codeContent.slice(1, -1)
+                        }
+                        
                         const rawText = text.slice(pos, searchPos + backtickCount)
-                        const startIndex = startOffset + pos
-                        const endIndex = startOffset + searchPos + backtickCount
                         result.push({ 
                             id: uuid(),
                             type: "CodeSpan", 
                             value: codeContent,
                             rawText,
-                            startIndex,
-                            endIndex,
+                            startIndex: startOffset + pos,
+                            endIndex: startOffset + searchPos + backtickCount,
                         })
                         pos = searchPos + backtickCount
                         textStart = pos
@@ -139,335 +193,149 @@ function parseInline(
                 }
             }
             if (found) continue
-            // If no matching backtick found, treat as regular character and advance
-            pos++
+            
+            // No matching backticks - treat as text and continue
+            pos += backtickCount
             continue
         }
 
+        // Autolinks
         if (text[pos] === "<") {
             let matched = false
-            const end = text.indexOf(">", pos + 1)
-            if (end !== -1) {
-                const content = text.slice(pos + 1, end)
-                if (/^https?:\/\/|^ftp:\/\//i.test(content)) {
+            
+            // URI autolinks
+            const uriMatch = text.slice(pos).match(/^<([a-zA-Z][a-zA-Z0-9+.-]{1,31}:[^\s<>]*)>/)
+            if (uriMatch) {
+                addText(textStart, pos)
+                result.push({ 
+                    id: uuid(),
+                    type: "Autolink", 
+                    url: uriMatch[1],
+                    rawText: uriMatch[0],
+                    startIndex: startOffset + pos,
+                    endIndex: startOffset + pos + uriMatch[0].length,
+                })
+                pos += uriMatch[0].length
+                textStart = pos
+                matched = true
+            }
+            
+            // Email autolinks
+            if (!matched) {
+                const emailMatch = text.slice(pos).match(/^<([a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)>/)
+                if (emailMatch) {
                     addText(textStart, pos)
-                    const rawText = text.slice(pos, end + 1)
-                    const startIndex = startOffset + pos
-                    const endIndex = startOffset + end + 1
                     result.push({ 
                         id: uuid(),
                         type: "Autolink", 
-                        url: content,
-                        rawText,
-                        startIndex,
-                        endIndex,
+                        url: "mailto:" + emailMatch[1],
+                        rawText: emailMatch[0],
+                        startIndex: startOffset + pos,
+                        endIndex: startOffset + pos + emailMatch[0].length,
                     })
-                    pos = end + 1
-                    textStart = pos
-                    matched = true
-                } else if (
-                    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
-                        content,
-                    )
-                ) {
-                    addText(textStart, pos)
-                    const rawText = text.slice(pos, end + 1)
-                    const startIndex = startOffset + pos
-                    const endIndex = startOffset + end + 1
-                    result.push({ 
-                        id: uuid(),
-                        type: "Autolink", 
-                        url: "mailto:" + content,
-                        rawText,
-                        startIndex,
-                        endIndex,
-                    })
-                    pos = end + 1
+                    pos += emailMatch[0].length
                     textStart = pos
                     matched = true
                 }
             }
             
+            // Raw HTML
             if (!matched) {
-                const htmlTagMatch = text
-                    .slice(pos)
-                    .match(/^<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/)
-                if (htmlTagMatch) {
-                    const fullMatch = htmlTagMatch[0]
-                    const tagName = htmlTagMatch[2].toLowerCase()
-                    const inlineTags = [
-                        "a",
-                        "abbr",
-                        "acronym",
-                        "b",
-                        "bdo",
-                        "big",
-                        "br",
-                        "button",
-                        "cite",
-                        "code",
-                        "dfn",
-                        "em",
-                        "i",
-                        "img",
-                        "input",
-                        "kbd",
-                        "label",
-                        "map",
-                        "object",
-                        "output",
-                        "q",
-                        "samp",
-                        "script",
-                        "select",
-                        "small",
-                        "span",
-                        "strong",
-                        "sub",
-                        "sup",
-                        "textarea",
-                        "time",
-                        "tt",
-                        "var",
-                    ]
-                    if (inlineTags.includes(tagName)) {
-                        addText(textStart, pos)
-                        const rawText = fullMatch
-                        const startIndex = startOffset + pos
-                        const endIndex = startOffset + pos + fullMatch.length
-                        result.push({ 
-                            id: uuid(),
-                            type: "HTML", 
-                            html: fullMatch,
-                            rawText,
-                            startIndex,
-                            endIndex,
-                        })
-                        pos += fullMatch.length
-                        textStart = pos
-                        matched = true
-                    }
+                const htmlMatch = text.slice(pos).match(/^<(\/?[a-zA-Z][a-zA-Z0-9]*\b[^>]*>|!--[\s\S]*?-->|!\[CDATA\[[\s\S]*?\]\]>|\?[^>]*\?>|![A-Z]+[^>]*>)/)
+                if (htmlMatch) {
+                    addText(textStart, pos)
+                    result.push({ 
+                        id: uuid(),
+                        type: "HTML", 
+                        html: htmlMatch[0],
+                        rawText: htmlMatch[0],
+                        startIndex: startOffset + pos,
+                        endIndex: startOffset + pos + htmlMatch[0].length,
+                    })
+                    pos += htmlMatch[0].length
+                    textStart = pos
+                    matched = true
                 }
             }
             
             if (matched) continue
-            // If no HTML/autolink pattern matched, treat as regular character and advance
             pos++
             continue
         }
 
-        if (
-            text[pos] === "!" &&
-            pos + 1 < text.length &&
-            text[pos + 1] === "["
-        ) {
-            const linkEnd = text.indexOf("]", pos + 2)
-            if (linkEnd !== -1) {
-                const altText = text.slice(pos + 2, linkEnd)
-
-                if (linkEnd + 1 < text.length && text[linkEnd + 1] === "(") {
-                    const linkInfo = parseLinkDestinationAndTitle(
-                        text,
-                        linkEnd + 1,
-                    )
-                    if (linkInfo) {
-                        addText(textStart, pos)
-                        const rawText = text.slice(pos, linkInfo.end)
-                        const startIndex = startOffset + pos
-                        const endIndex = startOffset + linkInfo.end
-                        result.push({
-                            id: uuid(),
-                            type: "Image",
-                            url: linkInfo.url,
-                            alt: altText,
-                            title: linkInfo.title,
-                            children: [],
-                            rawText,
-                            startIndex,
-                            endIndex,
-                        })
-                        pos = linkInfo.end
-                        textStart = pos
-                        continue
-                    }
-                }
-
-                if (linkReferences) {
-                    let refLabel = ""
-                    let refEnd = linkEnd + 1
-
-                    if (
-                        linkEnd + 1 < text.length &&
-                        text[linkEnd + 1] === "["
-                    ) {
-                        const refEndPos = text.indexOf("]", linkEnd + 2)
-                        if (refEndPos !== -1) {
-                            refLabel = text
-                                .slice(linkEnd + 2, refEndPos)
-                                .toLowerCase()
-                                .trim()
-                            refEnd = refEndPos + 1
-                        } else {
-                            pos = linkEnd + 1
-                            continue
-                        }
-                    } else {
-                        refLabel = altText.toLowerCase().trim()
-                    }
-
-                    const ref = linkReferences.get(refLabel)
-                    if (ref) {
-                        addText(textStart, pos)
-                        const rawText = text.slice(pos, refEnd)
-                        const startIndex = startOffset + pos
-                        const endIndex = startOffset + refEnd
-                        result.push({
-                            id: uuid(),
-                            type: "Image",
-                            url: ref.url,
-                            alt: altText,
-                            title: ref.title,
-                            children: [],
-                            rawText,
-                            startIndex,
-                            endIndex,
-                        })
-                        pos = refEnd
-                        textStart = pos
-                        continue
-                    }
-                }
+        // Images
+        if (text[pos] === "!" && pos + 1 < text.length && text[pos + 1] === "[") {
+            const imageResult = parseImage(text, pos, linkReferences, startOffset)
+            if (imageResult) {
+                addText(textStart, pos)
+                result.push(imageResult.node)
+                pos = imageResult.endPos
+                textStart = pos
+                continue
             }
-            // If no matching ] found or no valid image pattern, treat as regular characters and advance
-            pos++
-            continue
         }
 
+        // Links
         if (text[pos] === "[") {
-            const linkEnd = text.indexOf("]", pos + 1)
-            if (linkEnd !== -1) {
-                const linkText = text.slice(pos + 1, linkEnd)
-
-                if (linkEnd + 1 < text.length && text[linkEnd + 1] === "(") {
-                    const linkInfo = parseLinkDestinationAndTitle(
-                        text,
-                        linkEnd + 1,
-                    )
-                    if (linkInfo) {
-                        addText(textStart, pos)
-                        const linkStartIndex = startOffset + pos + 1
-                        const linkChildren =
-                            linkText.trim() === ""
-                                ? [
-                                      {
-                                          id: uuid(),
-                                          type: "Text",
-                                          value: linkInfo.url,
-                                          rawText: linkInfo.url,
-                                          startIndex: linkStartIndex,
-                                          endIndex: linkStartIndex + linkInfo.url.length,
-                                      } as Inline,
-                                  ]
-                                : parseInline(linkText, linkReferences, linkStartIndex)
-                        const rawText = text.slice(pos, linkInfo.end)
-                        const startIndex = startOffset + pos
-                        const endIndex = startOffset + linkInfo.end
-                        result.push({
-                            id: uuid(),
-                            type: "Link",
-                            url: linkInfo.url,
-                            title: linkInfo.title,
-                            children: linkChildren,
-                            rawText,
-                            startIndex,
-                            endIndex,
-                        })
-                        pos = linkInfo.end
-                        textStart = pos
-                        continue
-                    }
-                }
-
-                if (linkReferences) {
-                    let refLabel = ""
-                    let refEnd = linkEnd + 1
-
-                    if (
-                        linkEnd + 1 < text.length &&
-                        text[linkEnd + 1] === "["
-                    ) {
-                        const refEndPos = text.indexOf("]", linkEnd + 2)
-                        if (refEndPos !== -1) {
-                            refLabel = text
-                                .slice(linkEnd + 2, refEndPos)
-                                .toLowerCase()
-                                .trim()
-                            if (refLabel === "") {
-                                refLabel = linkText.toLowerCase().trim()
-                            }
-                            refEnd = refEndPos + 1
-                        } else {
-                            pos = linkEnd + 1
-                            continue
-                        }
-                    } else {
-                        refLabel = linkText.toLowerCase().trim()
-                    }
-
-                    const ref = linkReferences.get(refLabel)
-                    if (ref) {
-                        addText(textStart, pos)
-                        const linkStartIndex = startOffset + pos + 1
-                        const linkChildren =
-                            linkText.trim() === ""
-                                ? [{ 
-                                    id: uuid(),
-                                    type: "Text", 
-                                    value: ref.url,
-                                    rawText: ref.url,
-                                    startIndex: linkStartIndex,
-                                    endIndex: linkStartIndex + ref.url.length,
-                                } as Inline]
-                                : parseInline(linkText, linkReferences, linkStartIndex)
-                        const rawText = text.slice(pos, refEnd)
-                        const startIndex = startOffset + pos
-                        const endIndex = startOffset + refEnd
-                        result.push({
-                            id: uuid(),
-                            type: "Link",
-                            url: ref.url,
-                            title: ref.title,
-                            children: linkChildren,
-                            rawText,
-                            startIndex,
-                            endIndex,
-                        })
-                        pos = refEnd
-                        textStart = pos
-                        continue
-                    }
-                }
+            const linkResult = parseLink(text, pos, linkReferences, startOffset)
+            if (linkResult) {
+                addText(textStart, pos)
+                result.push(linkResult.node)
+                pos = linkResult.endPos
+                textStart = pos
+                continue
             }
-            // If no matching ] found or no valid link pattern, treat as regular character and advance
-            pos++
-            continue
         }
 
+        // Strikethrough
+        if (text[pos] === "~" && pos + 1 < text.length && text[pos + 1] === "~") {
+            const closePos = text.indexOf("~~", pos + 2)
+            if (closePos !== -1) {
+                addText(textStart, pos)
+                const innerText = text.slice(pos + 2, closePos)
+                const innerNodes = parseInline(innerText, linkReferences, startOffset + pos + 2)
+                result.push({
+                    id: uuid(),
+                    type: "Strikethrough",
+                    children: innerNodes,
+                    rawText: text.slice(pos, closePos + 2),
+                    startIndex: startOffset + pos,
+                    endIndex: startOffset + closePos + 2,
+                })
+                pos = closePos + 2
+                textStart = pos
+                continue
+            }
+        }
+
+        // Emphasis and strong emphasis
         if (text[pos] === "*" || text[pos] === "_") {
-            const type = text[pos] as "*" | "_"
-            let length = 1
-            while (pos + length < text.length && text[pos + length] === type) {
-                length++
+            const delimType = text[pos] as "*" | "_"
+            let runLength = 1
+            while (pos + runLength < text.length && text[pos + runLength] === delimType) {
+                runLength++
             }
 
-            const canOpen = canBeOpener(pos, type)
-            const canClose = canBeCloser(pos, type)
+            const leftFlanking = isLeftFlanking(pos, runLength)
+            const rightFlanking = isRightFlanking(pos, runLength)
+
+            // Determine if can open/close based on flanking rules
+            let canOpen = leftFlanking
+            let canClose = rightFlanking
+
+            // For _, additional rules apply (intraword emphasis)
+            if (delimType === "_") {
+                const charBefore = pos > 0 ? text[pos - 1] : " "
+                const charAfter = pos + runLength < text.length ? text[pos + runLength] : " "
+                canOpen = leftFlanking && (!rightFlanking || /[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(charBefore))
+                canClose = rightFlanking && (!leftFlanking || /[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(charAfter))
+            }
 
             if (canOpen || canClose) {
                 addText(textStart, pos)
-                const rawText = type.repeat(length)
+                const rawText = delimType.repeat(runLength)
                 const startIndex = startOffset + pos
-                const endIndex = startOffset + pos + length
+                const endIndex = startOffset + pos + runLength
                 const textNode: Inline = {
                     id: uuid(),
                     type: "Text",
@@ -481,18 +349,54 @@ function parseInline(
                 result.push(textNode)
 
                 delimiterStack.push({
-                    type,
-                    length,
+                    type: delimType,
+                    length: runLength,
                     pos: result.length - 1,
                     canOpen,
                     canClose,
                     node: textNode,
                 })
 
-                textStart = pos + length
+                textStart = pos + runLength
             }
 
-            pos += length
+            pos += runLength
+            continue
+        }
+
+        // Hard line break: two+ spaces followed by newline
+        if (text[pos] === " ") {
+            let spaceCount = 1
+            while (pos + spaceCount < text.length && text[pos + spaceCount] === " ") {
+                spaceCount++
+            }
+            if (spaceCount >= 2 && pos + spaceCount < text.length && text[pos + spaceCount] === "\n") {
+                addText(textStart, pos)
+                result.push({
+                    id: uuid(),
+                    type: "HardBreak",
+                    rawText: " ".repeat(spaceCount) + "\n",
+                    startIndex: startOffset + pos,
+                    endIndex: startOffset + pos + spaceCount + 1,
+                })
+                pos += spaceCount + 1
+                textStart = pos
+                continue
+            }
+        }
+
+        // Soft line break
+        if (text[pos] === "\n") {
+            addText(textStart, pos)
+            result.push({
+                id: uuid(),
+                type: "SoftBreak",
+                rawText: "\n",
+                startIndex: startOffset + pos,
+                endIndex: startOffset + pos + 1,
+            })
+            pos++
+            textStart = pos
             continue
         }
 
@@ -501,9 +405,217 @@ function parseInline(
 
     addText(textStart, pos)
 
+    // Process emphasis
     processEmphasis(delimiterStack, result)
 
     return result
+}
+
+/**
+ * Parse a link construct [text](url "title") or [text][ref]
+ */
+function parseLink(
+    text: string,
+    start: number,
+    linkReferences?: Map<string, LinkReference>,
+    startOffset: number = 0
+): { node: Inline; endPos: number } | null {
+    // Find matching ]
+    let bracketDepth = 1
+    let pos = start + 1
+    while (pos < text.length && bracketDepth > 0) {
+        if (text[pos] === "\\") {
+            pos += 2
+            continue
+        }
+        if (text[pos] === "[") bracketDepth++
+        if (text[pos] === "]") bracketDepth--
+        pos++
+    }
+
+    if (bracketDepth !== 0) return null
+
+    const linkTextEnd = pos - 1
+    const linkText = text.slice(start + 1, linkTextEnd)
+
+    // Inline link: [text](url "title")
+    if (pos < text.length && text[pos] === "(") {
+        const linkInfo = parseLinkDestinationAndTitle(text, pos)
+        if (linkInfo) {
+            const linkStartIndex = startOffset + start + 1
+            const linkChildren =
+                linkText.trim() === ""
+                    ? [
+                          {
+                              id: uuid(),
+                              type: "Text" as const,
+                              value: linkInfo.url,
+                              rawText: linkInfo.url,
+                              pureText: linkInfo.url,
+                              synthText: linkInfo.url,
+                              startIndex: linkStartIndex,
+                              endIndex: linkStartIndex + linkInfo.url.length,
+                          },
+                      ]
+                    : parseInline(linkText, linkReferences, linkStartIndex)
+            return {
+                node: {
+                    id: uuid(),
+                    type: "Link",
+                    url: linkInfo.url,
+                    title: linkInfo.title,
+                    children: linkChildren,
+                    rawText: text.slice(start, linkInfo.end),
+                    startIndex: startOffset + start,
+                    endIndex: startOffset + linkInfo.end,
+                },
+                endPos: linkInfo.end,
+            }
+        }
+    }
+
+    // Reference link: [text][ref] or [text][] or [text]
+    if (linkReferences) {
+        let refLabel = ""
+        let refEnd = pos
+
+        if (pos < text.length && text[pos] === "[") {
+            const refEndPos = text.indexOf("]", pos + 1)
+            if (refEndPos !== -1) {
+                refLabel = text.slice(pos + 1, refEndPos).toLowerCase().trim()
+                if (refLabel === "") {
+                    refLabel = linkText.toLowerCase().trim()
+                }
+                refEnd = refEndPos + 1
+            } else {
+                return null
+            }
+        } else {
+            refLabel = linkText.toLowerCase().trim()
+        }
+
+        const ref = linkReferences.get(refLabel)
+        if (ref) {
+            const linkStartIndex = startOffset + start + 1
+            const linkChildren =
+                linkText.trim() === ""
+                    ? [{
+                        id: uuid(),
+                        type: "Text" as const,
+                        value: ref.url,
+                        rawText: ref.url,
+                        pureText: ref.url,
+                        synthText: ref.url,
+                        startIndex: linkStartIndex,
+                        endIndex: linkStartIndex + ref.url.length,
+                    }]
+                    : parseInline(linkText, linkReferences, linkStartIndex)
+            return {
+                node: {
+                    id: uuid(),
+                    type: "Link",
+                    url: ref.url,
+                    title: ref.title,
+                    children: linkChildren,
+                    rawText: text.slice(start, refEnd),
+                    startIndex: startOffset + start,
+                    endIndex: startOffset + refEnd,
+                },
+                endPos: refEnd,
+            }
+        }
+    }
+
+    return null
+}
+
+/**
+ * Parse an image construct ![alt](url "title") or ![alt][ref]
+ */
+function parseImage(
+    text: string,
+    start: number,
+    linkReferences?: Map<string, LinkReference>,
+    startOffset: number = 0
+): { node: Inline; endPos: number } | null {
+    if (text[start + 1] !== "[") return null
+
+    // Find matching ]
+    let bracketDepth = 1
+    let pos = start + 2
+    while (pos < text.length && bracketDepth > 0) {
+        if (text[pos] === "\\") {
+            pos += 2
+            continue
+        }
+        if (text[pos] === "[") bracketDepth++
+        if (text[pos] === "]") bracketDepth--
+        pos++
+    }
+
+    if (bracketDepth !== 0) return null
+
+    const altTextEnd = pos - 1
+    const altText = text.slice(start + 2, altTextEnd)
+
+    // Inline image: ![alt](url "title")
+    if (pos < text.length && text[pos] === "(") {
+        const linkInfo = parseLinkDestinationAndTitle(text, pos)
+        if (linkInfo) {
+            return {
+                node: {
+                    id: uuid(),
+                    type: "Image",
+                    url: linkInfo.url,
+                    alt: altText,
+                    title: linkInfo.title,
+                    rawText: text.slice(start, linkInfo.end),
+                    startIndex: startOffset + start,
+                    endIndex: startOffset + linkInfo.end,
+                },
+                endPos: linkInfo.end,
+            }
+        }
+    }
+
+    // Reference image: ![alt][ref] or ![alt][] or ![alt]
+    if (linkReferences) {
+        let refLabel = ""
+        let refEnd = pos
+
+        if (pos < text.length && text[pos] === "[") {
+            const refEndPos = text.indexOf("]", pos + 1)
+            if (refEndPos !== -1) {
+                refLabel = text.slice(pos + 1, refEndPos).toLowerCase().trim()
+                refEnd = refEndPos + 1
+            } else {
+                return null
+            }
+        }
+
+        if (refLabel === "") {
+            refLabel = altText.toLowerCase().trim()
+        }
+
+        const ref = linkReferences.get(refLabel)
+        if (ref) {
+            return {
+                node: {
+                    id: uuid(),
+                    type: "Image",
+                    url: ref.url,
+                    alt: altText,
+                    title: ref.title,
+                    rawText: text.slice(start, refEnd),
+                    startIndex: startOffset + start,
+                    endIndex: startOffset + refEnd,
+                },
+                endPos: refEnd,
+            }
+        }
+    }
+
+    return null
 }
 
 function parseInlineWithBreaks(
