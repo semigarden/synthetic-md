@@ -502,7 +502,7 @@ export function createSynthEngine() {
         blocks = nextBlocks;
         sourceText = nextText;
 
-        console.log("blocks", JSON.stringify(blocks, null, 2));
+        // console.log("blocks", JSON.stringify(blocks, null, 2));
 
         const lastBlock = blocks[blocks.length - 1];
         if (!inlines.has(lastBlock.id)) {

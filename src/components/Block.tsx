@@ -1,52 +1,174 @@
 import React from 'react'
 import styles from '../styles/Synth.module.scss'
 import Inline from './Inline'
-import type { BlockContext, InlineContext } from '../oldHooks/useSynth'
+import type { Block as BlockType, Inline as InlineType } from '../hooks/createSynthEngine'
 
-const Block: React.FC<{
-    className?: string;
-    synth: any;
-    block: BlockContext;
-    onBlockEdit?: (block: BlockContext, text: string) => void;
-    onMergePrev?: (inline: InlineContext) => void;
-    onSplitBlock?: (inlineBlockId: string, inlineStart: number, caretOffset: number) => void;
-}> = ({
-    className = "",
-    synth,
-    block,
-    onBlockEdit = (_block: BlockContext, _text: string) => {},
-    onMergePrev = (_inline: InlineContext) => {},
-    onSplitBlock = (_inlineBlockId: string, _inlineStart: number, _caretOffset: number) => {},
-}) => {
-    const inlines = synth.parseInline(block)
+interface BlockProps {
+    block: BlockType
+    inlines: InlineType[]
+    onInlineInput: (inline: InlineType, text: string, caretOffset: number) => void
+}
 
-    const onInlineEdit = (inline: InlineContext, text: string) => {
-        const newText = block.text.slice(0, inline.start) + text + block.text.slice(inline.end)
+const Block: React.FC<BlockProps> = ({ block, inlines, onInlineInput }) => {
+    const renderInlines = () => (
+        inlines.map(inline => (
+            <Inline
+                key={inline.id}
+                inline={inline}
+                onInput={({ text, caretOffset }) => {
+                    onInlineInput(inline, text, caretOffset)
+                }}
+            />
+        ))
+    )
 
-        onBlockEdit(block, newText)
+    const commonProps = {
+        'data-block-id': block.id,
+        'data-block-type': block.type,
+        className: styles.block,
     }
 
+    switch (block.type) {
+        case 'heading': {
+            const level = (block as any).level as number
+            const headingClass = `${styles.block} ${styles.heading} ${styles[`h${level}`]}`
+            switch (level) {
+                case 1:
+                    return <h1 {...commonProps} className={headingClass}>{renderInlines()}</h1>
+                case 2:
+                    return <h2 {...commonProps} className={headingClass}>{renderInlines()}</h2>
+                case 3:
+                    return <h3 {...commonProps} className={headingClass}>{renderInlines()}</h3>
+                case 4:
+                    return <h4 {...commonProps} className={headingClass}>{renderInlines()}</h4>
+                case 5:
+                    return <h5 {...commonProps} className={headingClass}>{renderInlines()}</h5>
+                case 6:
+                default:
+                    return <h6 {...commonProps} className={headingClass}>{renderInlines()}</h6>
+            }
+        }
 
-    return (
-        <div className={`${styles.block} ${className}`}
-            data-block-id={block.id}
-            data-start={block.start}
-            data-end={block.end}
-            style={{
-                minHeight: '1em',
-            }}
-            onClick={(e) => {
-                e.stopPropagation();
-                if (inlines.length === 0) return;
-                const firstInlineEl = document.getElementById(inlines[0].id);
-                if (firstInlineEl) (firstInlineEl as HTMLElement).focus();
-            }}
-        >
-            {inlines.map((inline: InlineContext) => (
-                <Inline key={inline.id} inline={inline} synth={synth} onEdit={onInlineEdit} onMergePrev={onMergePrev} onSplitBlock={onSplitBlock} />
-            ))}
-        </div>
-    )
+        case 'blockQuote':
+            return (
+                <blockquote {...commonProps} className={`${styles.block} ${styles.blockquote}`}>
+                    {renderInlines()}
+                </blockquote>
+            )
+
+        case 'codeBlock': {
+            const language = (block as any).language
+            return (
+                <pre {...commonProps} className={`${styles.block} ${styles.codeBlock}`}>
+                    <code className={language ? `language-${language}` : undefined}>
+                        {renderInlines()}
+                    </code>
+                </pre>
+            )
+        }
+
+        case 'list': {
+            const listBlock = block as any
+            const ListTag = listBlock.ordered ? 'ol' : 'ul'
+            return (
+                <ListTag 
+                    {...commonProps} 
+                    className={`${styles.block} ${styles.list}`}
+                    start={listBlock.ordered && listBlock.listStart !== 1 ? listBlock.listStart : undefined}
+                >
+                    {listBlock.children?.map((item: BlockType) => (
+                        <Block 
+                            key={item.id} 
+                            block={item} 
+                            inlines={[]} 
+                            onInlineInput={onInlineInput}
+                        />
+                    ))}
+                </ListTag>
+            )
+        }
+
+        case 'listItem':
+            return (
+                <li {...commonProps} className={`${styles.block} ${styles.listItem}`}>
+                    {renderInlines()}
+                </li>
+            )
+
+        case 'taskListItem': {
+            const checked = (block as any).checked ?? false
+            return (
+                <li {...commonProps} className={`${styles.block} ${styles.taskListItem}`}>
+                    <input 
+                        type="checkbox" 
+                        checked={checked} 
+                        readOnly 
+                        className={styles.taskCheckbox}
+                    />
+                    <span className={styles.taskContent}>
+                        {renderInlines()}
+                    </span>
+                </li>
+            )
+        }
+
+        case 'thematicBreak':
+            return <hr {...commonProps} className={`${styles.block} ${styles.thematicBreak}`} />
+
+        case 'table': {
+            const tableBlock = block as any
+            return (
+                <table {...commonProps} className={`${styles.block} ${styles.table}`}>
+                    <tbody>
+                        {tableBlock.children?.map((row: BlockType, rowIndex: number) => (
+                            <tr key={row.id} className={styles.tableRow}>
+                                {(row as any).children?.map((cell: BlockType) => {
+                                    const CellTag = rowIndex === 0 ? 'th' : 'td'
+                                    return (
+                                        <CellTag key={cell.id} className={styles.tableCell}>
+                                            {cell.text}
+                                        </CellTag>
+                                    )
+                                })}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )
+        }
+
+        case 'htmlBlock':
+            return (
+                <div 
+                    {...commonProps} 
+                    className={`${styles.block} ${styles.htmlBlock}`}
+                    dangerouslySetInnerHTML={{ __html: block.text }}
+                />
+            )
+
+        case 'footnote': {
+            const label = (block as any).label
+            return (
+                <div {...commonProps} className={`${styles.block} ${styles.footnote}`} id={`fn-${label}`}>
+                    <sup className={styles.footnoteLabel}>[{label}]</sup>
+                    <span className={styles.footnoteContent}>
+                        {renderInlines()}
+                    </span>
+                </div>
+            )
+        }
+
+        case 'blankLine':
+            return <div {...commonProps} className={`${styles.block} ${styles.blankLine}`}>&nbsp;</div>
+
+        case 'paragraph':
+        default:
+            return (
+                <p {...commonProps} className={`${styles.block} ${styles.paragraph}`}>
+                    {renderInlines()}
+                </p>
+            )
+    }
 }
 
 export default Block

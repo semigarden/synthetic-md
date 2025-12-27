@@ -13,8 +13,6 @@ const Inline: React.FC<{
   const ref = useRef<HTMLSpanElement>(null);
   const [focused, setFocused] = useState(false);
 
-  // console.log("Inline", JSON.stringify(inline, null, 2))
-
   useLayoutEffect(() => {
     if (!ref.current || focused) return;
 
@@ -60,25 +58,83 @@ const Inline: React.FC<{
     });
   }, [inline.id, onInput]);
 
+  if (inline.type === 'hardBreak') {
+    return <br data-inline-id={inline.id} data-type={inline.type} />;
+  }
+
+  if (inline.type === 'softBreak') {
+    return <span data-inline-id={inline.id} data-type={inline.type}> </span>;
+  }
+
+  if (inline.type === 'image') {
+    const imageInline = inline as any;
+    return (
+      <span
+        data-inline-id={inline.id}
+        data-type={inline.type}
+        className={styles.inline}
+        title={imageInline.title || imageInline.alt}
+      >
+        <img 
+          src={imageInline.url} 
+          alt={imageInline.alt} 
+          style={{ maxWidth: '100%', height: 'auto' }}
+        />
+      </span>
+    );
+  }
+
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    if (!focused && inline.type === 'link') {
+      const linkInline = inline as any;
+      if (e.ctrlKey || e.metaKey) {
+        window.open(linkInline.url, '_blank');
+        e.preventDefault();
+      }
+    }
+    if (!focused && inline.type === 'autolink') {
+      const autolinkInline = inline as any;
+      if (e.ctrlKey || e.metaKey) {
+        window.open(autolinkInline.url, '_blank');
+        e.preventDefault();
+      }
+    }
+  }, [focused, inline]);
+
   return (
     <span
       ref={ref}
       id={inline.id}
-      className={styles.inline}
+      className={`${styles.inline} ${focused ? styles.focus : ''}`}
       contentEditable
       suppressContentEditableWarning
       onFocus={onFocus}
       onBlur={onBlur}
       onInput={onInputHandler}
+      onClick={handleClick}
       data-inline-id={inline.id}
       data-type={inline.type}
-      style={{
-        whiteSpace: "pre-wrap",
-        outline: focused ? "1px solid #4af" : "none",
-      }}
+      title={getInlineTitle(inline)}
     />
   );
 };
+
+function getInlineTitle(inline: InlineType): string | undefined {
+  switch (inline.type) {
+    case 'link':
+      return `${(inline as any).url}${(inline as any).title ? ` - ${(inline as any).title}` : ''} (Ctrl+Click to open)`;
+    case 'autolink':
+      return `${(inline as any).url} (Ctrl+Click to open)`;
+    case 'image':
+      return (inline as any).alt || (inline as any).url;
+    case 'footnoteRef':
+      return `Footnote: ${(inline as any).label}`;
+    case 'emoji':
+      return `:${(inline as any).name}:`;
+    default:
+      return undefined;
+  }
+}
 
 function placeCaret(el: HTMLElement, offset: number) {
   const range = document.createRange();

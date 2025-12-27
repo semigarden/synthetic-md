@@ -1,7 +1,8 @@
 import React, { useLayoutEffect, forwardRef, useCallback } from 'react'
-import Inline from './Inline';
+import Block from './Block'
 import styles from '../styles/Synth.module.scss'
 import { useSynthController, type SyntheticTextRef } from '../hooks/useSynthController'
+import type { Inline as InlineType } from '../hooks/createSynthEngine'
 
 export interface SyntheticTextProps {
     className?: string;
@@ -20,7 +21,7 @@ const SyntheticText = forwardRef<SyntheticTextRef, SyntheticTextProps>(({
         synth.restoreCaret();
     });
 
-    const handleInlineInput = useCallback((inline: ReturnType<typeof synth.engine.getInlines>[number], text: string, caretOffset: number) => {
+    const handleInlineInput = useCallback((inline: InlineType, text: string, caretOffset: number) => {
         synth.saveCaret(inline.id, caretOffset);
 
         const nextMarkdown = synth.engine.applyInlineEdit(inline, text);
@@ -28,23 +29,18 @@ const SyntheticText = forwardRef<SyntheticTextRef, SyntheticTextProps>(({
         synth.forceRender();
 
         onChange?.(nextMarkdown);
-    }, [synth.engine, onChange, synth.saveCaret]);
+    }, [synth, onChange]);
 
     return (
         <div className={`${styles.syntheticText} ${className}`}>
-            {synth.engine.blocks.map(block =>
-                <div key={block.id}>
-                    {synth.engine.getInlines(block).map(inline => (
-                        <Inline
-                            key={inline.id}
-                            inline={inline}
-                            onInput={({ text, caretOffset }) => {
-                                handleInlineInput(inline, text, caretOffset);
-                            }}
-                        />
-                    ))}
-                </div>
-            )}
+            {synth.engine.blocks.map(block => (
+                <Block
+                    key={block.id}
+                    block={block}
+                    inlines={synth.engine.getInlines(block)}
+                    onInlineInput={handleInlineInput}
+                />
+            ))}
         </div>
     )
 });
