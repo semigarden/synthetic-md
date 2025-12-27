@@ -8,19 +8,19 @@ interface BlockType<T extends string = string> {
     end: number
 }
 
-type Block =
+export type Block =
     | Document
     | Paragraph
     | Heading
     | BlockQuote
-    | Code
+    | CodeBlock
     | List
     | ListItem
     | ThematicBreak
     | Table
     | TableRow
     | TableCell
-    | HTML
+    | HTMLBlock
     | Footnote
     | TaskListItem
 
@@ -38,9 +38,7 @@ interface Heading extends BlockType<'heading'> {    start: number
 interface BlockQuote extends BlockType<'blockQuote'> {
 }
 
-interface Code extends BlockType<'code'> {
-    language: string
-    code: string
+interface CodeBlock extends BlockType<'codeBlock'> {
 }
 
 interface List extends BlockType<'list'> {
@@ -62,7 +60,7 @@ interface TableRow extends BlockType<'tableRow'> {
 interface TableCell extends BlockType<'tableCell'> {
 }
 
-interface HTML extends BlockType<'html'> {
+interface HTMLBlock extends BlockType<'htmlBlock'> {
 }
 
 interface Footnote extends BlockType<'footnote'> {
@@ -72,33 +70,81 @@ interface TaskListItem extends BlockType<'taskListItem'> {
 }
 
 
-// export type BlockType =
-//   | "paragraph"
-//   | "heading"
-//   | "block-quote"
-//   | "list-item"
-//   | "empty";
+interface InlineType<T extends string = string> {
+    id: string
+    blockId: string
+    type: T
+    synthetic: string
+    pure: string
+    start: number
+    end: number
+}
 
-export type InlineType =
-  | "text"
-  | "strong"
-  | "em"
-  | "code";
+export type Inline =
+    | Text
+    | Emphasis
+    | Strong
+    | CodeSpan
+    | Link
+    | Autolink
+    | Image
+    | Strikethrough
+    | FootnoteRef
+    | Emoji
+    | SoftBreak
+    | HardBreak
 
-export interface InlineContext {
-  id: string;
-  type: InlineType;
-  blockId: string;
-  synthetic: string;
-  pure: string;
-  start: number;
-  end: number;
+interface Text extends InlineType<'text'> {
+}
+
+interface Emphasis extends InlineType<'emphasis'> {
+}
+
+interface Strong extends InlineType<'strong'> {
+}
+
+interface CodeSpan extends InlineType<'codeSpan'> {
+}
+
+interface Link extends InlineType<'link'> {
+    url: string
+    title?: string
+    children: Inline[]
+}
+
+interface Autolink extends InlineType<'autolink'> {
+    url: string
+}
+
+interface Image extends InlineType<'image'> {
+    url: string
+    alt: string
+    title?: string
+    children: Inline[]
+}
+
+interface Strikethrough extends InlineType<'strikethrough'> {
+    children: Inline[]
+}
+
+interface FootnoteRef extends InlineType<'footnoteRef'> {
+    id: string
+}
+
+interface Emoji extends InlineType<'emoji'> {
+    name: string
+}
+
+interface SoftBreak extends InlineType<'softBreak'> {
+}
+
+interface HardBreak extends InlineType<'hardBreak'> {
 }
 
 export function createSynthEngine() {
     let sourceText = "";
     let blocks: Block[] = [];
-    let inlines = new Map<string, InlineContext[]>();
+    let inlines = new Map<string, Inline[]>();
 
     function sync(nextText: string) {
         if (sourceText.length > 0 && nextText === sourceText) return;
@@ -205,13 +251,13 @@ export function createSynthEngine() {
         return "paragraph";
     }
 
-    function parseInlines(block: Block): InlineContext[] {
-        const next: InlineContext[] = [];
+    function parseInlines(block: Block): Inline[] {
+        const next: Inline[] = [];
         let i = 0;
         const text = block.text;
 
         if (text === "") {
-            const emptyInline: InlineContext = {
+            const emptyInline: Inline = {
                 id: uuid(),
                 type: "text",
                 blockId: block.id,
@@ -240,7 +286,7 @@ export function createSynthEngine() {
                 if (end !== -1) {
                     next.push({
                         id: uuid(),
-                        type: "code",
+                        type: "codeSpan",
                         blockId: block.id,
                         synthetic: text.slice(i, end + 1),
                         pure: text.slice(i + 1, end),
@@ -289,7 +335,7 @@ export function createSynthEngine() {
                     if (!inner.includes("*")) {
                         next.push({
                             id: uuid(),
-                            type: "em",
+                            type: "emphasis",
                             blockId: block.id,
                             synthetic: text.slice(i, end + 1),
                             pure: inner,
@@ -362,7 +408,7 @@ export function createSynthEngine() {
         return current;
     }
     
-    function applyInlineEdit(inline: InlineContext, nextPureText: string): string {
+    function applyInlineEdit(inline: Inline, nextPureText: string): string {
         const block = blocks.find(b => b.id === inline.blockId)!;
         const blockInlines = inlines.get(block.id)!;
 
@@ -371,10 +417,10 @@ export function createSynthEngine() {
             case "strong":
                 newSynthetic = `**${nextPureText}**`;
                 break;
-            case "em":
+            case "emphasis":
                 newSynthetic = `*${nextPureText}*`;
                 break;
-            case "code":
+            case "codeSpan":
                 newSynthetic = `\`${nextPureText}\``;
                 break;
             case "text":

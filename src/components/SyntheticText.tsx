@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, forwardRef, useCallback } from 'react'
+import Inline from './Inline';
 import styles from '../styles/Synth.module.scss'
-import Inline from './Inline'
 import { useSynthController, type SyntheticTextRef } from '../hooks/useSynthController'
 
 export interface SyntheticTextProps {

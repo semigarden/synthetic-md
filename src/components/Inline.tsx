@@ -1,9 +1,9 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from "react";
-import type { InlineContext } from '../oldHooks/useSynth';
+import type { Inline as InlineType } from '../hooks/createSynthEngine';
 import styles from '../styles/Synth.module.scss';
 
 const Inline: React.FC<{
-  inline: InlineContext;
+  inline: InlineType;
   onInput: (payload: {
     inlineId: string;
     text: string;
