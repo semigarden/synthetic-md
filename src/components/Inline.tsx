@@ -13,7 +13,11 @@ const Inline: React.FC<{
     inlineId: string;
     caretOffset: number;
   }) => void;
-}> = ({ inline, onInput, onSplit }) => {
+  onMergeWithPrevious?: (payload: { inlineId: string }) => void;
+  onMergeWithNext?: (payload: { inlineId: string }) => void;
+  isFirstInline?: boolean;
+  isLastInline?: boolean;
+}> = ({ inline, onInput, onSplit, onMergeWithPrevious, onMergeWithNext, isFirstInline, isLastInline }) => {
   const ref = useRef<HTMLSpanElement>(null);
   const [focused, setFocused] = useState(false);
 
@@ -63,17 +67,33 @@ const Inline: React.FC<{
   }, [inline.id, onInput]);
 
   const onKeyDownHandler = useCallback((e: React.KeyboardEvent) => {
+    const caretOffset = getCaretOffset();
+    const textLength = ref.current?.textContent?.length ?? 0;
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       
       if (onSplit) {
         onSplit({
           inlineId: inline.id,
-          caretOffset: getCaretOffset(),
+          caretOffset,
         });
       }
+      return;
     }
-  }, [inline.id, onSplit]);
+
+    if (e.key === 'Backspace' && caretOffset === 0 && isFirstInline && onMergeWithPrevious) {
+      e.preventDefault();
+      onMergeWithPrevious({ inlineId: inline.id });
+      return;
+    }
+
+    if (e.key === 'Delete' && caretOffset === textLength && isLastInline && onMergeWithNext) {
+      e.preventDefault();
+      onMergeWithNext({ inlineId: inline.id });
+      return;
+    }
+  }, [inline.id, onSplit, onMergeWithPrevious, onMergeWithNext, isFirstInline, isLastInline]);
 
   if (inline.type === 'hardBreak') {
     return <br data-inline-id={inline.id} data-type={inline.type} />;

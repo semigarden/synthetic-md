@@ -8,11 +8,13 @@ interface BlockProps {
     inlines: InlineType[]
     onInlineInput: (inline: InlineType, text: string, caretOffset: number) => void
     onInlineSplit?: (inline: InlineType, caretOffset: number) => void
+    onMergeWithPrevious?: (inline: InlineType) => void
+    onMergeWithNext?: (inline: InlineType) => void
 }
 
-const Block: React.FC<BlockProps> = ({ block, inlines, onInlineInput, onInlineSplit }) => {
+const Block: React.FC<BlockProps> = ({ block, inlines, onInlineInput, onInlineSplit, onMergeWithPrevious, onMergeWithNext }) => {
     const renderInlines = () => (
-        inlines.map(inline => (
+        inlines.map((inline, index) => (
             <Inline
                 key={inline.id}
                 inline={inline}
@@ -22,6 +24,14 @@ const Block: React.FC<BlockProps> = ({ block, inlines, onInlineInput, onInlineSp
                 onSplit={onInlineSplit ? ({ caretOffset }) => {
                     onInlineSplit(inline, caretOffset)
                 } : undefined}
+                onMergeWithPrevious={onMergeWithPrevious ? () => {
+                    onMergeWithPrevious(inline)
+                } : undefined}
+                onMergeWithNext={onMergeWithNext ? () => {
+                    onMergeWithNext(inline)
+                } : undefined}
+                isFirstInline={index === 0}
+                isLastInline={index === inlines.length - 1}
             />
         ))
     )
@@ -113,6 +123,8 @@ const Block: React.FC<BlockProps> = ({ block, inlines, onInlineInput, onInlineSp
                             inlines={[]} 
                             onInlineInput={onInlineInput}
                             onInlineSplit={onInlineSplit}
+                            onMergeWithPrevious={onMergeWithPrevious}
+                            onMergeWithNext={onMergeWithNext}
                         />
                     ))}
                 </ListTag>

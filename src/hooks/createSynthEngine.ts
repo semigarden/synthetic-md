@@ -1659,6 +1659,80 @@ export function createSynthEngine() {
         };
     }
 
+    function mergeWithPreviousBlock(inline: Inline): { newSourceText: string; mergedBlockId: string; caretOffset: number } | null {
+        const block = blocks.find(b => b.id === inline.blockId);
+        if (!block) {
+            return null;
+        }
+
+        const blockIndex = blocks.findIndex(b => b.id === block.id);
+        if (blockIndex <= 0) {
+            return null;
+        }
+
+        const prevBlock = blocks[blockIndex - 1];
+        
+        const deleteStart = prevBlock.end;
+        const deleteEnd = block.start;
+
+        if (deleteStart >= deleteEnd) {
+            return null;
+        }
+
+        const caretOffset = prevBlock.text.length;
+
+        const newSourceText = 
+            sourceText.slice(0, deleteStart) + 
+            sourceText.slice(deleteEnd);
+
+        sync(newSourceText);
+
+        const mergedBlock = blocks.find(b => b.start === prevBlock.start);
+
+        return { 
+            newSourceText, 
+            mergedBlockId: mergedBlock?.id ?? prevBlock.id,
+            caretOffset
+        };
+    }
+
+    function mergeWithNextBlock(inline: Inline): { newSourceText: string; currentBlockId: string; caretOffset: number } | null {
+        const block = blocks.find(b => b.id === inline.blockId);
+        if (!block) {
+            return null;
+        }
+
+        const blockIndex = blocks.findIndex(b => b.id === block.id);
+        if (blockIndex >= blocks.length - 1) {
+            return null;
+        }
+
+        const nextBlock = blocks[blockIndex + 1];
+        
+        const deleteStart = block.end;
+        const deleteEnd = nextBlock.start;
+
+        if (deleteStart >= deleteEnd) {
+            return null;
+        }
+
+        const caretOffset = block.text.length;
+
+        const newSourceText = 
+            sourceText.slice(0, deleteStart) + 
+            sourceText.slice(deleteEnd);
+
+        sync(newSourceText);
+
+        const mergedBlock = blocks.find(b => b.start === block.start);
+
+        return { 
+            newSourceText, 
+            currentBlockId: mergedBlock?.id ?? block.id,
+            caretOffset
+        };
+    }
+
     return {
         get blocks() {
             return blocks;
@@ -1672,6 +1746,8 @@ export function createSynthEngine() {
         applyInlineEdit,
         getLinkReferences,
         splitBlockAtInline,
+        mergeWithPreviousBlock,
+        mergeWithNextBlock,
     };
 }
 
