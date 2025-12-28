@@ -212,6 +212,7 @@
         border-radius: 3px;
         padding: 0 2px;
         min-height: 1.2em;
+        outline: 1px solid var(--color-accent);
     }
 
     &[data-type="strong"]:not(.focus) {

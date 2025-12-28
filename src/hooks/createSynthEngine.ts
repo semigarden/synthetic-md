@@ -1455,29 +1455,37 @@ export function createSynthEngine() {
             const openerNodePos = opener.position;
             const closerNodePos = closer.position;
             
-            // Extract children between opener and closer
-            const children = nodes.slice(openerNodePos + 1, closerNodePos);
-            
             // Create emphasis node
             const openerNode = nodes[openerNodePos];
             const closerNode = nodes[closerNodePos];
+
+            // Extract children between opener and closer
+            const children = nodes.slice(openerNodePos + 1, closerNodePos);
+
+            let cursor = 0;
+            for (const child of children) {
+                const len = child.end - child.start;
+                child.start = cursor;
+                child.end = cursor + len;
+                cursor += len;
+            }
             
             const emphType = isStrong ? "strong" : "emphasis";
             const delimCount = isStrong ? 2 : 1;
             const delimStr = opener.type.repeat(delimCount);
 
             // Build the raw text
-            let rawText = delimStr;
+            let synthetic = delimStr;
             for (const child of children) {
-                rawText += child.synthetic;
+                synthetic += child.synthetic;
             }
-            rawText += delimStr;
+            synthetic += delimStr;
 
             const emphNode: Inline = {
                 id: uuid(),
                 type: emphType,
                 blockId,
-                synthetic: rawText,
+                synthetic,
                 pure: children.map(c => c.pure).join(""),
                 children: children,
                 start: openerNode.start,
@@ -1531,7 +1539,18 @@ export function createSynthEngine() {
             }
             closer.position -= posShift;
 
-            // Remove inactive openers/closers
+            // Remove closer node
+            if (closer.length === 0) {
+                nodes.splice(closerNodePos, 1);
+
+                for (const d of stack) {
+                    if (d.position > closerNodePos) {
+                        d.position--;
+                    }
+                }
+            }
+
+            // Remove opener node
             if (opener.length === 0) {
                 nodes.splice(openerNodePos, 1);
                 for (const d of stack) {

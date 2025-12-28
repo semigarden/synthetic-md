@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useState } from 'react'
 import styles from '../styles/Synth.module.scss'
 import Inline from './Inline'
 import type { Block as BlockType, Inline as InlineType } from '../hooks/createSynthEngine'
@@ -13,6 +13,8 @@ interface BlockProps {
 }
 
 const Block: React.FC<BlockProps> = ({ block, inlines, onInlineInput, onInlineSplit, onMergeWithPrevious, onMergeWithNext }) => {
+    const [focus, setFocus] = useState(false)
+    
     const renderInlines = () => (
         inlines.map((inline, index) => (
             <Inline
@@ -40,6 +42,10 @@ const Block: React.FC<BlockProps> = ({ block, inlines, onInlineInput, onInlineSp
         const target = e.target as HTMLElement
         if (target.hasAttribute('data-inline-id')) return
 
+        if (block.type === 'thematicBreak') {
+            setFocus(true)
+        }
+
         if (inlines.length > 0) {
             const lastInline = inlines[inlines.length - 1]
             const el = document.getElementById(lastInline.id)
@@ -61,11 +67,16 @@ const Block: React.FC<BlockProps> = ({ block, inlines, onInlineInput, onInlineSp
         }
     }, [inlines])
 
+    const handleBlockBlur = useCallback((e: React.FocusEvent) => {
+        setFocus(false)
+    }, [])
+
     const commonProps = {
         'data-block-id': block.id,
         'data-block-type': block.type,
         className: styles.block,
         onClick: handleBlockClick,
+        onBlur: handleBlockBlur,
     }
 
     switch (block.type) {
