@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Inline as InlineType } from '../hooks/createSynthEngine';
 import styles from '../styles/Synth.module.scss';
 import type { useSynthController } from '../hooks/useSynthController';
@@ -23,6 +23,12 @@ const Inline: React.FC<{
 }> = ({ synth, inline, onChange, onInput, onSplit, onMergeWithPrevious, onMergeWithNext, isFirstInline, isLastInline }) => {
   const ref = useRef<HTMLSpanElement>(null);
   const [focused, setFocused] = useState(false);
+  
+  console.log('Inline', JSON.stringify(inline, null, 2));
+
+  useEffect(() => {
+    synth.restoreCaret();
+  }, []);
 
   useLayoutEffect(() => {
     if (!ref.current || focused) return;
@@ -30,24 +36,41 @@ const Inline: React.FC<{
     if (ref.current.textContent !== inline.text.semantic) {
       ref.current.textContent = inline.text.semantic;
     }
+
+    // synth.restoreCaret();
   }, [inline.text.semantic, focused]);
 
-  const getCaretOffset = (): number => {
+  function getCaretOffset(inlineEl: HTMLElement) {
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return 0;
-
+  
     const range = sel.getRangeAt(0);
-    if (range.startContainer.nodeType === Node.TEXT_NODE) {
-      return range.startOffset;
+    let offset = 0;
+  
+    function traverse(node: Node): boolean {
+      if (node === range.startContainer) {
+        offset += range.startOffset;
+        return true; // found
+      }
+      for (let child of node.childNodes) {
+        if (traverse(child)) return true;
+      }
+      // add text length if traversing text nodes before the selection
+      if (node.nodeType === Node.TEXT_NODE) {
+        offset += (node as Text).length;
+      }
+      return false;
     }
-    return 0;
-  };
+  
+    traverse(inlineEl);
+    return offset;
+  }
 
   const onFocus = useCallback(() => {
     setFocused(true);
     if (!ref.current) return;
 
-    const offset = getCaretOffset();
+    const offset = getCaretOffset(ref.current);
     ref.current.textContent = inline.text.symbolic;
 
     requestAnimationFrame(() => {
@@ -62,15 +85,22 @@ const Inline: React.FC<{
   const onInputHandler = useCallback(() => {
     if (!ref.current) return;
 
+    const caretPosition = getCaretOffset(ref.current);
+    console.log('onInputHandler', caretPosition);
+
+    synth.saveCaret(inline.id, caretPosition);
+
+
     onInput({
       inlineId: inline.id,
       text: ref.current.textContent ?? "",
-      position: getCaretOffset(),
+      position: caretPosition,
     });
   }, [inline.id, onInput]);
 
   const onKeyDownHandler = useCallback((e: React.KeyboardEvent) => {
-    const position = getCaretOffset();
+    if (!ref.current) return;
+    const position = getCaretOffset(ref.current);
     const textLength = ref.current?.textContent?.length ?? 0;
 
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -101,8 +131,9 @@ const Inline: React.FC<{
           const prevBlock = synth.engine.blocks[synth.engine.blocks.findIndex(b => b.id === block.id) - 1];
 
           if (prevBlock) {
+            console.log('1');
               const result = synth.engine.mergeWithPreviousBlock(inline);
-              synth.engine.placeCaret(prevBlock.id, prevBlock.position.end);
+              synth.saveCaret(inline.id, result?.caretOffset ?? 0);
 
               if (result) {
                 synth.forceRender();
@@ -113,6 +144,7 @@ const Inline: React.FC<{
       }
   
       if (position === 0 && inlineIndex > 0) {
+        console.log('2');
         const prevInline = blockInlines[inlineIndex - 1];
 
         prevInline.text.symbolic = prevInline.text.symbolic.slice(0, -1);
@@ -121,20 +153,20 @@ const Inline: React.FC<{
 
         synth.forceRender();
         onChange?.(mergedText);
-        synth.engine.placeCaret(prevInline.id, prevInline.text.symbolic.length);
+        synth.saveCaret(prevInline.id, prevInline.text.symbolic.length);
         return;
       }
 
       if (position > 0) {
+        console.log('3 and position', position);
         let textToEdit = inline.text.symbolic;
 
         const newSymbolic = textToEdit.slice(0, position - 1) + textToEdit.slice(position);
-
+        synth.saveCaret(inline.id, position - 1);
         synth.engine.applyInlineEdit(inline, newSymbolic);
 
         synth.forceRender();
         onChange?.(inline.text.semantic);
-        synth.engine.placeCaret(inline.id, position - 1);
         return;
       }
   

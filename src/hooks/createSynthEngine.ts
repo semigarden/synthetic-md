@@ -214,12 +214,15 @@ export function createSynthEngine() {
     let sourceText = "";
     let blocks: Block[] = [];
     let inlines = new Map<string, Inline[]>();
+    let prevBlocks: Block[] = [];
+    let prevInlines = new Map<string, Inline[]>();
     let linkReferences = new Map<string, LinkReference>();
 
     function sync(nextText: string) {
         if (sourceText.length > 0 && nextText === sourceText) return;
     
-        const prevBlocks = blocks;
+        prevBlocks = [...blocks];
+        prevInlines = new Map(inlines);
         const lines = nextText.split("\n");
         let offset = 0;
         const nextBlocks: Block[] = [];
@@ -561,10 +564,42 @@ export function createSynthEngine() {
         blocks = nextBlocks;
         sourceText = nextText;
 
+        // console.log(JSON.stringify(deepDiff(prevBlocks, blocks), null, 2));
+
         for (const block of blocks) {
             parseInlinesRecursive(block);
         }
     }
+
+    function deepDiff(obj1: any, obj2: any) {
+        const diff: any = {};
+      
+        for (const key in obj1) {
+          if (obj2.hasOwnProperty(key)) {
+            if (typeof obj1[key] === 'object' && obj1[key] !== null &&
+                typeof obj2[key] === 'object' && obj2[key] !== null) {
+              const nestedDiff = deepDiff(obj1[key], obj2[key]);
+              if (Object.keys(nestedDiff).length > 0) {
+                diff[key] = nestedDiff;
+              }
+            } else if (obj1[key] !== obj2[key]) {
+              diff[key] = { from: obj1[key], to: obj2[key] };
+            }
+          } else {
+            diff[key] = { from: obj1[key], to: undefined };
+          }
+        }
+      
+        for (const key in obj2) {
+          if (!obj1.hasOwnProperty(key)) {
+            diff[key] = { from: undefined, to: obj2[key] };
+          }
+        }
+      
+        return diff;
+    }
+      
+      
 
     function parseInlinesRecursive(block: Block) {
         switch (block.type) {
@@ -821,6 +856,7 @@ export function createSynthEngine() {
         next.push(...result);
 
         inlines.set(blockId, next);
+        prevInlines.set(blockId, next);
         return next;
     }
 
@@ -1776,7 +1812,7 @@ export function createSynthEngine() {
         return null;
     }
     
-    function applyInlineEdit(inline: Inline, nextSymbolic: string): string {
+    function applyInlineEdit(inline: Inline, nextSymbolic: string): { newSourceText: string; position: { start: number; end: number; } } {
         const block = findBlockById(blocks, inline.blockId);
         if (!block) {
             throw new Error(`Block not found for inline edit: ${inline.blockId}`);
@@ -1814,11 +1850,15 @@ export function createSynthEngine() {
 
         block.position.end += delta;
 
-        sourceText = newSourceText;
-
         sync(newSourceText);
 
-        return newSourceText;
+        return {
+            newSourceText,
+            position: {
+                start: block.position.start + inline.position.start,
+                end: block.position.start + inline.position.end,
+            }
+        };
     }
 
     function deriveSemantic(type: Inline["type"], symbolic: string): string {
@@ -1886,8 +1926,6 @@ export function createSynthEngine() {
             sourceText.slice(block.position.start, block.position.end) +
             sourceText.slice(block.position.end);
     
-        sourceText = newSourceText;
-    
         prevBlock.text += block.text;
         prevBlock.position.end = block.position.end;
     
@@ -1912,68 +1950,6 @@ export function createSynthEngine() {
             mergedBlockId: prevBlock.id,
             caretOffset
         };
-    }
-
-    function handleBackspace(inline: Inline, position: number) {
-        const block = findBlockById(blocks, inline.blockId);
-
-        if (!block) return;
-    
-        const blockInlines = inlines.get(block.id);
-        if (!blockInlines) return;
-    
-        const inlineIndex = blockInlines.findIndex(i => i.id === inline.id);
-    
-        // 1️⃣ At start of first inline → merge with previous block
-        if (position === 0 && inlineIndex === 0) {
-            const prevBlock = blocks[blocks.findIndex(b => b.id === block.id) - 1];
-
-            console.log("Backspace", 
-                "position", position,
-                "inline", JSON.stringify(inline, null, 2),
-                "block", JSON.stringify(block, null, 2),
-                "prevBlock", JSON.stringify(prevBlock, null, 2)
-            );
-
-            if (prevBlock) {
-                mergeWithPreviousBlock(inline);
-                placeCaret(prevBlock.id, prevBlock.position.end);
-            }
-            return;
-        }
-    
-        // // 2️⃣ At start of an inline that is NOT first → merge with previous inline
-        // if (caretOffset === 0 && inlineIndex > 0) {
-        //     const prevInline = blockInlines[inlineIndex - 1];
-        //     const newCaretOffset = prevInline.text.symbolic.length;
-    
-        //     // Merge texts
-        //     const mergedText = prevInline.text.symbolic + inline.text.symbolic;
-        //     applyInlineEdit(prevInline, mergedText);
-    
-        //     // Remove current inline
-        //     blockInlines.splice(inlineIndex, 1);
-    
-        //     // Update positions of following inlines
-        //     for (let i = inlineIndex; i < blockInlines.length; i++) {
-        //         blockInlines[i].position.start -= inline.text.symbolic.length;
-        //         blockInlines[i].position.end -= inline.text.symbolic.length;
-        //     }
-    
-        //     placeCaret(prevInline.id, newCaretOffset);
-        //     return;
-        // }
-    
-        // // 3️⃣ Default behavior inside inline
-        // if (caretOffset > 0) {
-        //     const text = inline.text.symbolic;
-        //     const newText =
-        //         text.slice(0, caretOffset - 1) +
-        //         text.slice(caretOffset);
-    
-        //     applyInlineEdit(inline, newText);
-        //     placeCaret(inline.id, caretOffset - 1);
-        // }
     }
 
     function getLastTextNode(node: Node): Node | null {
@@ -2039,6 +2015,52 @@ export function createSynthEngine() {
         };
     }
 
+    function updateInlineDOM(inline: Inline) {
+        const el = document.querySelector(`[data-inline-id="${inline.id}"]`);
+        if (!el) return;
+    
+        el.textContent = inline.text.symbolic;
+    }
+
+    function renderInlineElement(inline: Inline) {
+        switch (inline.type) {
+            case 'hardBreak': {
+                const span = document.createElement('br');
+                span.setAttribute('data-inline-id', inline.id);
+                span.setAttribute('data-type', inline.type);
+                return span;
+            }
+            case 'softBreak': {
+                const span = document.createElement('span');
+                span.setAttribute('data-inline-id', inline.id);
+                span.setAttribute('data-type', inline.type);
+                return span;
+            }
+            case 'image': {
+                const span = document.createElement('span');
+                span.setAttribute('data-inline-id', inline.id);
+                span.setAttribute('data-type', inline.type);
+                span.className = 'inline';
+                span.title = inline.title || inline.alt;
+
+                const img = document.createElement('img');
+                img.setAttribute('src', inline.url);
+                img.setAttribute('alt', inline.alt);
+                img.style.maxWidth = '100%';
+                img.style.height = 'auto';
+                span.appendChild(img);
+
+                return span;
+            }
+            case 'text':
+                const span = document.createElement('span');
+                span.setAttribute('data-inline-id', inline.id);
+                span.setAttribute('data-type', inline.type);
+                span.textContent = inline.text.symbolic;
+                return span;
+        }
+    }
+
     return {
         get blocks() {
             return blocks;
@@ -2057,9 +2079,10 @@ export function createSynthEngine() {
         splitBlockAtInline,
         mergeWithPreviousBlock,
         mergeWithNextBlock,
-        handleBackspace,
         placeCaret,
         findBlockById,
+        updateInlineDOM,
+        renderInlineElement,
     };
 }
 

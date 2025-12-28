@@ -17,19 +17,27 @@ const SyntheticText = forwardRef<SyntheticTextRef, SyntheticTextProps>(({
 }, ref) => {
     const synth = useSynthController(initialValue, ref as React.RefObject<SyntheticTextRef>);
 
-    useLayoutEffect(() => {
-        synth.restoreCaret();
-    });
+    // useLayoutEffect(() => {
+    //     synth.restoreCaret();
+    // });
 
     const handleInlineInput = useCallback((inline: InlineType, text: string, caretOffset: number) => {
-        synth.saveCaret(inline.id, caretOffset);
-
+        
         const nextMarkdown = synth.engine.applyInlineEdit(inline, text);
 
+        // console.log('nextMarkdown', JSON.stringify(nextMarkdown, null, 2), 'caretOffset', nextMarkdown.position.end);
+
+        // synth.engine.sync(nextMarkdown.newSourceText);
         synth.forceRender();
 
-        onChange?.(nextMarkdown);
-    }, [synth, onChange]);
+        // console.log('blocks', JSON.stringify(synth.engine.blocks, null, 2));
+        // console.log('nextMarkdown', nextMarkdown);
+        // console.log('sourceText', synth.engine.sourceText);
+        
+
+        onChange?.(nextMarkdown.newSourceText);
+
+    }, [synth]);
 
     const handleInlineSplit = useCallback((inline: InlineType, caretOffset: number) => {
         const { newSourceText, newBlockId } = synth.engine.splitBlockAtInline(inline, caretOffset);
