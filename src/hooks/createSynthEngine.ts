@@ -1777,6 +1777,8 @@ export function createSynthEngine() {
 
         sourceText = newSourceText;
 
+        sync(newSourceText);
+
         return newSourceText;
     }
 
@@ -1801,7 +1803,7 @@ export function createSynthEngine() {
     }
 
     function splitBlockAtInline(inline: Inline, caretOffset: number): { newSourceText: string; newBlockId: string } {
-        const block = blocks.find(b => b.id === inline.blockId);
+        const block = findBlockById(blocks, inline.blockId);
         if (!block) {
             throw new Error(`Block not found for split: ${inline.blockId}`);
         }
@@ -1830,7 +1832,7 @@ export function createSynthEngine() {
     }
 
     function mergeWithPreviousBlock(inline: Inline): { newSourceText: string; mergedBlockId: string; caretOffset: number } | null {
-        const block = blocks.find(b => b.id === inline.blockId);
+        const block = findBlockById(blocks, inline.blockId);
         if (!block) {
             return null;
         }
