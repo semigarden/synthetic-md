@@ -17,12 +17,6 @@ interface BlockProps {
 const Block: React.FC<BlockProps> = ({ synth, block, inlines, onInlineInput, onInlineSplit, onMergeWithPrevious, onMergeWithNext }) => {
     const [focus, setFocus] = useState(false)
 
-    console.log('block', JSON.stringify(block, null, 2))
-
-    // if (block.type === 'listItem') {
-    //     console.log('block', JSON.stringify(block, null, 2))
-    // }
-    
     const renderInlines = () => (
         inlines.map((inline, index) => (
             <Inline
@@ -50,13 +44,13 @@ const Block: React.FC<BlockProps> = ({ synth, block, inlines, onInlineInput, onI
         const target = e.target as HTMLElement
         if (target.hasAttribute('data-inline-id')) return
 
-        if (block.type === 'thematicBreak') {
-            setFocus(true)
-        }
+        // if (block.type === 'thematicBreak') {
+        //     setFocus(true)
+        // }
 
-        if (block.type === 'listItem') {
-            setFocus(true)
-        }
+        // if (block.type === 'listItem') {
+        //     setFocus(true)
+        // }
 
         if (inlines.length > 0) {
             const lastInline = inlines[inlines.length - 1]
@@ -202,7 +196,17 @@ const Block: React.FC<BlockProps> = ({ synth, block, inlines, onInlineInput, onI
         }
 
         case 'thematicBreak':
-            return <hr {...commonProps} className={`${styles.block} ${styles.thematicBreak}`} />
+            return (
+                <div>
+                    {focus ? (
+                        <span className={styles.thematicBreakText}>
+                            {block.text}
+                        </span>
+                    ) : (
+                        <hr {...commonProps} className={`${styles.block} ${styles.thematicBreak}`} />
+                    )}
+                </div>
+            )
 
         case 'table': {
             const tableBlock = block as any

@@ -295,13 +295,16 @@ export function createSynthEngine() {
                 }
 
                 case "listItem": {
-                    const listItemText = line.replace(/^(\s*([-*+]|(\d+[.)])))\s+/, "");
+                    const markerMatch = /^(\s*([-*+]|(\d+[.)])))\s+/.exec(line);
+                    const markerLength = markerMatch ? markerMatch[0].length : 0;
+
+                    const listItemText = line.slice(markerLength);
 
                     const paragraph: Paragraph = {
                         id: uuid(),
                         type: "paragraph",
                         text: listItemText,
-                        start,
+                        start: start + markerLength,
                         end,
                     };
 
@@ -528,6 +531,9 @@ export function createSynthEngine() {
         for (const block of blocks) {
             parseInlinesRecursive(block);
         }
+
+        console.log('sourceText', `"${sourceText}"`)
+        console.log('blocks', JSON.stringify(blocks, null, 2))
     }
 
     function parseInlinesRecursive(block: Block) {
