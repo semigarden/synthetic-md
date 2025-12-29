@@ -17,8 +17,10 @@ export function useSynthController(initialValue: string, ref: React.RefObject<Sy
     }, []);
 
     const caretRef = React.useRef<{
+        blockId: string;
         inlineId: string;
-        offset: number;
+        position: number;
+        affinity?: "forward" | "backward";
     } | null>(null);
 
     useImperativeHandle(ref, () => ({
@@ -40,9 +42,9 @@ export function useSynthController(initialValue: string, ref: React.RefObject<Sy
         },
     }), [engine]);
 
-    const saveCaret = useCallback((inlineId: string, offset: number) => {
-        console.log('saveCaret', inlineId, offset);
-        caretRef.current = { inlineId, offset };
+    const saveCaret = useCallback((blockId: string, inlineId: string, position: number) => {
+        console.log('saveCaret', blockId, inlineId, position);
+        caretRef.current = { blockId, inlineId, position };
     }, []);
 
     const restoreCaret = useCallback(() => {
@@ -51,12 +53,12 @@ export function useSynthController(initialValue: string, ref: React.RefObject<Sy
         if (!caret) return;
 
 
-        const blockEl = findClosestBlock(engine.blocks, caret.offset);
+        const blockEl = findClosestBlock(engine.blocks, caret.position);
         // console.log('closestBlock', JSON.stringify(blockEl, null, 2));
  
         if (!blockEl) return;
 
-        const inlineEl = findClosestInline(engine.getInlines(blockEl), caret.offset);
+        const inlineEl = findClosestInline(engine.getInlines(blockEl), caret.position);
         // console.log('closestInline', JSON.stringify(inlineEl, null, 2));
 
         const elId = inlineEl?.id ?? blockEl?.id;
@@ -68,7 +70,7 @@ export function useSynthController(initialValue: string, ref: React.RefObject<Sy
             const range = document.createRange();
             const sel = window.getSelection();
             const node = el.firstChild ?? el;
-            range.setStart(node, Math.min(caret.offset, node.textContent?.length ?? 0));
+            range.setStart(node, Math.min(caret.position, node.textContent?.length ?? 0));
             range.collapse(true);
             sel?.removeAllRanges();
             sel?.addRange(range);

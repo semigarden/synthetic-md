@@ -1,7 +1,8 @@
-import SyntheticText from './components/SyntheticText'
+// import SyntheticText from './components/SyntheticText'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import useStore from './hooks/useStore'
 import { type SyntheticTextRef } from './hooks/useSynthController'
+
 
 function App() {
   const { loadText, saveText } = useStore();
@@ -21,11 +22,12 @@ function App() {
   }
 
   return (
-    <SyntheticText
-      ref={editorRef}
-      initialValue={initialValue}
-      onChange={onChange}
-    />
+    // <SyntheticText
+    //   ref={editorRef}
+    //   initialValue={initialValue}
+    //   onChange={onChange}
+    // />
+    <synthetic-text />
   );
 }
 

@@ -1,13 +1,15 @@
 {
-  "files": [],
+  "files": ["dev/elements.d.ts"],
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "target": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true
   },
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
+  "include": [
+    "dev",
+    "core",
+    "**/*.d.ts"
   ]
 }
