@@ -1,3 +1,4 @@
+import Engine from '../engine/engine'
 import css from './SyntheticText.scss?inline'
 
 export class SyntheticText extends HTMLElement {
@@ -6,12 +7,15 @@ export class SyntheticText extends HTMLElement {
     private contentEl?: HTMLDivElement
     private _value = ''
 
+    private engine = new Engine()
+
     constructor() {
         super()
         this.root = this.attachShadow({ mode: 'open' })
     }
 
     connectedCallback() {
+        this.engine = new Engine(this.textContent ?? '')
         this.ensureStyle()
         this.ensureDom()
     }
@@ -26,6 +30,10 @@ export class SyntheticText extends HTMLElement {
 
     get value() {
         return this._value
+    }
+
+    private onInput(next: string) {
+        this.engine.setSource(next)
     }
 
     private ensureStyle() {
@@ -49,6 +57,8 @@ export class SyntheticText extends HTMLElement {
         div.addEventListener('input', () => {
             const next = div.textContent ?? ''
             this._value = next
+
+            this.onInput(next)
       
             this.dispatchEvent(
               new CustomEvent('change', {
