@@ -1,4 +1,4 @@
-import { SyntheticText } from './visual/SyntheticText (original)'
+import { SyntheticText } from './visual/SyntheticText'
 
 if (!customElements.get('synthetic-text')) {
     customElements.define('synthetic-text', SyntheticText)
