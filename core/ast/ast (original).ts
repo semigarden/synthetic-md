@@ -2,36 +2,23 @@ import { uuid, decodeHTMLEntity } from "../utils/utils";
 import { ParseState, Delimiter, DetectedBlock, Block, Inline } from './types';
 import { CodeBlock, ListItem, List, Paragraph, Table, TableRow, TableCell, Document } from './types';
 
-function levenshteinDistance(a: string, b: string): number {
-    const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(0));
-
-    for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
-    for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
-
-    for (let j = 1; j <= b.length; j++) {
-        for (let i = 1; i <= a.length; i++) {
-            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-            matrix[j][i] = Math.min(
-                matrix[j][i - 1] + 1,
-                matrix[j - 1][i] + 1,
-                matrix[j - 1][i - 1] + cost
-            );
-        }
-    }
-    return matrix[b.length][a.length];
+interface IdReuseContext {
+    blockIds: Map<string, string>
+    inlineIds: Map<string, string>
+    usedBlockIds: Set<string>
+    usedInlineIds: Set<string>
 }
 
-function buildAst(text: string, previousAst: Document | null = null): Document {
+function buildAst(text: string, previousAst: Document | null = null) {
     const lines = text.split("\n");
     let offset = 0;
     const blocks: Block[] = [];
+    
     const state: ParseState = {
         inFencedCodeBlock: false,
         codeBlockFence: "",
         codeBlockId: "",
     };
-
-    const tempUuid = () => uuid();
 
     parseLinkReferenceDefinitions(text);
 
@@ -40,24 +27,25 @@ function buildAst(text: string, previousAst: Document | null = null): Document {
         const start = offset;
         const end = i === lines.length - 1 ? text.length : offset + line.length;
 
+        // Handle fenced code block continuation/closing
         if (state.inFencedCodeBlock) {
-            const closeMatch = line.match(
-                new RegExp(`^\\s{0,3}${state.codeBlockFence.charAt(0)}{${state.codeBlockFence.length},}\\s*$`)
-            );
-            const currentBlock = blocks.find(b => b.id === state.codeBlockId) as Block;
-
+            const closeMatch = line.match(new RegExp(`^\\s{0,3}${state.codeBlockFence.charAt(0)}{${state.codeBlockFence.length},}\\s*$`));
             if (closeMatch) {
-                if (currentBlock) {
-                    currentBlock.text += "\n" + line;
-                    currentBlock.position.end = end + 1;
+                // Close the code block
+                const existingBlock = blocks.find(b => b.id === state.codeBlockId) as CodeBlock;
+                if (existingBlock) {
+                    existingBlock.text += "\n" + line;
+                    existingBlock.position.end = end;
                 }
                 state.inFencedCodeBlock = false;
                 state.codeBlockFence = "";
                 state.codeBlockId = "";
             } else {
-                if (currentBlock) {
-                    currentBlock.text += "\n" + line;
-                    currentBlock.position.end = end + 1;
+                // Add line to code block
+                const existingBlock = blocks.find(b => b.id === state.codeBlockId) as CodeBlock;
+                if (existingBlock) {
+                    existingBlock.text += "\n" + line;
+                    existingBlock.position.end = end;
                 }
             }
             offset = end + 1;
@@ -65,29 +53,36 @@ function buildAst(text: string, previousAst: Document | null = null): Document {
         }
 
         const detectedBlock = detectType(line);
+
         let block: Block;
 
         switch (detectedBlock.type) {
-            case "heading": {
+            case "heading":
                 block = {
-                    id: tempUuid(),
+                    id: uuid(),
                     type: "heading",
                     level: detectedBlock.level!,
                     text: line,
-                    position: { start, end },
+                    position: {
+                        start,
+                        end,
+                    },
                     inlines: [],
                 };
                 blocks.push(block);
                 break;
-            }
 
             case "blockQuote": {
+                // Handle nested content in blockquotes
                 const quoteContent = line.replace(/^>\s?/, "");
                 block = {
-                    id: tempUuid(),
+                    id: uuid(),
                     type: "blockQuote",
                     text: quoteContent,
-                    position: { start, end },
+                    position: {
+                        start,
+                        end,
+                    },
                     blocks: [],
                     inlines: [],
                 };
@@ -98,36 +93,47 @@ function buildAst(text: string, previousAst: Document | null = null): Document {
             case "listItem": {
                 const markerMatch = /^(\s*([-*+]|(\d+[.)])))\s+/.exec(line);
                 const markerLength = markerMatch ? markerMatch[0].length : 0;
+
                 const listItemText = line.slice(markerLength);
 
-                const paragraph: Block = {
-                    id: tempUuid(),
+                const paragraph: Paragraph = {
+                    id: uuid(),
                     type: "paragraph",
                     text: listItemText,
-                    position: { start: start + markerLength, end },
+                    position: {
+                        start: start + markerLength,
+                        end,
+                    },
                     inlines: [],
                 };
 
-                const listItem: Block = {
-                    id: tempUuid(),
+                const listItem: ListItem = {
+                    id: uuid(),
                     type: "listItem",
                     text: listItemText,
-                    position: { start, end },
+                    position: {
+                        start,
+                        end,
+                    },
                     blocks: [paragraph],
                     inlines: [],
                 };
 
+                // Find or create parent list
                 const lastBlock = blocks[blocks.length - 1];
-                if (lastBlock && lastBlock.type === "list" && (lastBlock as any).ordered === !!detectedBlock.ordered) {
-                    (lastBlock as any).blocks.push(listItem);
-                    lastBlock.position.end = end;
+                if (lastBlock && lastBlock.type === "list" && (lastBlock as List).ordered === detectedBlock.ordered) {
+                    (lastBlock as List).blocks.push(listItem);
+                    (lastBlock as List).position.end = end;
                 } else {
-                    const newList: Block = {
-                        id: tempUuid(),
+                    const newList: List = {
+                        id: uuid(),
                         type: "list",
                         text: "",
-                        position: { start, end },
-                        ordered: !!detectedBlock.ordered,
+                        position: {
+                            start,
+                            end,
+                        },
+                        ordered: detectedBlock.ordered ?? false,
                         listStart: detectedBlock.listStart,
                         tight: true,
                         blocks: [listItem],
@@ -138,257 +144,279 @@ function buildAst(text: string, previousAst: Document | null = null): Document {
                 break;
             }
 
+            case "taskListItem": {
+                const taskMatch = line.match(/^\s*([-*+])\s+\[([ xX])\]\s+(.*)/);
+
+                const taskText = taskMatch ? taskMatch[3] : line
+                const paragraph: Paragraph = {
+                    id: uuid(),
+                    type: "paragraph",
+                    text: taskText,
+                    position: {
+                        start,
+                        end,
+                    },
+                    inlines: [],
+                };
+
+                block = {
+                    id: uuid(),
+                    type: "taskListItem",
+                    text: taskMatch ? taskMatch[3] : line,
+                    checked: taskMatch ? taskMatch[2].toLowerCase() === 'x' : false,
+                    position: {
+                        start,
+                        end,
+                    },
+                    blocks: [paragraph],
+                    inlines: [],
+                };
+                blocks.push(block);
+                break;
+            }
+
+            case "thematicBreak":
+                block = {
+                    id: uuid(),
+                    type: "thematicBreak",
+                    text: line,
+                    position: {
+                        start,
+                        end,
+                    },
+                    inlines: [],
+                };
+                blocks.push(block);
+                break;
+
             case "codeBlock": {
                 const fenceMatch = line.match(/^(\s{0,3})(```+|~~~+)(.*)$/);
                 if (fenceMatch) {
-                    const newTempId = tempUuid();
                     state.inFencedCodeBlock = true;
                     state.codeBlockFence = fenceMatch[2];
-                    state.codeBlockId = newTempId;
-
+                    state.codeBlockId = uuid();
                     block = {
-                        id: newTempId,
+                        id: uuid(),
                         type: "codeBlock",
                         text: line,
                         language: fenceMatch[3].trim() || undefined,
                         isFenced: true,
                         fence: fenceMatch[2],
-                        position: { start, end },
+                        position: {
+                            start,
+                            end,
+                        },
                         inlines: [],
                     };
                     blocks.push(block);
                 } else {
+                    // Indented code block (4 spaces)
                     block = {
-                        id: tempUuid(),
+                        id: uuid(),
                         type: "codeBlock",
                         text: line.replace(/^ {4}/, ""),
                         isFenced: false,
-                        position: { start, end },
+                        position: {
+                            start,
+                            end,
+                        },
                         inlines: [],
                     };
                     blocks.push(block);
                 }
                 break;
             }
+
+            case "table": {
+                const table: Table = {
+                    id: uuid(),
+                    type: "table",
+                    text: "",
+                    position: {
+                        start,
+                        end,
+                    },
+                    blocks: [],
+                    inlines: [],
+                };
+                const cells = parseTableRow(line);
+                const row: TableRow = {
+                    id: uuid(),
+                    type: "tableRow",
+                    text: line,
+                    position: {
+                        start,
+                        end,
+                    },
+                    blocks: cells,
+                    inlines: [],
+                };
+                table.blocks.push(row);
+                blocks.push(table);
+                break;
+            }
+
+            case "footnote": {
+                const footnoteMatch = line.match(/^\[\^([^\]]+)\]:\s*(.*)/);
+                block = {
+                    id: uuid(),
+                    type: "footnote",
+                    text: footnoteMatch ? footnoteMatch[2] : line,
+                    label: footnoteMatch ? footnoteMatch[1] : "",
+                    position: {
+                        start,
+                        end,
+                    },
+                    inlines: [],
+                };
+                blocks.push(block);
+                break;
+            }
+
+            case "htmlBlock":
+                block = {
+                    id: uuid(),
+                    type: "htmlBlock",
+                    text: line,
+                    position: {
+                        start,
+                        end,
+                    },
+                    inlines: [],
+                };
+                blocks.push(block);
+                break;
+
+            case "blankLine":
+                block = {
+                    id: uuid(),
+                    type: "blankLine",
+                    text: "",
+                    position: {
+                        start,
+                        end,
+                    },
+                    inlines: [],
+                };
+                blocks.push(block);
+                break;
 
             case "paragraph":
             default: {
+                // Check if we can continue previous paragraph (lazy continuation)
                 const lastBlock = blocks[blocks.length - 1];
                 if (lastBlock && lastBlock.type === "paragraph" && line.trim() !== "") {
                     lastBlock.text += "\n" + line;
-                    lastBlock.position.end = end + 1;
+                    lastBlock.position.end = end;
                 } else {
                     block = {
-                        id: tempUuid(),
+                        id: uuid(),
                         type: "paragraph",
                         text: line,
-                        position: { start, end },
+                        position: {
+                            start,
+                            end,
+                        },
                         inlines: [],
                     };
                     blocks.push(block);
                 }
                 break;
             }
-
         }
 
         offset = end + 1;
     }
 
+    // Ensure there's always at least one block
     if (blocks.length === 0) {
-        blocks.push({
-            id: tempUuid(),
+        const emptyBlock: Paragraph = {
+            id: uuid(),
             type: "paragraph",
             text: "",
-            position: { start: 0, end: 0 },
+            position: {
+                start: 0,
+                end: 0,
+            },
             inlines: [],
-        });
+        };
+        blocks.push(emptyBlock);
     }
 
-    const prevBlocks = previousAst?.blocks || [];
-    const usedPrevIds = new Set<string>();
-
-    const prevByType = new Map<string, Block[]>();
-prevBlocks.forEach(b => {
-    const list = prevByType.get(b.type) || [];
-    list.push(b);
-    prevByType.set(b.type, list);
-});
-
-    const simpleSimilarity = (a: string, b: string): number => {
-        if (a === b) return 1;
-        a = a.trim();
-        b = b.trim();
-        if (a === "" && b === "") return 1;
-        if (a === "" || b === "") return 0;
-    
-        const longer = a.length > b.length ? a : b;
-        const shorter = a.length > b.length ? b : a;
-    
-        let matches = 0;
-        for (let i = 0; i < shorter.length; i++) {
-            if (shorter[i] === longer[i]) matches++;
-        }
-        return matches / longer.length;
-    };
-
-    for (let i = 0; i < blocks.length; i++) {
-        const newBlock = blocks[i];
-        const candidates = prevByType.get(newBlock.type) || [];
-    
-        let bestMatch: Block | null = null;
-        let bestScore = 0;
-    
-        for (const prev of candidates) {
-            if (usedPrevIds.has(prev.id)) continue;
-    
-            let score = 0;
-    
-            const posDiff = Math.abs(prev.position.start - newBlock.position.start);
-            if (posDiff <= 50) {
-                score += 1.0;
-            }
-    
-            const similarity = simpleSimilarity(prev.text, newBlock.text);
-            score += similarity;
-    
-            const lenDiff = Math.abs(prev.text.length - newBlock.text.length);
-            if (lenDiff <= 10) {
-                score += 0.5;
-            }
-    
-            const minLen = Math.min(prev.text.length, newBlock.text.length);
-            if (minLen > 0) {
-                const shorter = prev.text.length <= newBlock.text.length ? prev.text : newBlock.text;
-                const longer = prev.text.length > newBlock.text.length ? prev.text : newBlock.text;
-                if (longer.startsWith(shorter)) {
-                    score += 1.0;
-                }
-                if (longer.endsWith(shorter)) {
-                    score += 0.8;
-                }
-            }
-    
-            if (score > bestScore) {
-                bestScore = score;
-                bestMatch = prev;
-            }
-        }
-    
-        if (bestMatch && bestScore > 1.5) {
-            newBlock.id = bestMatch.id;
-            usedPrevIds.add(bestMatch.id);
-        }
-    }
-
-    const reconcileNested = (blockList: Block[]) => {
+    // Clean up orphaned inline caches
+    const newBlockIds = new Set<string>();
+    const collectIds = (blockList: Block[]) => {
         for (const b of blockList) {
-            if ('blocks' in b && (b as any).blocks.length > 0) {
-                reconcileNested(b.blocks);
+            newBlockIds.add(b.id);
+            if ('blocks' in b && Array.isArray(b.blocks)) {
+                collectIds(b.blocks as Block[]);
             }
         }
     };
-    reconcileNested(blocks);
+    collectIds(blocks);
 
     const ast: Document = {
-        id: previousAst?.id || uuid(),
+        id: uuid(),
         type: "document",
-        text,
+        text: text,
         position: {
-            start: 0,
-            end: text.length,
+            start: blocks[0]?.position.start || 0,
+            end: blocks[blocks.length - 1]?.position.end || 0,
         },
-        blocks,
+        blocks: blocks,
         inlines: [],
     };
 
-    const prevBlockMap = new Map<string, Block>();
-    previousAst?.blocks.forEach(b => {
-        if (b.id) prevBlockMap.set(b.id, b);
-    });
-
     for (const block of blocks) {
-        const previousVersion = prevBlockMap.get(block.id);
-        parseInlinesRecursive(block, previousVersion);
-
+        parseInlinesRecursive(block);
         if (block.inlines) {
-            ast.inlines.push(...block.inlines);
+            ast.inlines = [...(ast.inlines || []), ...block.inlines];
         }
     }
 
     return ast;
 }
 
-function parseInlinesRecursive(block: Block, previousBlock?: Block) {
-    const prevInlines = previousBlock?.inlines || [];
-
-    switch (block.type) {
-        case "paragraph":
-        case "heading":
-        case "codeBlock": {
-            const newInlines = parseInlines(block, prevInlines);
-            block.inlines = newInlines;
-            break;
-        }
-
-        default:
-            if ('blocks' in block && Array.isArray(block.blocks)) {
-                const prevNestedMap = new Map<string, Block>();
-                if (previousBlock && 'blocks' in previousBlock && Array.isArray(previousBlock.blocks)) {
-                    previousBlock.blocks.forEach((b: Block) => {
-                        if (b.id) prevNestedMap.set(b.id, b);
-                    });
-                }
-
-                for (const childBlock of block.blocks as Block[]) {
-                    const prevChild = prevNestedMap.get(childBlock.id);
-                    parseInlinesRecursive(childBlock, prevChild);
-                }
-            }
-            break;
-    }
-}
-
-function parseInlines(block: Block, previousInlines: Inline[] = []): Inline[] {
+function parseInlines(block: Block): Inline[] {
     const next: Inline[] = [];
     const text = block.text;
     const blockId = block.id;
 
-    if (text === "") {
-        const oldEmpty = previousInlines[0];
-        next.push({
-            id: oldEmpty?.id || uuid(),
+    if (text === "") {  
+        const emptyInline: Inline = {
+            id: uuid(),
             type: "text",
             blockId,
-            text: { symbolic: "", semantic: "" },
-            position: { start: 0, end: 0 },
-        });
+            text: {
+                symbolic: "",
+                semantic: "",
+            },
+            position: {
+                start: 0,
+                end: 0,
+            },
+        };
+        next.push(emptyInline);
         return next;
     }
 
     if (block.type === "codeBlock") {
         const codeBlock = block as CodeBlock;
-        const codeContent = codeBlock.isFenced
+        const codeContent = codeBlock.isFenced 
             ? extractFencedCodeContent(text, codeBlock.fence!)
             : text;
-
-        const old = previousInlines[0];
-        const oldContent = old?.text.semantic || "";
-
-        const shouldReuse = old && (
-            codeContent.startsWith(oldContent) ||
-            codeContent.endsWith(oldContent) ||
-            oldContent.startsWith(codeContent) ||
-            oldContent.endsWith(codeContent) ||
-            Math.abs(codeContent.length - oldContent.length) < 50
-        );
-
         next.push({
-            id: shouldReuse ? old.id : uuid(),
+            id: uuid(),
             type: "text",
             blockId,
-            text: { symbolic: text, semantic: codeContent },
-            position: { start: 0, end: text.length },
+            text: {
+                symbolic: text,
+                semantic: codeContent,
+            },
+            position: {
+                start: 0,
+                end: text.length,
+            },
         });
         return next;
     }
@@ -403,76 +431,11 @@ function parseInlines(block: Block, previousInlines: Inline[] = []): Inline[] {
         }
     }
 
-    const newFragments = parseInlineContent(parseText, blockId, textOffset);
-
-    const prevByKey = new Map<string, Inline>();
-    const usedIds = new Set<string>();
-
-    for (const prev of previousInlines) {
-        const key = `${prev.type}|${prev.text.symbolic}`;
-        prevByKey.set(key, prev);
-    }
-
-    for (const frag of newFragments) {
-        const symbolic = frag.text.symbolic;
-
-        let reusedId: string | null = null;
-
-        if (frag.type === "text") {
-            for (const prev of previousInlines) {
-                if (usedIds.has(prev.id) || prev.type !== "text") continue;
-
-                const oldText = prev.text.symbolic;
-
-                if (symbolic.startsWith(oldText) && symbolic.length > oldText.length) {
-                    reusedId = prev.id;
-                    break;
-                }
-
-                if (symbolic.endsWith(oldText) && symbolic.length > oldText.length) {
-                    reusedId = prev.id;
-                    break;
-                }
-
-                if (oldText.startsWith(symbolic) && oldText.length > symbolic.length) {
-                    reusedId = prev.id;
-                    break;
-                }
-
-                if (oldText.endsWith(symbolic) && oldText.length > symbolic.length) {
-                    reusedId = prev.id;
-                    break;
-                }
-
-                if (Math.abs(symbolic.length - oldText.length) <= 5) {
-                    const distance = levenshteinDistance(symbolic, oldText);
-                    if (distance <= 3) {
-                        reusedId = prev.id;
-                        break;
-                    }
-                }
-            }
-        } else {
-            const key = `${frag.type}|${symbolic}`;
-            const match = prevByKey.get(key);
-            if (match && !usedIds.has(match.id)) {
-                reusedId = match.id;
-            }
-        }
-
-        const inlineId = reusedId || uuid();
-        if (reusedId) usedIds.add(reusedId);
-
-        next.push({
-            ...frag,
-            id: inlineId,
-            blockId,
-        });
-    }
+    const result = parseInlineContent(parseText, blockId, textOffset);
+    next.push(...result);
 
     return next;
 }
-
 
 function parseTableRow(line: string): TableCell[] {
     const cellTexts: string[] = [];
@@ -514,6 +477,7 @@ function parseTableRow(line: string): TableCell[] {
         cellTexts.push(current);
     }
     
+    // Remove empty first/last cells from leading/trailing pipes
     if (cellTexts.length > 0 && cellTexts[0].trim() === "") cellTexts.shift();
     if (cellTexts.length > 0 && cellTexts[cellTexts.length - 1].trim() === "") cellTexts.pop();
 
@@ -549,6 +513,7 @@ function parseTableRow(line: string): TableCell[] {
 function extractFencedCodeContent(text: string, fence: string): string {
     const lines = text.split("\n");
     if (lines.length <= 1) return "";
+    // Remove first line (opening fence) and last line (closing fence if present)
     const contentLines = lines.slice(1);
     const closingPattern = new RegExp(`^\\s{0,3}${fence.charAt(0)}{${fence.length},}\\s*$`);
     if (contentLines.length > 0 && closingPattern.test(contentLines[contentLines.length - 1])) {
@@ -585,6 +550,7 @@ function parseInlineContent(text: string, blockId: string, offset: number = 0): 
         }
     };
 
+    // Flanking rules for * and _
     const isLeftFlanking = (pos: number, runLength: number): boolean => {
         const afterRun = pos + runLength;
         if (afterRun >= text.length) return false;
@@ -1488,7 +1454,23 @@ function processEmphasis(stack: Delimiter[], nodes: Inline[], blockId: string) {
     // They stay as text, which is correct
 }
 
+function parseInlinesRecursive(block: Block) {
+    switch (block.type) {
+        case "paragraph":
+        case "heading":
+        case "codeBlock":
+            const inlines = parseInlines(block);
+            block.inlines = inlines;
+            break;
 
+        default:
+            if ('blocks' in block && Array.isArray(block.blocks)) {
+                for (const blockItem of block.blocks) {
+                    parseInlinesRecursive(blockItem as Block);
+                }
+            }
+    }
+}
 
 function detectType(line: string): DetectedBlock {
     const trimmed = line.trim();
