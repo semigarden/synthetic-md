@@ -1,5 +1,5 @@
 import Engine from '../engine/engine'
-import { renderAST } from '../render/render'
+import { renderAST, patchDOM } from '../render/render'
 import css from './SyntheticText.scss?inline'
 
 export class SyntheticText extends HTMLElement {
@@ -8,9 +8,9 @@ export class SyntheticText extends HTMLElement {
     private contentEl?: HTMLDivElement
     private engine = new Engine()
     private connected = false
-    private mode : 'symbolic' | 'synthetic' = 'synthetic'
     private focusedInlineId: string | null = null
     private caretPosition: number = 0
+    private initialRenderDone = false
 
     constructor() {
         super()
@@ -28,7 +28,7 @@ export class SyntheticText extends HTMLElement {
     set value(value: string) {
         this.engine.setSource(value)
         if (this.connected) {
-            this.render()
+            this.patch()
         }
     }
 
@@ -38,71 +38,72 @@ export class SyntheticText extends HTMLElement {
 
     private render() {
         if (!this.contentEl) return
-
         const ast = this.engine.getAst()
-        // console.log('ast', JSON.stringify(ast, null, 2))
-        renderAST(ast, this.contentEl!, this.focusedInlineId)
-        console.log('render', this.focusedInlineId)
-        console.log('caretPosition', this.caretPosition)
+        renderAST(ast, this.contentEl, this.focusedInlineId)
+        this.initialRenderDone = true
+        this.restoreCaret()
+    }
 
+    private patch() {
+        if (!this.contentEl) return
+        const diff = this.engine.getLastDiff()
+        if (!diff || !this.initialRenderDone) {
+            this.render()
+            return
+        }
+        patchDOM(diff, this.contentEl, this.focusedInlineId)
         this.restoreCaret()
     }
 
     private restoreCaret() {
-        if (this.caretPosition == null || !this.contentEl) return;
+        if (this.caretPosition == null || !this.contentEl) return
 
-    const sel = window.getSelection();
-    if (!sel) return;
+        const sel = window.getSelection()
+        if (!sel) return
 
-    let remaining = this.caretPosition;
-    let targetNode: Node | null = null;
-    let offset = 0;
+        let remaining = this.caretPosition
+        let targetNode: Node | null = null
+        let offset = 0
 
-    const walk = (node: Node): boolean => {
-        if (node.nodeType === Node.TEXT_NODE) {
-            const parentInlineId = (node.parentElement)?.dataset.inlineId;
-            let nodeLength = node.textContent?.length ?? 0;
+        const walk = (node: Node): boolean => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const parentInlineId = (node.parentElement)?.dataset.inlineId
+                let nodeLength = node.textContent?.length ?? 0
 
-            // Decide whether to use symbolic or semantic length
-            if (parentInlineId) {
-                const inline = this.engine.getInlineById(parentInlineId);
-                if (inline) {
-                    nodeLength = parentInlineId === this.focusedInlineId
-                        ? inline.text.symbolic.length
-                        : inline.text.semantic.length;
+                if (parentInlineId) {
+                    const inline = this.engine.getInlineById(parentInlineId)
+                    if (inline) {
+                        nodeLength = parentInlineId === this.focusedInlineId
+                            ? inline.text.symbolic.length
+                            : inline.text.semantic.length
+                    }
                 }
+
+                if (remaining <= nodeLength) {
+                    targetNode = node
+                    offset = remaining
+                    return true
+                }
+
+                remaining -= nodeLength
             }
 
-            if (remaining <= nodeLength) {
-                targetNode = node;
-                offset = remaining;
-                return true;
+            for (let child = node.firstChild; child; child = child.nextSibling) {
+                if (walk(child)) return true
             }
 
-            remaining -= nodeLength;
+            return false
         }
 
-        for (let child = node.firstChild; child; child = child.nextSibling) {
-            if (walk(child)) return true;
+        walk(this.contentEl)
+
+        if (targetNode) {
+            const range = document.createRange()
+            range.setStart(targetNode, offset)
+            range.collapse(true)
+            sel.removeAllRanges()
+            sel.addRange(range)
         }
-
-        return false;
-    };
-
-    walk(this.contentEl);
-
-    if (targetNode) {
-        const range = document.createRange();
-        range.setStart(targetNode, offset);
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-    }
-    }
-
-    private onInput(next: string) {
-        this.engine.setSource(next)
-        // this.render()
     }
 
     private ensureStyle() {
@@ -156,50 +157,16 @@ export class SyntheticText extends HTMLElement {
             const position = getCaretPosition()
             this.caretPosition = position
             this.focusedInlineId = this.engine.getInlineIdByPosition(position)
-            console.log('click', position, this.focusedInlineId)
             this.render()
         })
 
-        div.addEventListener('focusin', (e) => {
-            // const selection = window.getSelection()
-            // if (!selection || !selection.anchorNode) return
-
-            // let el: HTMLElement | null = null
-            // if (selection.anchorNode.nodeType === Node.TEXT_NODE) {
-            //     el = selection.anchorNode.parentElement as HTMLElement
-            // } else if (selection.anchorNode.nodeType === Node.ELEMENT_NODE) {
-            //     el = selection.anchorNode as HTMLElement
-            // }
-
-            // const inlineEl = el?.closest('[data-inline-id]') as HTMLElement | null
-            // this.focusedInlineId = inlineEl?.dataset.inlineId ?? null
-
-            // // console.log('focusin', this.focusedInlineId)
-            // this.render()
-        })
-
-
-        div.addEventListener('focusout', (e) => {
-            // const related = e.relatedTarget as HTMLElement | null
-
-            // const el = related?.closest('[data-inline-id]') as HTMLElement | null
-            // const sameInline = el?.dataset.inlineId
-
-            // if (sameInline === this.focusedInlineId) return
-
-            // this.focusedInlineId = null
-
-            
-            // this.render()
-        })
+        div.addEventListener('focusin', () => {})
+        div.addEventListener('focusout', () => {})
 
         div.addEventListener('input', () => {
             const next = div.textContent ?? ''
             this.engine.setSource(next)
-            // this.render()
-
-            // this.onInput(next)
-      
+            this.patch()
             this.dispatchEvent(
               new CustomEvent('change', {
                 detail: { value: next },
