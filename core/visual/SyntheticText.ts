@@ -1,6 +1,6 @@
 import Engine from '../engine/engine'
-import { patchDOM, renderAST } from '../render/render'
-import { renderInlines } from '../render/renderInline'
+import Caret from './caret'
+import { renderAST } from '../render/render'
 import css from './SyntheticText.scss?inline'
 
 export class SyntheticText extends HTMLElement {
@@ -8,6 +8,7 @@ export class SyntheticText extends HTMLElement {
     private styled = false
     private contentEl?: HTMLDivElement
     private engine = new Engine()
+    private caret = new Caret()
     private connected = false
     private isRendered = false
 
