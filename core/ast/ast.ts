@@ -1312,11 +1312,6 @@ function parseLinkDestinationAndTitle(text: string, start: number): { url: strin
 function processEmphasis(stack: Delimiter[], nodes: Inline[], blockId: string) {
     if (stack.length === 0) return;
 
-    const openersBottom: Record<string, Record<number, number>> = {
-        "*": { 0: -1, 1: -1, 2: -1 },
-        "_": { 0: -1, 1: -1, 2: -1 },
-    };
-
     let current = 0;
 
     while (current < stack.length) {
@@ -1326,57 +1321,47 @@ function processEmphasis(stack: Delimiter[], nodes: Inline[], blockId: string) {
             continue;
         }
 
-        // Find opener
         let openerIndex = -1;
-        const bottomKey = closer.length % 3;
-        const bottom = openersBottom[closer.type]?.[bottomKey] ?? -1;
-
-        for (let i = current - 1; i > bottom; i--) {
+        for (let i = current - 1; i >= 0; i--) {
             const opener = stack[i];
-            if (!opener.active || !opener.canOpen) continue;
-            if (opener.type !== closer.type) continue;
-            
-            // "Sum of lengths is not a multiple of 3" rule
-            if ((opener.canOpen && opener.canClose) || (closer.canOpen && closer.canClose)) {
-                if ((opener.length + closer.length) % 3 === 0 && opener.length % 3 !== 0 && closer.length % 3 !== 0) {
-                    continue;
-                }
+            if (opener.type !== closer.type || !opener.canOpen || !opener.active) continue;
+
+            if ((opener.length + closer.length) % 3 === 0 &&
+                opener.length !== 1 && closer.length !== 1) {
+                continue;
             }
-            
+
             openerIndex = i;
             break;
         }
 
         if (openerIndex === -1) {
-            if (!closer.canOpen) {
-                closer.active = false;
-            }
-            openersBottom[closer.type][bottomKey] = current - 1;
             current++;
             continue;
         }
 
         const opener = stack[openerIndex];
-        const useLength = Math.min(2, Math.min(opener.length, closer.length));
-        const isStrong = useLength >= 2;
-
-        // Get nodes between opener and closer
-        const openerNodePos = opener.position;
-        const closerNodePos = closer.position;
-        
-        // Create emphasis node
-        const openerNode = nodes[openerNodePos];
-        const closerNode = nodes[closerNodePos];
-
+        const useLength = Math.min(opener.length, closer.length, 2);
+        const isStrong = useLength === 2;
         const emphType = isStrong ? "strong" : "emphasis";
-        const delimCount = isStrong ? 2 : 1;
-        const delimStr = opener.type.repeat(delimCount);
+        const delimChar = opener.type;
+        const delimStr = delimChar.repeat(useLength);
 
-        // Build the raw text
+        const openerNodeIndex = opener.position;
+        const closerNodeIndex = closer.position;
+
+        const startIdx = openerNodeIndex;
+        const endIdx = closerNodeIndex + 1;
+        const affectedNodes = nodes.slice(startIdx, endIdx);
+
         let symbolic = delimStr;
+        let semantic = '';
+        for (const node of affectedNodes.slice(1, -1)) {
+            symbolic += node.text.symbolic;
+            semantic += node.text.semantic;
+        }
         symbolic += delimStr;
 
-        const semantic = openerNode.text.symbolic + closerNode.text.symbolic;
         const emphNode: Inline = {
             id: uuid(),
             type: emphType,
@@ -1386,85 +1371,26 @@ function processEmphasis(stack: Delimiter[], nodes: Inline[], blockId: string) {
                 semantic,
             },
             position: {
-                start: openerNode.position.start,
-                end: closerNode.position.end,
+                start: nodes[openerNodeIndex].position.start,
+                end: nodes[closerNodeIndex].position.end
             },
         };
 
-        // Update opener/closer lengths and text
-        opener.length -= useLength;
-        closer.length -= useLength;
+        const deleteCount = endIdx - startIdx;
+        nodes.splice(startIdx, deleteCount, emphNode);
 
-        if (opener.length === 0) {
-            opener.active = false;
-        } else {
-            const openerTextNode = nodes[openerNodePos];
-            if (openerTextNode.type === "text") {
-                openerTextNode.text.symbolic = opener.type.repeat(opener.length);
-                openerTextNode.text.semantic = opener.type.repeat(opener.length);
-                openerTextNode.position.end = openerTextNode.position.start + opener.length;
+        stack.splice(current, 1);
+        stack.splice(openerIndex, 1);
+
+        const removedCount = deleteCount - 1;
+        for (let i = 0; i < stack.length; i++) {
+            if (stack[i].position >= startIdx + 1) {
+                stack[i].position -= removedCount;
             }
         }
 
-        if (closer.length === 0) {
-            closer.active = false;
-        } else {
-            const closerTextNode = nodes[closerNodePos];
-            if (closerTextNode.type === "text") {
-                closerTextNode.text.symbolic = closer.type.repeat(closer.length);
-                closerTextNode.text.semantic = closer.type.repeat(closer.length);
-                closerTextNode.position.end = closerTextNode.position.start + closer.length;
-            }
-        }
-
-        // Remove delimiters between opener and closer
-        for (let i = openerIndex + 1; i < current; i++) {
-            stack[i].active = false;
-        }
-
-        // Replace children with emphasis node
-        const removeCount = closerNodePos - openerNodePos - 1;
-        const insertPos = openerNodePos + 1;
-        
-        // Remove old children
-        nodes.splice(insertPos, removeCount, emphNode);
-        
-        // Update positions in stack
-        const posShift = removeCount - 1;
-        for (const d of stack) {
-            if (d.position > insertPos) {
-                d.position -= posShift;
-            }
-        }
-        closer.position -= posShift;
-
-        // Remove closer node
-        if (closer.length === 0) {
-            nodes.splice(closerNodePos, 1);
-
-            for (const d of stack) {
-                if (d.position > closerNodePos) {
-                    d.position--;
-                }
-            }
-        }
-
-        // Remove opener node
-        if (opener.length === 0) {
-            nodes.splice(openerNodePos, 1);
-            for (const d of stack) {
-                if (d.position > openerNodePos) {
-                    d.position--;
-                }
-            }
-        }
-
-        // Continue from same position to handle nested emphasis
-        current = 0;
+        current = startIdx;
     }
-
-    // Clean up remaining delimiter text nodes that weren't matched
-    // They stay as text, which is correct
 }
 
 
