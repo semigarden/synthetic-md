@@ -65,43 +65,78 @@ export class SyntheticText extends HTMLElement {
         div.classList.add('syntheticText')
         div.contentEditable = 'true'
 
-        div.addEventListener('focusin', (e) => {
+        const getCaretPosition = (): number => {
             const selection = window.getSelection()
-            if (!selection || !selection.anchorNode) return
+            if (!selection || !selection.anchorNode) return 0
 
-            let el: HTMLElement | null = null
-            if (selection.anchorNode.nodeType === Node.TEXT_NODE) {
-                el = selection.anchorNode.parentElement as HTMLElement
-            } else if (selection.anchorNode.nodeType === Node.ELEMENT_NODE) {
-                el = selection.anchorNode as HTMLElement
+            const anchorNode = selection.anchorNode
+            const anchorOffset = selection.anchorOffset
+
+            let charCount = 0
+
+            const walkNodes = (node: Node): boolean => {
+                if (node === anchorNode) {
+                    charCount += anchorOffset
+                    return true
+                }
+
+                if (node.nodeType === Node.TEXT_NODE) {
+                    charCount += node.textContent?.length ?? 0
+                }
+
+                for (let child = node.firstChild; child; child = child.nextSibling) {
+                    if (walkNodes(child)) return true
+                }
+
+                return false
             }
 
-            const inlineEl = el?.closest('[data-inline-id]') as HTMLElement | null
-            this.focusedInlineId = inlineEl?.dataset.inlineId ?? null
+            walkNodes(div)
+            return charCount
+        }
 
-            // console.log('focusin', this.focusedInlineId)
-            this.render()
+        div.addEventListener('click', (e) => {
+            const position = getCaretPosition()
+            console.log('click', position)
+        })
+
+        div.addEventListener('focusin', (e) => {
+            // const selection = window.getSelection()
+            // if (!selection || !selection.anchorNode) return
+
+            // let el: HTMLElement | null = null
+            // if (selection.anchorNode.nodeType === Node.TEXT_NODE) {
+            //     el = selection.anchorNode.parentElement as HTMLElement
+            // } else if (selection.anchorNode.nodeType === Node.ELEMENT_NODE) {
+            //     el = selection.anchorNode as HTMLElement
+            // }
+
+            // const inlineEl = el?.closest('[data-inline-id]') as HTMLElement | null
+            // this.focusedInlineId = inlineEl?.dataset.inlineId ?? null
+
+            // // console.log('focusin', this.focusedInlineId)
+            // this.render()
         })
 
 
         div.addEventListener('focusout', (e) => {
-            const related = e.relatedTarget as HTMLElement | null
+            // const related = e.relatedTarget as HTMLElement | null
 
-            const el = related?.closest('[data-inline-id]') as HTMLElement | null
-            const sameInline = el?.dataset.inlineId
+            // const el = related?.closest('[data-inline-id]') as HTMLElement | null
+            // const sameInline = el?.dataset.inlineId
 
-            if (sameInline === this.focusedInlineId) return
+            // if (sameInline === this.focusedInlineId) return
 
-            this.focusedInlineId = null
+            // this.focusedInlineId = null
 
             
-            this.render()
+            // this.render()
         })
 
         div.addEventListener('input', () => {
             const next = div.textContent ?? ''
             this.engine.setSource(next)
-            this.render()
+            // this.render()
 
             // this.onInput(next)
       
