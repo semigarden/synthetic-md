@@ -23,31 +23,32 @@ export function renderInline(inline: Inline, focusedInlineId: string | null): No
         return span
     }
 
-    const inlineEl = document.createElement('span')
+    const tag = getInlineTag(inline)
+    const inlineEl = document.createElement(tag)
+    inlineEl.id = inline.id
+    inlineEl.dataset.inlineId = inline.id
+    inlineEl.textContent = inline.text.semantic
+    inlineEl.contentEditable = 'true'
+    inlineEl.style.whiteSpace = 'pre-wrap'
+    inlineEl.style.wordBreak = 'break-word'
+    inlineEl.style.wordWrap = 'break-word'
+    inlineEl.style.overflowWrap = 'break-word'
+    inlineEl.style.textOverflow = 'ellipsis'
+    inlineEl.style.maxWidth = '100%'
+    inlineEl.style.height = 'auto'
+    inlineEl.style.display = 'inline-block'
+    return inlineEl
+}
 
+export function getInlineTag(inline: Inline): string {
     switch (inline.type) {
         case 'text':
-            const el = document.createElement('span')
-            el.id = inline.id
-            el.dataset.inlineId = inline.id
-            el.textContent = inline.text.semantic
-            return el
-
-        case 'emphasis': {
-            const el = document.createElement('em')
-            el.id = inline.id
-            el.dataset.inlineId = inline.id
-            return el
-        }
-
-        case 'strong': {
-            const el = document.createElement('strong')
-            el.id = inline.id
-            el.dataset.inlineId = inline.id
-            return el
-        }
-
+            return 'span'
+        case 'emphasis':
+            return 'em'
+        case 'strong':
+            return 'strong'
         default:
-            return document.createTextNode('')
+            return 'span'
     }
 }
