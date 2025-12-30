@@ -11,6 +11,7 @@ export class SyntheticText extends HTMLElement {
     private caret = new Caret()
     private connected = false
     private isRendered = false
+    private isEditing = false
 
     constructor() {
         super()
@@ -28,6 +29,7 @@ export class SyntheticText extends HTMLElement {
         this.engine.setText(value)
         if (this.connected && !this.isRendered) {
           this.render()
+          this.isRendered = true
         }
     }
 
@@ -39,8 +41,6 @@ export class SyntheticText extends HTMLElement {
         if (!this.syntheticEl) return
         const ast = this.engine.getAst()
         if (!ast) return
-
-        console.log('render', JSON.stringify(ast, null, 2))
 
         renderAST(ast, this.syntheticEl)
     }
@@ -111,6 +111,7 @@ export class SyntheticText extends HTMLElement {
             const inline = this.engine.getInlineById(inlineId);
             if (!inline) return;
 
+            this.isEditing = true;
             this.caret.setInlineId(inlineId);
             this.caret.setBlockId(inline.blockId);
 
@@ -125,13 +126,13 @@ export class SyntheticText extends HTMLElement {
                 let position: number;
 
                 if (range.startContainer === target) {
-                position = range.startOffset;
+                    position = range.startOffset;
                 } else {
-                const textNode = range.startContainer as Text;
-                const preCaretRange = range.cloneRange();
-                preCaretRange.selectNodeContents(target);
-                preCaretRange.setEnd(range.startContainer, range.startOffset);
-                position = preCaretRange.toString().length;
+                    const textNode = range.startContainer as Text;
+                    const preCaretRange = range.cloneRange();
+                    preCaretRange.selectNodeContents(target);
+                    preCaretRange.setEnd(range.startContainer, range.startOffset);
+                    position = preCaretRange.toString().length;
                 }
 
                 this.caret.setPosition(position);
@@ -141,24 +142,29 @@ export class SyntheticText extends HTMLElement {
 
         div.addEventListener('focusout', (e) => {
             console.log('focusout')
-            this.caret.clear();
+            if (!this.syntheticEl?.contains(e.relatedTarget as Node)) {
+                this.isEditing = false;
+                this.caret.clear();
+            }
         })
   
-        // div.addEventListener('input', () => {
-        //     const next = div.textContent ?? ''
-        //     this.engine.setText(next)
+        div.addEventListener('input', () => {
+            const text = div.textContent ?? ''
+            
+            this.onInput(text)
 
-        //     this.patch()
-
-
-        //     this.dispatchEvent(new CustomEvent('change', {
-        //         detail: { value: next },
-        //         bubbles: true,
-        //         composed: true,
-        //     }))
-        // })
+            this.dispatchEvent(new CustomEvent('change', {
+                detail: { value: text },
+                bubbles: true,
+                composed: true,
+            }))
+        })
     
         this.root.appendChild(div)
         this.syntheticEl = div
+    }
+
+    private onInput(text: string) {
+        console.log('onInput', text)
     }
 }
