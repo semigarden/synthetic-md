@@ -50,7 +50,7 @@ function renderInlines(
 function renderInline(inline: Inline, focusedInlineId: string | null): Node {
     const isFocused = inline.id === focusedInlineId
 
-    console.log('isFocused', isFocused, JSON.stringify(inline, null, 2))
+    // console.log('isFocused', isFocused, JSON.stringify(inline, null, 2))
 
     if (isFocused) {
         const span = document.createElement('span')

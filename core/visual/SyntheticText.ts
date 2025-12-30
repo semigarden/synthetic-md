@@ -10,6 +10,7 @@ export class SyntheticText extends HTMLElement {
     private connected = false
     private mode : 'symbolic' | 'synthetic' = 'synthetic'
     private focusedInlineId: string | null = null
+    private caretPosition: number = 0
 
     constructor() {
         super()
@@ -41,6 +42,62 @@ export class SyntheticText extends HTMLElement {
         const ast = this.engine.getAst()
         // console.log('ast', JSON.stringify(ast, null, 2))
         renderAST(ast, this.contentEl!, this.focusedInlineId)
+        console.log('render', this.focusedInlineId)
+        console.log('caretPosition', this.caretPosition)
+
+        this.restoreCaret()
+    }
+
+    private restoreCaret() {
+        if (this.caretPosition == null || !this.contentEl) return;
+
+    const sel = window.getSelection();
+    if (!sel) return;
+
+    let remaining = this.caretPosition;
+    let targetNode: Node | null = null;
+    let offset = 0;
+
+    const walk = (node: Node): boolean => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            const parentInlineId = (node.parentElement)?.dataset.inlineId;
+            let nodeLength = node.textContent?.length ?? 0;
+
+            // Decide whether to use symbolic or semantic length
+            if (parentInlineId) {
+                const inline = this.engine.getInlineById(parentInlineId);
+                if (inline) {
+                    nodeLength = parentInlineId === this.focusedInlineId
+                        ? inline.text.symbolic.length
+                        : inline.text.semantic.length;
+                }
+            }
+
+            if (remaining <= nodeLength) {
+                targetNode = node;
+                offset = remaining;
+                return true;
+            }
+
+            remaining -= nodeLength;
+        }
+
+        for (let child = node.firstChild; child; child = child.nextSibling) {
+            if (walk(child)) return true;
+        }
+
+        return false;
+    };
+
+    walk(this.contentEl);
+
+    if (targetNode) {
+        const range = document.createRange();
+        range.setStart(targetNode, offset);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
     }
 
     private onInput(next: string) {
@@ -97,7 +154,10 @@ export class SyntheticText extends HTMLElement {
 
         div.addEventListener('click', (e) => {
             const position = getCaretPosition()
-            console.log('click', position)
+            this.caretPosition = position
+            this.focusedInlineId = this.engine.getInlineIdByPosition(position)
+            console.log('click', position, this.focusedInlineId)
+            this.render()
         })
 
         div.addEventListener('focusin', (e) => {
