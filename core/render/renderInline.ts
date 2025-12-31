@@ -30,6 +30,9 @@ export function renderInline(inline: Inline, focusedInlineId: string | null): No
     inlineEl.style.maxWidth = '100%'
     inlineEl.style.height = 'auto'
     inlineEl.style.display = 'inline-block'
+    inlineEl.style.minWidth = '100px'
+    inlineEl.style.textAlign = 'left'
+    inlineEl.style.border = '1px solid blue'
 
     return inlineEl
 }

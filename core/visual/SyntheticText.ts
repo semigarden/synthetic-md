@@ -373,7 +373,7 @@ export class SyntheticText extends HTMLElement {
 
         this.applyInlineNormalization(ctx.block, result)
     
-        renderBlock(ctx.block, this.syntheticEl!)
+        renderBlock(ctx.block, this.syntheticEl!, result.caretInline?.id ?? null)
 
         console.log(`inline${ctx.inline.id} changed: ${ctx.inline.text.symbolic} > ${ctx.inlineEl.textContent ?? ''}`)
 
@@ -486,6 +486,7 @@ export class SyntheticText extends HTMLElement {
         }
     }
     
+    
 
     private emitChange() {
         this.dispatchEvent(new CustomEvent('change', {
@@ -497,67 +498,55 @@ export class SyntheticText extends HTMLElement {
 
     private updateBlock(block: Block) {
         let pos = 0;
-
-        for (let i = 0; i < block.inlines.length; i++) {
-            const inline = block.inlines[i];
-
-            if (!inline.id) {
-                inline.id = crypto.randomUUID();
-            }
-
-            const textLength = inline.text.symbolic.length;
-            inline.position = {
-                start: pos,
-                end: pos + textLength
-            };
-
-            pos += textLength;
+        for (const inline of block.inlines) {
+            if (!inline.id) inline.id = uuid()
+            const len = inline.text.symbolic.length
+            inline.position = { start: pos, end: pos + len }
+            pos += len
         }
 
-        block.text = block.inlines.map(i => i.text.symbolic).join('');
+        block.text = block.inlines.map(i => i.text.symbolic).join('')
 
-        if (!block.id) {
-            block.id = crypto.randomUUID();
-        }
+        if (!block.id) block.id = uuid()
 
         block.position = {
             start: block.inlines[0]?.position.start ?? 0,
-            end: block.inlines[block.inlines.length - 1]?.position.end ?? 0
-        };
+            end: block.inlines[block.inlines.length - 1]?.position.end ?? 0,
+        }
     }
 
     private updateAST() {
-        const ast = this.engine.getAst();
-        if (!ast) return;
+        const ast = this.engine.getAst()
+        console.log('updateAST after')
+        if (!ast) return
+        console.log('updateAST aft')
 
         let globalPos = 0;
 
         for (const block of ast.blocks) {
-            let blockStart = globalPos;
+            const blockStart = globalPos;
 
-            let inlinePos = blockStart;
             for (const inline of block.inlines) {
-                const textLength = inline.text.symbolic.length;
-
-                if (!inline.id) inline.id = crypto.randomUUID();
-
-                inline.position = { start: inlinePos, end: inlinePos + textLength };
-                inlinePos += textLength;
+                if (!inline.id) inline.id = uuid()
+                const len = inline.text.symbolic.length
+                inline.position = { start: globalPos, end: globalPos + len };
+                globalPos += len;
             }
 
-            block.text = block.inlines.map(i => i.text.symbolic).join('');
+            block.text = block.inlines.map(i => i.text.symbolic).join('')
 
             block.position = {
                 start: blockStart,
-                end: blockStart + block.text.length
-            };
+                end: globalPos,
+            }
 
-            if (!block.id) block.id = crypto.randomUUID();
+            if (!block.id) block.id = uuid()
 
-            globalPos += block.text.length + 1;
+            globalPos += 1
         }
 
-        this.engine.setText(ast.blocks.map(b => b.text).join('\n'));
+        const joinedText = ast.blocks.map(b => b.text).join('\n')
+        this.engine.setText(joinedText)
     }
 
     private restoreCaret() {

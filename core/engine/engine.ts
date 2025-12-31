@@ -16,12 +16,13 @@ export default class Engine {
     }
   
     setText(text: string) {
+        console.log('setText', text)
         if (text !== '') {
             this.ast = buildAst(text)
             this.blocks = this.ast?.blocks ?? []
             this.inlines = this.ast?.inlines ?? []
 
-            console.log('buildAst', JSON.stringify(this.ast.blocks, null, 2))
+            // console.log('buildAst', JSON.stringify(this.ast.blocks, null, 2))
         }
         this.text = text
     }

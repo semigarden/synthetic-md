@@ -11,6 +11,8 @@ export function renderBlock(block: Block, container: HTMLElement, focusedInlineI
       switch (block.type) {
         case 'paragraph':
           el = document.createElement('p')
+          el.style.margin = '0px'
+          el.style.border = '1px solid red'
           break
         case 'heading':
           el = document.createElement(`h${block.level}`)
