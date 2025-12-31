@@ -6,6 +6,8 @@ export function renderInlines(
     parent: HTMLElement,
     focusedInlineId: string | null,
 ) {
+    parent.replaceChildren()
+
     for (const inline of inlines) {
         parent.appendChild(renderInline(inline, focusedInlineId))
     }

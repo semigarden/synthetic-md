@@ -184,7 +184,17 @@ function buildAst(text: string, previousAst: Document | null = null): Document {
                         text: line,
                         position: { start, end },
                         inlines: [],
-                    };
+                    }
+
+                    const text: Inline = {
+                        id: uuid(),
+                        type: "text",
+                        blockId: block.id,
+                        text: { symbolic: "", semantic: "" },
+                        position: { start: 0, end: 0 },
+                    }
+
+                    block.inlines.push(text);
                     blocks.push(block);
                 }
                 break;
@@ -195,25 +205,15 @@ function buildAst(text: string, previousAst: Document | null = null): Document {
         offset = end + 1;
     }
 
-    if (blocks.length === 0) {
-        blocks.push({
-            id: tempUuid(),
-            type: "paragraph",
-            text: "",
-            position: { start: 0, end: 0 },
-            inlines: [],
-        });
-    }
-
     const prevBlocks = previousAst?.blocks || [];
     const usedPrevIds = new Set<string>();
 
     const prevByType = new Map<string, Block[]>();
-prevBlocks.forEach(b => {
-    const list = prevByType.get(b.type) || [];
-    list.push(b);
-    prevByType.set(b.type, list);
-});
+    prevBlocks.forEach(b => {
+        const list = prevByType.get(b.type) || [];
+        list.push(b);
+        prevByType.set(b.type, list);
+    });
 
     const simpleSimilarity = (a: string, b: string): number => {
         if (a === b) return 1;

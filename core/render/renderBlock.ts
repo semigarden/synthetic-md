@@ -4,17 +4,9 @@ import { renderInlines } from "./renderInline"
 export function renderBlock(block: Block, container: HTMLElement, focusedInlineId: string | null = null): HTMLElement {
     let el: HTMLElement = container.querySelector(`[data-block-id="${block.id}"]`) as HTMLElement
 
+    const isNew = !el
     if (el) {
       el.replaceChildren()
-
-      if (block.type === 'codeBlock') {
-        const code = el.querySelector('code') as HTMLElement || document.createElement('code')
-        code.innerHTML = ''
-        renderInlines(block.inlines, code, focusedInlineId)
-        if (!el.querySelector('code')) el.appendChild(code)
-      } else {
-        renderInlines(block.inlines, el, focusedInlineId)
-      }
     } else {
       switch (block.type) {
         case 'paragraph':
@@ -35,10 +27,19 @@ export function renderBlock(block: Block, container: HTMLElement, focusedInlineI
     
       el.dataset.blockId = block.id
       el.id = block.id
-    
-      if (block.type !== 'codeBlock') {
-        renderInlines(block.inlines, el, focusedInlineId)
-      }
+    }
+
+    if (block.type === 'codeBlock') {
+      const code = el.querySelector('code') as HTMLElement || document.createElement('code')
+      code.innerHTML = ''
+      renderInlines(block.inlines, code, focusedInlineId)
+      if (!el.querySelector('code')) el.appendChild(code)
+    } else {
+      renderInlines(block.inlines, el, focusedInlineId)
+    }
+
+    if (isNew) {
+      container.appendChild(el)
     }
 
     return el

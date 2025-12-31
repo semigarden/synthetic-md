@@ -5,6 +5,7 @@ import { renderBlock } from '../render/renderBlock'
 import css from './SyntheticText.scss?inline'
 import { parseInlineContent } from '../ast/ast'
 import { Block, Inline } from '../ast/types'
+import { uuid } from '../utils/utils'
 
 export class SyntheticText extends HTMLElement {
     private root: ShadowRoot
@@ -29,6 +30,7 @@ export class SyntheticText extends HTMLElement {
         this.engine = new Engine(this.textContent ?? '')
         this.addStyles()
         this.addDOM()
+        this.render()
     }
 
     set value(value: string) {
@@ -192,6 +194,9 @@ export class SyntheticText extends HTMLElement {
         div.addEventListener('input', this.onInput.bind(this))
 
         div.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Enter') {
+                this.onEnter(e)
+            }
             if (e.key === 'Backspace') {
                 this.onBackspace(e)
             }
@@ -199,6 +204,94 @@ export class SyntheticText extends HTMLElement {
     
         this.root.appendChild(div)
         this.syntheticEl = div
+    }
+
+    private onEnter(e: KeyboardEvent) {
+        console.log('enter')
+        const ctx = this.resolveInlineContext(e)
+        if (!ctx) return
+
+        this.isEditing = true
+
+        e.preventDefault()
+
+        const caretPosition = this.caret.getPositionInInline(ctx.inlineEl)
+        const text = ctx.inline.text.symbolic
+
+        const beforeText = text.slice(0, caretPosition)
+        const afterText = text.slice(caretPosition)
+
+        const beforeInlines = parseInlineContent(beforeText, ctx.block.id, ctx.inline.position.start)
+        const afterInlines = parseInlineContent(afterText, ctx.block.id, ctx.inline.position.start + beforeText.length)
+
+        const newBlockInlines = afterInlines.concat(ctx.block.inlines.slice(ctx.inlineIndex + 1))
+        ctx.block.inlines.splice(ctx.inlineIndex, ctx.block.inlines.length - ctx.inlineIndex, ...beforeInlines)
+
+        if (newBlockInlines.length === 0) {
+            newBlockInlines.push({
+                id: uuid(),
+                type: 'text',
+                blockId: ctx.block.id,
+                text: { symbolic: '', semantic: '' },
+                position: { start: 0, end: 0 }
+            })
+        }
+
+        const newBlockText = newBlockInlines.map(i => i.text.symbolic).join('')
+        const newBlock = this.engine.createBlock('paragraph', newBlockText, { start: ctx.block.position.end, end: ctx.block.position.end + newBlockText.length }, newBlockInlines)
+
+        const newBlockIndex = this.engine.blocks.findIndex(b => b.id === ctx.block.id) + 1
+        this.engine.blocks.splice(newBlockIndex, 0, newBlock)
+
+        for (const inline of newBlockInlines) {
+            inline.blockId = newBlock.id
+        }
+
+        const caretAtEnd = caretPosition === text.length
+
+        let targetInline: Inline
+        let targetOffset: number
+
+        if (caretAtEnd && newBlock.inlines.length === 0) {
+            targetInline = beforeInlines[beforeInlines.length - 1]
+            targetOffset = targetInline.text.symbolic.length
+        } else if (caretAtEnd) {
+            targetInline = newBlock.inlines[0]
+            targetOffset = 0
+        } else {
+            targetInline = newBlock.inlines[0]
+            targetOffset = 0
+        }
+ 
+        if (targetInline) {
+            this.caret.setInlineId(targetInline.id)
+            this.caret.setBlockId(targetInline.blockId)
+            this.caret.setPosition(targetOffset)
+        }
+
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
+                const el = range.startContainer as HTMLElement;
+                if (el.firstChild?.nodeName === 'BR') {
+                    el.removeChild(el.firstChild);
+                }
+            }
+        }
+
+        renderBlock(ctx.block, this.syntheticEl!)
+        renderBlock(newBlock, this.syntheticEl!)
+
+        this.updateBlock(ctx.block)
+        this.updateBlock(newBlock)
+        this.updateAST()
+        this.restoreCaret()
+        this.emitChange()
+
+        console.log(`inline ${ctx.inline.id} split: ${ctx.inline.text.symbolic} > ${ctx.inlineEl.textContent ?? ''}`)
+
+        this.isEditing = false
     }
 
     private onBackspace(e: KeyboardEvent) {
