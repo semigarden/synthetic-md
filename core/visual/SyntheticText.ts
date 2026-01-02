@@ -240,8 +240,8 @@ export class SyntheticText extends HTMLElement {
         const newBlockText = newBlockInlines.map(i => i.text.symbolic).join('')
         const newBlock = this.engine.createBlock('paragraph', newBlockText, { start: ctx.block.position.end, end: ctx.block.position.end + newBlockText.length }, newBlockInlines)
 
-        const newBlockIndex = this.engine.blocks.findIndex(b => b.id === ctx.block.id) + 1
-        this.engine.blocks.splice(newBlockIndex, 0, newBlock)
+        const newBlockIndex = this.engine.ast.blocks.findIndex(b => b.id === ctx.block.id) + 1
+        this.engine.ast.blocks.splice(newBlockIndex, 0, newBlock)
 
         for (const inline of newBlockInlines) {
             inline.blockId = newBlock.id
@@ -356,7 +356,7 @@ export class SyntheticText extends HTMLElement {
     }
 
     private onInput(e: Event) {
-        console.log('input')
+        console.log('onInput')
         const ctx = this.resolveInlineContext(e)
         if (!ctx) return
 
@@ -375,7 +375,7 @@ export class SyntheticText extends HTMLElement {
     
         renderBlock(ctx.block, this.syntheticEl!, result.caretInline?.id ?? null)
 
-        console.log(`inline${ctx.inline.id} changed: ${ctx.inline.text.symbolic} > ${ctx.inlineEl.textContent ?? ''}`)
+        console.log(`inline ${ctx.inline.id} changed: ${ctx.inline.text.symbolic} > ${ctx.inlineEl.textContent ?? ''}`)
 
         this.updateBlock(ctx.block)
         this.updateAST()
@@ -516,10 +516,7 @@ export class SyntheticText extends HTMLElement {
     }
 
     private updateAST() {
-        const ast = this.engine.getAst()
-        console.log('updateAST after')
-        if (!ast) return
-        console.log('updateAST aft')
+        const ast = this.engine.ast
 
         let globalPos = 0;
 
@@ -546,7 +543,9 @@ export class SyntheticText extends HTMLElement {
         }
 
         const joinedText = ast.blocks.map(b => b.text).join('\n')
-        this.engine.setText(joinedText)
+        this.engine.text = joinedText
+        this.engine.ast.text = joinedText
+        // this.engine.setText(joinedText)
     }
 
     private restoreCaret() {
@@ -642,8 +641,9 @@ export class SyntheticText extends HTMLElement {
 
         const target = e.target as HTMLDivElement
         if (!target.dataset?.inlineId) return null
-
+        
         const inlineId = target.dataset.inlineId!
+
         const inline = this.engine.getInlineById(inlineId)
         if (!inline) return null
 

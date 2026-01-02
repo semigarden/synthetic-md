@@ -3,24 +3,17 @@ import { Block, Document, Inline } from '../ast/types'
 import { uuid } from '../utils/utils'
 
 export default class Engine {
-    private text = ''
-    private ast: Document | null = null
-    public blocks: Block[] = []
-    public inlines: Inline[] = []
+    public text = ''
+    public ast: Document = buildAst('')
 
     constructor(text = '') {
         this.text = text
         this.ast = buildAst(text)
-        this.blocks = this.ast?.blocks ?? []
-        this.inlines = this.ast?.inlines ?? []
     }
   
     setText(text: string) {
-        console.log('setText', text)
-        if (text !== '') {
+        if (this.text === '') {
             this.ast = buildAst(text)
-            this.blocks = this.ast?.blocks ?? []
-            this.inlines = this.ast?.inlines ?? []
         }
         this.text = text
     }
@@ -49,7 +42,7 @@ export default class Engine {
     }
 
     private findBlockByIdRecursive(targetId: string): Block | null {
-        for (const block of this.blocks) {
+        for (const block of this.ast?.blocks ?? []) {
             if (block.id === targetId) {
                 return block
             }
@@ -62,12 +55,22 @@ export default class Engine {
     }
 
     getInlineById(id: string): Inline | null {
-        for (const inline of this.inlines) {
-            if (inline.id === id) {
-                return inline;
+        return this.findInlineByIdRecursive(id, this.ast?.blocks ?? [])
+    }
+
+    private findInlineByIdRecursive(targetId: string, blocks: Block[]): Inline | null {
+        for (const block of blocks) {
+            for (const inline of block.inlines) {
+                if (inline.id === targetId) {
+                    return inline
+                }
+            }
+
+            if ('blocks' in block && block.blocks) {
+                const found = this.findInlineByIdRecursive(targetId, block.blocks)
+                if (found) return found
             }
         }
-      
-        return null;
+        return null
     }
 }
