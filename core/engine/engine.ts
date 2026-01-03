@@ -17,7 +17,7 @@ export default class Engine {
         }
         this.text = text
 
-        console.log('init ast', JSON.stringify(this.ast, null, 2))
+        // console.log('init ast', JSON.stringify(this.ast, null, 2))
     }
 
     getText() {

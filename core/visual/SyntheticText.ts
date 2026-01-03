@@ -464,6 +464,8 @@ export class SyntheticText extends HTMLElement {
             return
         }
 
+        console.log('ctx.block.inlines', JSON.stringify(ctx.block.inlines, null, 2))
+
         const previousInline = ctx.block.inlines[ctx.inlineIndex - 1]
 
         const currentBlockText = ctx.block.inlines.map(i => {
@@ -477,10 +479,13 @@ export class SyntheticText extends HTMLElement {
 
         ctx.block.inlines = newInlines
 
+        console.log('newInlines', JSON.stringify(newInlines, null, 2))
+
         const targetInline = newInlines[ctx.inlineIndex - 1]
 
         this.caret.setInlineId(targetInline.id)
         this.caret.setBlockId(targetInline.blockId)
+        this.caret.setPosition(targetInline.position.end)
 
         renderBlock(ctx.block, this.syntheticEl!)
 
@@ -580,7 +585,13 @@ export class SyntheticText extends HTMLElement {
             caretInline = last
             caretPosition = last.text.symbolic.length
         }
-    
+
+        if (!caretInline && newInlines.length === 0) {
+            const prevInline = block.inlines[inlineIndex - 1]
+            caretInline = prevInline
+            caretPosition = prevInline.text.symbolic.length
+        }
+
         return {
             contextStart,
             contextEnd,
@@ -682,6 +693,7 @@ export class SyntheticText extends HTMLElement {
     }
 
     private restoreCaret() {
+        console.log('restoreCaret', this.caret.getInlineId(), this.caret.getPosition())
         if (!this.caret.getInlineId() || this.caret.getPosition() === null) {
           return;
         }
