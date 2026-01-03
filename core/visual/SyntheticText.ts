@@ -240,11 +240,11 @@ export class SyntheticText extends HTMLElement {
 
             const newBlock: Block = {
                 id: uuid(),
-                type: 'paragraph',
+                type: ctx.block.type,
                 text: text,
                 inlines,
                 position: { start: ctx.block.position.start, end: ctx.block.position.start + text.length }
-            }
+            } as Block
 
             for (const inline of newBlock.inlines) {
                 inline.blockId = newBlock.id
@@ -268,8 +268,6 @@ export class SyntheticText extends HTMLElement {
             renderBlock(ctx.block, this.syntheticEl!)
             renderBlock(newBlock, this.syntheticEl!, null, ctx.block)
 
-            this.updateBlock(ctx.block)
-            this.updateBlock(newBlock)
             this.updateAST()
 
             requestAnimationFrame(() => {
@@ -356,8 +354,6 @@ export class SyntheticText extends HTMLElement {
         renderBlock(ctx.block, this.syntheticEl!)
         renderBlock(newBlock, this.syntheticEl!, null, ctx.block)
 
-        this.updateBlock(ctx.block)
-        this.updateBlock(newBlock)
         this.updateAST()
         this.restoreCaret()
         this.emitChange()
@@ -456,7 +452,6 @@ export class SyntheticText extends HTMLElement {
                 blockEl.remove()
             }
 
-            this.updateBlock(prevBlock)
             this.updateAST()
 
             requestAnimationFrame(() => {
@@ -489,7 +484,6 @@ export class SyntheticText extends HTMLElement {
 
         renderBlock(ctx.block, this.syntheticEl!)
 
-        this.updateBlock(ctx.block)
         this.updateAST()
         this.restoreCaret()
         this.emitChange()
@@ -520,7 +514,6 @@ export class SyntheticText extends HTMLElement {
 
         console.log(`inline ${ctx.inline.id} changed: ${ctx.inline.text.symbolic} > ${ctx.inlineEl.textContent ?? ''}`)
 
-        this.updateBlock(ctx.block)
         this.updateAST()
         this.restoreCaret()
         this.emitChange()
