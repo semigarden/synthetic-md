@@ -17,7 +17,7 @@ export default class Engine {
         }
         this.text = text
 
-        // console.log('init ast', JSON.stringify(this.ast, null, 2))
+        console.log('init ast', JSON.stringify(this.ast, null, 2))
     }
 
     getText() {
@@ -40,16 +40,16 @@ export default class Engine {
     }
 
     getBlockById(id: string): Block | null {
-        return this.findBlockByIdRecursive(id)
+        return this.findBlockByIdRecursive(id, this.ast?.blocks ?? [])
     }
 
-    private findBlockByIdRecursive(targetId: string): Block | null {
-        for (const block of this.ast?.blocks ?? []) {
+    private findBlockByIdRecursive(targetId: string, blocks: Block[]): Block | null {
+        for (const block of blocks) {
             if (block.id === targetId) {
                 return block
             }
             if ('blocks' in block && block.blocks) {
-                const found = this.findBlockByIdRecursive(targetId)
+                const found = this.findBlockByIdRecursive(targetId, block.blocks)
                 if (found) return found
             }
         }
