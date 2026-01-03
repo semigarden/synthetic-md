@@ -1,7 +1,7 @@
 import { Block } from "../ast/types"
 import { renderInlines } from "./renderInline"
 
-export function renderBlock(block: Block, container: HTMLElement, focusedInlineId: string | null = null): HTMLElement {
+export function renderBlock(block: Block, container: HTMLElement, focusedInlineId: string | null = null, beforeBlock: Block | null = null): HTMLElement {
     let el: HTMLElement = container.querySelector(`[data-block-id="${block.id}"]`) as HTMLElement
 
     const isNew = !el
@@ -41,16 +41,19 @@ export function renderBlock(block: Block, container: HTMLElement, focusedInlineI
     }
 
     if (isNew) {
-      container.appendChild(el)
+      if (beforeBlock) {
+        const beforeEl = container.querySelector(
+          `[data-block-id="${beforeBlock.id}"]`
+        )
+        if (beforeEl) {
+          beforeEl.after(el)
+        } else {
+          container.appendChild(el)
+        }
+      } else {
+        container.appendChild(el)
+      }
     }
 
     return el
-  }
-
-
-
-
-
-
-
-
+}

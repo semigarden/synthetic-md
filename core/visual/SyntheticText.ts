@@ -216,7 +216,11 @@ export class SyntheticText extends HTMLElement {
         e.preventDefault()
 
         if (ctx.inlineIndex === 0) {
-            const newInline: Inline = {
+            const blocks = this.engine.ast.blocks
+            const blockIndex = blocks.findIndex(b => b.id === ctx.block.id)
+            if (blockIndex === -1) return
+
+            const emptyInline: Inline = {
                 id: uuid(),
                 type: 'text',
                 blockId: ctx.block.id,
@@ -232,12 +236,14 @@ export class SyntheticText extends HTMLElement {
                 type: 'paragraph',
                 text: text,
                 inlines,
-                position: { start: ctx.block.position.start, end: text.length }
+                position: { start: ctx.block.position.start, end: ctx.block.position.start + text.length }
             }
 
             ctx.block.text = ''
-            ctx.block.inlines = [newInline]
+            ctx.block.inlines = [emptyInline]
             ctx.block.position = { start: ctx.block.position.start, end: ctx.block.position.start }
+
+            blocks.splice(blockIndex + 1, 0, newBlock)
 
             const targetInline = newBlock.inlines[0]
 
@@ -249,13 +255,19 @@ export class SyntheticText extends HTMLElement {
             this.caret.setPosition(targetInline.position.start)
 
             renderBlock(ctx.block, this.syntheticEl!)
-            renderBlock(newBlock, this.syntheticEl!)
+            renderBlock(newBlock, this.syntheticEl!, null, ctx.block)
 
             this.updateBlock(ctx.block)
             this.updateBlock(newBlock)
             this.updateAST()
-            this.restoreCaret()
+
+            requestAnimationFrame(() => {
+                this.restoreCaret()
+            })
+
             this.emitChange()
+
+            console.log('ast', JSON.stringify(this.engine.ast, null, 2))
 
             this.isEditing = false
             return
