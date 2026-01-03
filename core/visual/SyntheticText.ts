@@ -208,7 +208,8 @@ export class SyntheticText extends HTMLElement {
 
     private onEnter(e: KeyboardEvent) {
         console.log('enter')
-        const ctx = this.resolveInlineContext(e)
+        // const ctx = this.resolveInlineContext(e)
+        const ctx = this.resolveInlineContext()
         if (!ctx) return
 
         this.isEditing = true
@@ -216,6 +217,7 @@ export class SyntheticText extends HTMLElement {
         e.preventDefault()
 
         if (ctx.inlineIndex === 0) {
+            console.log('enter at start of block')
             const blocks = this.engine.ast.blocks
             const blockIndex = blocks.findIndex(b => b.id === ctx.block.id)
             if (blockIndex === -1) return
@@ -239,6 +241,10 @@ export class SyntheticText extends HTMLElement {
                 position: { start: ctx.block.position.start, end: ctx.block.position.start + text.length }
             }
 
+            for (const inline of newBlock.inlines) {
+                inline.blockId = newBlock.id
+            }
+
             ctx.block.text = ''
             ctx.block.inlines = [emptyInline]
             ctx.block.position = { start: ctx.block.position.start, end: ctx.block.position.start }
@@ -247,8 +253,8 @@ export class SyntheticText extends HTMLElement {
 
             const targetInline = newBlock.inlines[0]
 
-            console.log('newBlock', JSON.stringify(newBlock, null, 2))
-            console.log('targetInline', JSON.stringify(ctx.block, null, 2))
+            // console.log('newBlock', JSON.stringify(newBlock, null, 2))
+            // console.log('targetInline', JSON.stringify(ctx.block, null, 2))
 
             this.caret.setInlineId(targetInline.id)
             this.caret.setBlockId(targetInline.blockId)
@@ -354,7 +360,8 @@ export class SyntheticText extends HTMLElement {
 
     private onBackspace(e: KeyboardEvent) {
         console.log('backspace')
-        const ctx = this.resolveInlineContext(e)
+        // const ctx = this.resolveInlineContext(e)
+        const ctx = this.resolveInlineContext()
         if (!ctx) return
 
         this.isEditing = true
@@ -478,7 +485,8 @@ export class SyntheticText extends HTMLElement {
 
     private onInput(e: Event) {
         console.log('onInput')
-        const ctx = this.resolveInlineContext(e)
+        // const ctx = this.resolveInlineContext(e)
+        const ctx = this.resolveInlineContext()
         if (!ctx) return
 
         this.isEditing = true;
@@ -618,7 +626,7 @@ export class SyntheticText extends HTMLElement {
     }
 
     private updateBlock(block: Block) {
-        console.log('updateBlock', JSON.stringify(block, null, 2))
+        // console.log('updateBlock', JSON.stringify(block, null, 2))
         let pos = 0;
         for (const inline of block.inlines) {
             if (!inline.id) inline.id = uuid()
@@ -758,31 +766,67 @@ export class SyntheticText extends HTMLElement {
         return Math.max(0, Math.min(offset, symbolicLength));
     }
 
-    private resolveInlineContext(e: Event) {
-        if (!this.syntheticEl) return null
+    // private resolveInlineContext(e: Event) {
+    //     if (!this.syntheticEl) return null
+    //     console.log('resolve 0')
 
-        const target = e.target as HTMLDivElement
-        if (!target.dataset?.inlineId) return null
+    //     const target = e.target as HTMLDivElement
+    //     if (!target.dataset?.inlineId) return null
+    //     console.log('resolve 1')
         
-        const inlineId = target.dataset.inlineId!
+    //     const inlineId = target.dataset.inlineId!
 
-        const inline = this.engine.getInlineById(inlineId)
-        if (!inline) return null
+    //     const inline = this.engine.getInlineById(inlineId)
+    //     if (!inline) return null
+    //     console.log('resolve 2')
+    //     const block = this.engine.getBlockById(inline.blockId)
+    //     if (!block) return null
+    //     console.log('resolve 3', inlineId, JSON.stringify(block.inlines, null, 2))
+    //     const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
+    //     if (inlineIndex === -1) return null
+    //     console.log('resolve 4')
+    //     const ctx: {
+    //         inline: Inline,
+    //         block: Block,
+    //         inlineIndex: number,
+    //         inlineEl: HTMLElement
+    //     } = { inline, block, inlineIndex, inlineEl: target }
 
-        const block = this.engine.getBlockById(inline.blockId)
+    //     return ctx
+    // }
+
+    private resolveInlineContext() {
+        const blockId = this.caret.getBlockId()
+        const inlineId = this.caret.getInlineId()
+        console.log('resolve 0')
+    
+        if (!blockId || !inlineId) return null
+    
+        console.log('resolve 1')
+        const block = this.engine.getBlockById(blockId)
         if (!block) return null
-
+    
+        console.log('resolve 2', inlineId)
         const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
         if (inlineIndex === -1) return null
-
-        const ctx: {
-            inline: Inline,
-            block: Block,
-            inlineIndex: number,
-            inlineEl: HTMLElement
-        } = { inline, block, inlineIndex, inlineEl: target }
-
-        return ctx
+    
+        console.log('resolve 3')
+        const inline = block.inlines[inlineIndex]
+    
+        console.log('resolve 4')
+        const inlineEl = this.syntheticEl?.querySelector(
+            `[data-inline-id="${inlineId}"]`
+        ) as HTMLElement | null
+    
+        console.log('resolve 5')
+        if (!inlineEl) return null
+    
+        return {
+            inline,
+            block,
+            inlineIndex,
+            inlineEl
+        }
     }
 
     private restoreCaretByTextOffset() {
