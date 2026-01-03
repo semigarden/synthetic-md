@@ -670,12 +670,11 @@ export class SyntheticText extends HTMLElement {
             for (const inline of block.inlines) {
                 if (!inline.id) inline.id = uuid()
                 const len = inline.text.symbolic.length
-                inline.position = { start: globalPos, end: globalPos + len };
-                globalPos += len;
+                inline.position = { start: 0, end: len };
             }
 
             block.text = block.inlines.map(i => i.text.symbolic).join('')
-            block.position = { start: blockStart, end: globalPos }
+            block.position = { start: blockStart, end: blockStart +block.text.length }
 
             if (!block.id) block.id = uuid()
 
@@ -685,9 +684,8 @@ export class SyntheticText extends HTMLElement {
         const joinedText = ast.blocks.map(b => b.text).join('\n')
         this.engine.text = joinedText
         this.engine.ast.text = joinedText
-        // this.engine.setText(joinedText)
 
-        console.log('ast', JSON.stringify(this.engine.ast, null, 2))
+        // console.log('ast', JSON.stringify(this.engine.ast, null, 2))
     }
 
     private restoreCaret() {
