@@ -672,7 +672,7 @@ export class SyntheticText extends HTMLElement {
             globalPos += 1
         }
 
-        const joinedText = ast.blocks.map(b => b.text).join('\n')
+        const joinedText = ast.blocks.map(b => b.text).join('')
         this.engine.text = joinedText
         this.engine.ast.text = joinedText
         // this.engine.setText(joinedText)
@@ -802,7 +802,8 @@ export class SyntheticText extends HTMLElement {
     
         if (!blockId || !inlineId) return null
     
-        console.log('resolve 1')
+        console.log('engine.ast', JSON.stringify(this.engine.ast, null, 2))
+        console.log('resolve 1', blockId, inlineId)
         const block = this.engine.getBlockById(blockId)
         if (!block) return null
     
