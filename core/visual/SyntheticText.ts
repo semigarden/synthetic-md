@@ -201,6 +201,29 @@ export class SyntheticText extends HTMLElement {
                 this.onBackspace(e)
             }
         })
+
+        div.addEventListener('click', (e: MouseEvent) => {
+            const target = e.target as HTMLElement
+            if (target.dataset?.inlineId) {
+                console.log('click on inline', target.dataset.inlineId)
+            }
+            if (target.dataset?.blockId) {
+                console.log('click on block', target.dataset.blockId)
+            }
+            if (target.classList.contains('syntheticText')) {
+                console.log('click on syntheticText')
+                const lastBlock = this.engine.ast.blocks.at(-1)
+                if (lastBlock) {
+                    const lastInline = lastBlock.inlines.at(-1)
+                    if (lastInline) {
+                        this.caret.setInlineId(lastInline.id)
+                        this.caret.setBlockId(lastBlock.id)
+                        this.caret.setPosition(lastInline.text.symbolic.length)
+                    }
+                }
+            }
+            this.restoreCaret()
+        })
     
         this.root.appendChild(div)
         this.syntheticEl = div
