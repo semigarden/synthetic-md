@@ -11,8 +11,7 @@ export function renderBlock(block: Block, container: HTMLElement, focusedInlineI
       switch (block.type) {
         case 'paragraph':
           el = document.createElement('p')
-          el.style.margin = '0px'
-          el.style.border = '1px solid red'
+          el.classList.add('paragraph')
           break
         case 'heading':
           el = document.createElement(`h${block.level}`)
@@ -26,12 +25,10 @@ export function renderBlock(block: Block, container: HTMLElement, focusedInlineI
           break
         case 'list':
           el = document.createElement(block.ordered ? 'ol' : 'ul')
-          el.style.margin = '0px'
-          el.style.border = '1px solid purple'
+          el.classList.add('list')
           break
         case 'listItem':
           el = document.createElement('li')
-          el.style.border = '1px solid green'
           break
         default:
           el = document.createElement('div')

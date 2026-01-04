@@ -22,17 +22,7 @@ export function renderInline(inline: Inline, focusedInlineId: string | null): No
     inlineEl.dataset.inlineId = inline.id
     inlineEl.textContent = inline.text.semantic
     inlineEl.contentEditable = 'true'
-    inlineEl.style.whiteSpace = 'pre-wrap'
-    inlineEl.style.wordBreak = 'break-word'
-    inlineEl.style.wordWrap = 'break-word'
-    inlineEl.style.overflowWrap = 'break-word'
-    inlineEl.style.textOverflow = 'ellipsis'
-    inlineEl.style.maxWidth = '100%'
-    inlineEl.style.height = 'auto'
-    inlineEl.style.display = 'inline-block'
-    inlineEl.style.minWidth = '100px'
-    inlineEl.style.textAlign = 'left'
-    inlineEl.style.border = '1px solid blue'
+    inlineEl.classList.add('inline')
 
     return inlineEl
 }
