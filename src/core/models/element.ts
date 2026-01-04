@@ -12,7 +12,6 @@ class Element extends HTMLElement {
     private syntheticEl?: HTMLElement
     private ast = new AST()
     private caret: Caret | null = null
-    private isEditing = false
     private focusedInlineId: string | null = null
     private hasAcceptedExternalValue = false
     private editor: Editor | null = null
@@ -38,7 +37,6 @@ class Element extends HTMLElement {
 
     set value(value: string) {
         if (value === this.ast.getText()) return
-        if (this.isEditing) return
 
         if (!this.hasAcceptedExternalValue && value !== '') {
             this.ast.setText(value)
@@ -78,7 +76,6 @@ class Element extends HTMLElement {
 
         document.addEventListener('selectionchange', () => {
             // console.log('selectionchange')
-            if (this.isEditing) return;
             if (!this.syntheticEl) return;
         
             requestAnimationFrame(() => {
@@ -190,7 +187,6 @@ class Element extends HTMLElement {
                 const newTextNode = document.createTextNode(inline.text.semantic);
                 target.appendChild(newTextNode);
 
-                this.isEditing = false;
                 this.caret?.clear();
                 this.focusedInlineId = null;
             }

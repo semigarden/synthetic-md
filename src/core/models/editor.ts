@@ -11,14 +11,12 @@ class Editor {
     private caret: Caret
     private root: HTMLElement
     private emitChange: () => void
-    private isEditing: boolean
 
     constructor(ast: AST, caret: Caret, root: HTMLElement, emitChange: () => void ) {
         this.ast = ast
         this.caret = caret
         this.root = root
         this.emitChange = emitChange
-        this.isEditing = false
     }
 
     public onIntent(intent: Intent, event: KeyboardEvent) {
@@ -33,8 +31,6 @@ class Editor {
         console.log('onInput')
         const ctx = this.resolveInlineContext()
         if (!ctx) return
-
-        this.isEditing = true;
 
         console.log('ctx', ctx.inlineEl.textContent)
         const newText = ctx.inlineEl.textContent ?? ''
@@ -73,7 +69,6 @@ class Editor {
 
         // console.log('ast', JSON.stringify(this.engine.ast, null, 2))
 
-        this.isEditing = false;
     }
 
     public onEnter(e: KeyboardEvent) {
@@ -81,8 +76,6 @@ class Editor {
         // const ctx = this.resolveInlineContext(e)
         const ctx = this.resolveInlineContext()
         if (!ctx) return
-
-        this.isEditing = true
 
         e.preventDefault()
 
@@ -155,7 +148,6 @@ class Editor {
                         this.caret?.restoreCaret()
                         this.emitChange()
 
-                        this.isEditing = false
                         return
                         
                     }
@@ -213,7 +205,6 @@ class Editor {
 
             // console.log('ast', JSON.stringify(this.engine.ast, null, 2))
 
-            this.isEditing = false
             return
         }
 
@@ -314,7 +305,6 @@ class Editor {
                     this.caret?.restoreCaret()
                     this.emitChange()
 
-                    this.isEditing = false
                     return
                 }
             }
@@ -400,7 +390,6 @@ class Editor {
 
         // console.log(`inline ${ctx.inline.id} split: ${ctx.inline.text.symbolic} > ${ctx.inlineEl.textContent ?? ''}`)
 
-        this.isEditing = false
     }
 
     public onBackspace(e: KeyboardEvent) {
@@ -409,12 +398,9 @@ class Editor {
         const ctx = this.resolveInlineContext()
         if (!ctx) return
 
-        this.isEditing = true
-
         const caretPosition = this.caret.getPositionInInline(ctx.inlineEl)
 
         if (caretPosition !== 0) {
-            this.isEditing = false
             return
         }
 
@@ -478,7 +464,6 @@ class Editor {
                                     this.caret?.restoreCaret()
                                     this.emitChange()
 
-                                    this.isEditing = false
                                     return
                                 }
                             }
@@ -552,7 +537,6 @@ class Editor {
 
                             this.emitChange()
 
-                            this.isEditing = false
                             return
                         }
                     }
@@ -628,7 +612,6 @@ class Editor {
 
             this.emitChange()
 
-            this.isEditing = false
             return
         }
 
@@ -661,7 +644,6 @@ class Editor {
         this.caret?.restoreCaret()
         this.emitChange()
         
-        this.isEditing = false
     }
 
     private detectBlockType(text: string) {
@@ -824,7 +806,6 @@ class Editor {
                 this.caret?.restoreCaret()
                 this.emitChange()
             
-                this.isEditing = false
                 return
             }
         }
@@ -842,7 +823,6 @@ class Editor {
         this.caret?.restoreCaret()
         this.emitChange()
 
-        this.isEditing = false
     }
 
     private getParentBlock(block: Block): Block | null {
