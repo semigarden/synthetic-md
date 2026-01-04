@@ -1,5 +1,5 @@
 import AST from "./ast"
-import Caret from "../visual/caret"
+import Caret from "./caret"
 import { Block, Inline, ListItem } from "../ast/types"
 import { parseInlineContent, detectType, buildBlocks } from "../ast/ast"
 import { uuid } from "../utils/utils"

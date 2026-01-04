@@ -1,6 +1,6 @@
 import { Inline } from "../ast/types"
 
-export default class Caret {
+class Caret {
     private root: HTMLElement
     private inlineId: string | null = null
     private blockId: string | null = null
@@ -181,3 +181,5 @@ export default class Caret {
         }
     }
 }
+
+export default Caret

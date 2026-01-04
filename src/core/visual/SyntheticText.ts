@@ -1,10 +1,9 @@
-import Caret from './caret'
 import AST from '../models/ast'
+import Caret from '../models/caret'
 import Editor from '../models/editor'
-import { renderAST } from '../render/render'
 import css from './SyntheticText.scss?inline'
 import { buildAst } from '../ast/ast'
-
+import { renderAST } from '../render/render'
 
 export class SyntheticText extends HTMLElement {
     private root: ShadowRoot
