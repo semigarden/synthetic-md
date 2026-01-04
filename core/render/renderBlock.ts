@@ -16,6 +16,7 @@ export function renderBlock(block: Block, container: HTMLElement, focusedInlineI
           break
         case 'heading':
           el = document.createElement(`h${block.level}`)
+          el.classList.add(`h${block.level}`)
           break
         case 'codeBlock':
           el = document.createElement('pre')
