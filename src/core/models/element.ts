@@ -1,11 +1,11 @@
-import AST from '../models/ast'
-import Caret from '../models/caret'
-import Editor from '../models/editor'
+import AST from './ast'
+import Caret from './caret'
+import Editor from './editor'
 import css from './SyntheticText.scss?inline'
 import { buildAst } from '../ast/ast'
 import { renderAST } from '../render/render'
 
-export class SyntheticText extends HTMLElement {
+class Element extends HTMLElement {
     private root: ShadowRoot
     private styled = false
     private syntheticEl?: HTMLElement
@@ -265,3 +265,5 @@ export class SyntheticText extends HTMLElement {
         return Math.max(0, Math.min(offset, symbolicLength));
     }
 }
+
+export default Element

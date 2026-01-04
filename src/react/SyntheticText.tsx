@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { defineSyntheticText } from '../core'
+import { defineElement } from '../core'
 
 type Props = {
     ref?: (el: HTMLTextAreaElement) => void
@@ -10,7 +10,7 @@ type Props = {
 
 const SyntheticText = ({ ref, className, value, onChange }: Props) => {
     useEffect(() => {
-        defineSyntheticText()
+        defineElement()
     }, [])
 
     return (

@@ -1,9 +1,9 @@
-import { SyntheticText } from './visual/SyntheticText'
+import Element from './models/element'
 
-function defineSyntheticText() {
+function defineElement() {
     if (!customElements.get('synthetic-text')) {
-        customElements.define('synthetic-text', SyntheticText)
+        customElements.define('synthetic-text', Element)
     }
 }
 
-export { defineSyntheticText }
+export { defineElement }
