@@ -29,6 +29,7 @@ export function renderBlock(block: Block, container: HTMLElement, focusedInlineI
           break
         case 'listItem':
           el = document.createElement('li')
+          el.classList.add('listItem')
           break
         default:
           el = document.createElement('div')
