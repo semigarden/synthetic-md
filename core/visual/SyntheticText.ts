@@ -480,9 +480,11 @@ export class SyntheticText extends HTMLElement {
 
         e.preventDefault()
 
+        const flattenedBlocks = this.flattenBlocks(this.engine.ast.blocks)
+
         if (ctx.inlineIndex === 0 && caretPosition === 0) {
             console.log('backspace at start of block')
-            const flattenedBlocks = this.flattenBlocks(this.engine.ast.blocks)
+            
             const blockIndex = flattenedBlocks.findIndex(b => b.id === ctx.block.id)
 
             const parentBlock = this.getParentBlock(ctx.block)
@@ -534,39 +536,17 @@ export class SyntheticText extends HTMLElement {
                                     this.updateAST()
                                     this.restoreCaret()
                                     this.emitChange()
+
+                                    this.isEditing = false
+                                    return
                                 }
                             }
-
-                            
-                            // this.engine.ast.blocks.splice(listBlockIndex, 1, newBlock)
-                            // renderBlock(newBlock, this.syntheticEl!)
                         }
-                        // console.log('listBlockIndex', listBlockIndex, 'listItemBlockIndex', listItemBlockIndex, 'listItemIndex', listItemIndex)
-                        // const newText = listBlock.text.slice(0, -1)
-                        // const newBlock = this.normalizeBlockType(listBlock)
-                        // console.log('list', JSON.stringify(newBlock, null, 2))
-                        // this.engine.ast.blocks.splice(listBlockIndex, 1, newBlock)
-                        // renderBlock(newBlock, this.syntheticEl!)
                     }
-                    // const parentBlockIndex = flattenedBlocks.findIndex(b => b.id === parentBlock.id)
-                    // const newText = parentBlock.text.slice(0, -1)
-
-                    // const newBlock = this.normalizeBlockType(parentBlock)
-                    // console.log('list', JSON.stringify(newBlock, null, 2))
-
-                    // this.engine.ast.blocks.splice(parentBlockIndex, 1, newBlock)
-                    // renderBlock(newBlock, this.syntheticEl!)
-
-                    // this.updateAST()
-                    // this.restoreCaret()
-                    // this.emitChange()
-
-                    this.isEditing = false
-                    return
                 }
             }
 
-            const prevBlock = this.engine.ast.blocks[blockIndex - 1]
+            const prevBlock = flattenedBlocks[blockIndex - 1]
 
             const prevLastInlineIndex = prevBlock.inlines.length - 1
             const targetPosition = prevBlock.inlines[prevLastInlineIndex].position.end
@@ -602,10 +582,10 @@ export class SyntheticText extends HTMLElement {
             prevBlock.inlines = newInlines
 
 
-            this.engine.ast.blocks.splice(blockIndex, 1)
-            // console.log('prevBlock', JSON.stringify(mergedText, null, 2))
+            const index = this.engine.ast.blocks.findIndex(b => b.id === ctx.block.id)
 
-            // console.log('ctx.inline.type', JSON.stringify(prevBlock.inlines, null, 2))
+            this.engine.ast.blocks.splice(index, 1)
+
             let targetInlineIndex: number
             if (ctx.inline.type === prevBlock.inlines[prevLastInlineIndex].type && ctx.inline.type === 'text') {
                 targetInlineIndex = prevLastInlineIndex
@@ -613,9 +593,6 @@ export class SyntheticText extends HTMLElement {
                 targetInlineIndex = prevLastInlineIndex + 1
             }
             const targetInline = newInlines[targetInlineIndex]
-
-            // console.log('prevBlock.inlines.length', JSON.stringify(newInlines, null, 2))
-            // console.log('targetInline', JSON.stringify(prevBlock.inlines.length, null, 2))
 
             this.caret.setInlineId(targetInline.id)
             this.caret.setBlockId(targetInline.blockId)
@@ -629,6 +606,8 @@ export class SyntheticText extends HTMLElement {
             }
 
             this.updateAST()
+
+            console.log('ast', JSON.stringify(this.engine.ast, null, 2))
 
             requestAnimationFrame(() => {
                 this.restoreCaret()
