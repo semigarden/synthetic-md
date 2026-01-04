@@ -8,13 +8,14 @@ export default class Engine {
 
     constructor(text = '') {
         this.text = text
-        this.ast = buildAst(text)
+        // this.ast = buildAst(text)
+        // console.log('engine constructor', JSON.stringify(this.ast, null, 2))
     }
   
     setText(text: string) {
-        if (this.text === '') {
-            this.ast = buildAst(text)
-        }
+        // if (this.ast.blocks.length === 0) {
+        //     this.ast = buildAst(text)
+        // }
         this.text = text
 
         // console.log('init ast', JSON.stringify(this.ast, null, 2))

@@ -3,7 +3,7 @@ import Caret from './caret'
 import { renderAST } from '../render/render'
 import { renderBlock } from '../render/renderBlock'
 import css from './SyntheticText.scss?inline'
-import { parseInlineContent, detectType, buildBlocks } from '../ast/ast'
+import { parseInlineContent, detectType, buildBlocks, buildAst } from '../ast/ast'
 import { Block, Inline, ListItem } from '../ast/types'
 import { uuid } from '../utils/utils'
 
@@ -17,6 +17,8 @@ export class SyntheticText extends HTMLElement {
     private isRendered = false
     private isEditing = false
     private focusedInlineId: string | null = null
+    private hasInitialized = false
+    private isExternalUpdate = false
 
 
     constructor() {
@@ -26,17 +28,44 @@ export class SyntheticText extends HTMLElement {
 
     connectedCallback() {
         this.connected = true
-        this.engine = new Engine(this.textContent ?? '')
+
+        const initialValue = this.getAttribute('value') ?? ''
+        this.engine.setText(initialValue)
+        this.engine.ast = buildAst(initialValue)
+
         this.addStyles()
         this.addDOM()
         this.render()
+
+        this.hasInitialized = true
+    }
+
+    static get observedAttributes() {
+        return ['value']
+    }
+
+    attributeChangedCallback(
+        name: string,
+        oldValue: string | null,
+        newValue: string | null
+    ) {
+        if (name !== 'value') return
+        if (newValue === oldValue) return
+
+        if (this.hasInitialized) return
+
+        this.isExternalUpdate = true
+        this.value = newValue ?? ''
+        this.isExternalUpdate = false
     }
 
     set value(value: string) {
         this.engine.setText(value)
-        if (this.connected && !this.isRendered) {
-          this.render()
-          this.isRendered = true
+        
+        if (this.connected && this.isExternalUpdate && !this.hasInitialized) {
+            this.engine.ast = buildAst(value)
+            this.render()
+            this.isRendered = true
         }
     }
 
@@ -866,7 +895,7 @@ export class SyntheticText extends HTMLElement {
         this.restoreCaret()
         this.emitChange()
 
-        console.log('ast', JSON.stringify(this.engine.ast, null, 2))
+        // console.log('ast', JSON.stringify(this.engine.ast, null, 2))
 
         this.isEditing = false;
     }
@@ -1100,8 +1129,12 @@ export class SyntheticText extends HTMLElement {
     
 
     private emitChange() {
-        this.dispatchEvent(new CustomEvent('change', {
-            detail: { value: this.engine.getText() },
+        // this.dispatchEvent(new CustomEvent('change', {
+        //     detail: { value: this.engine.getText() },
+        //     bubbles: true,
+        //     composed: true,
+        // }))
+        this.dispatchEvent(new Event('change', {
             bubbles: true,
             composed: true,
         }))

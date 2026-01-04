@@ -6,9 +6,10 @@ declare module 'react/jsx-runtime' {
       'synthetic-text': {
         ref?: any
         value?: string
-        onChange?: (e: {
-            nativeEvent: CustomEvent<{ value: string }>
-        }) => void
+        // onChange?: (e: {
+        //     nativeEvent: CustomEvent<{ value: string }>
+        // }) => void
+        onChange?: (e: Event) => void
         children?: any
         [key: string]: any
       }

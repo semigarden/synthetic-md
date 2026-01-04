@@ -4,18 +4,16 @@ import { defineSyntheticText } from '../core'
 type Props = {
     className?: string
     value: string
-    onChange: (text: string) => void
+    onChange: (e: Event) => void
 }
 
 const SyntheticText = ({ className, value, onChange }: Props) => {
     useEffect(() => {
         defineSyntheticText()
-      }, [])
+    }, [])
 
     return (
-        <synthetic-text className={className} value={value} onChange={(e) => {
-            onChange(e.nativeEvent.detail.value)
-        }} />
+        <synthetic-text className={className} value={value} onChange={onChange} />
     )
 }
 
