@@ -877,45 +877,6 @@ export class SyntheticText extends HTMLElement {
         this.isEditing = false;
     }
 
-    private normalizeBlockType(block: Block): Block {
-        const text = block.inlines.map(i => i.text.symbolic).join('')
-
-        const listMatch = /^(\s*([-*+]|(\d+[.)])))\s+/.exec(text)
-        if (block.type === 'listItem' && !listMatch) {
-            return {
-                id: block.id,
-                type: 'paragraph',
-                text,
-                position: block.position,
-                inlines: parseInlineContent(text, block.id, block.position.start),
-            }
-        }
-
-        if (block.type === 'paragraph' && listMatch) {
-            const marker = listMatch[0]
-            const content = text.slice(marker.length)
-        
-            const paragraph: Block = {
-                id: uuid(),
-                type: 'paragraph',
-                text: content,
-                position: block.position,
-                inlines: parseInlineContent(content, block.id, block.position.start),
-            }
-      
-            return {
-                id: block.id,
-                type: 'listItem',
-                text: content,
-                position: block.position,
-                blocks: [paragraph],
-                inlines: [],
-            }
-        }
-      
-        return block
-    }
-
     private transformBlock(block: Block, text: string, type: Block["type"]) {
         const flattenedBlocks = this.flattenBlocks(this.engine.ast.blocks)
         const blockIndex = flattenedBlocks.findIndex(b => b.id === block.id)
@@ -1106,11 +1067,6 @@ export class SyntheticText extends HTMLElement {
     
 
     private emitChange() {
-        // this.dispatchEvent(new CustomEvent('change', {
-        //     detail: { value: this.engine.getText() },
-        //     bubbles: true,
-        //     composed: true,
-        // }))
         this.dispatchEvent(new Event('change', {
             bubbles: true,
             composed: true,
@@ -1192,35 +1148,6 @@ export class SyntheticText extends HTMLElement {
 
         // console.log('ast', JSON.stringify(ast, null, 2))
     }
-
-    // private updateAST() {
-    //     const ast = this.engine.ast
-
-    //     let globalPos = 0;
-
-    //     for (const block of ast.blocks) {
-    //         const blockStart = globalPos;
-
-    //         for (const inline of block.inlines) {
-    //             if (!inline.id) inline.id = uuid()
-    //             const len = inline.text.symbolic.length
-    //             inline.position = { start: 0, end: len };
-    //         }
-
-    //         block.text = block.inlines.map(i => i.text.symbolic).join('')
-    //         block.position = { start: blockStart, end: blockStart +block.text.length }
-
-    //         if (!block.id) block.id = uuid()
-
-    //         globalPos += 1
-    //     }
-
-    //     const joinedText = ast.blocks.map(b => b.text).join('\n')
-    //     this.engine.text = joinedText
-    //     this.engine.ast.text = joinedText
-
-    //     console.log('ast', JSON.stringify(this.engine.ast, null, 2))
-    // }
 
     private restoreCaret() {
         console.log('restoreCaret', this.caret.getInlineId(), this.caret.getPosition())
@@ -1311,35 +1238,6 @@ export class SyntheticText extends HTMLElement {
         return Math.max(0, Math.min(offset, symbolicLength));
     }
 
-    // private resolveInlineContext(e: Event) {
-    //     if (!this.syntheticEl) return null
-    //     console.log('resolve 0')
-
-    //     const target = e.target as HTMLDivElement
-    //     if (!target.dataset?.inlineId) return null
-    //     console.log('resolve 1')
-        
-    //     const inlineId = target.dataset.inlineId!
-
-    //     const inline = this.engine.getInlineById(inlineId)
-    //     if (!inline) return null
-    //     console.log('resolve 2')
-    //     const block = this.engine.getBlockById(inline.blockId)
-    //     if (!block) return null
-    //     console.log('resolve 3', inlineId, JSON.stringify(block.inlines, null, 2))
-    //     const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
-    //     if (inlineIndex === -1) return null
-    //     console.log('resolve 4')
-    //     const ctx: {
-    //         inline: Inline,
-    //         block: Block,
-    //         inlineIndex: number,
-    //         inlineEl: HTMLElement
-    //     } = { inline, block, inlineIndex, inlineEl: target }
-
-    //     return ctx
-    // }
-
     private resolveInlineContext() {
         const blockId = this.caret.getBlockId()
         const inlineId = this.caret.getInlineId()
@@ -1373,78 +1271,6 @@ export class SyntheticText extends HTMLElement {
             inlineIndex,
             inlineEl
         }
-    }
-
-    private restoreCaretByTextOffset() {
-        const pending = this.caret.pendingTextRestore
-        if (!pending) return
-    
-        const blockEl = this.syntheticEl?.querySelector(
-            `[data-block-id="${pending.blockId}"]`
-        )
-        if (!blockEl) return
-    
-        let acc = 0
-    
-        const inlineEls = blockEl.querySelectorAll('[data-inline-id]')
-    
-        for (const inlineEl of inlineEls) {
-            const text = inlineEl.textContent ?? ''
-            const len = text.length
-    
-            if (acc + len >= pending.offset) {
-                const offsetInInline = pending.offset - acc
-                this.placeCaret(inlineEl.firstChild ?? inlineEl, offsetInInline)
-                this.caret.pendingTextRestore = null
-                return
-            }
-    
-            acc += len
-        }
-    
-        // fallback → end of block
-        const lastInline = inlineEls[inlineEls.length - 1]
-        if (lastInline) {
-            const len = lastInline.textContent?.length ?? 0
-            this.placeCaret(lastInline.firstChild ?? lastInline, len)
-        }
-    
-        this.caret.pendingTextRestore = null
-    }
-
-    private placeCaret(target: Node, offset: number) {
-        const selection = window.getSelection()
-        if (!selection) return
-    
-        const range = document.createRange()
-    
-        // Normalize target:
-        // If element node, try to use its first text child
-        let node: Node = target
-    
-        if (node.nodeType === Node.ELEMENT_NODE) {
-            if (node.firstChild) {
-                node = node.firstChild
-            } else {
-                // Empty element → caret can only be at offset 0
-                range.setStart(node, 0)
-                range.collapse(true)
-                selection.removeAllRanges()
-                selection.addRange(range)
-                return
-            }
-        }
-    
-        if (node.nodeType !== Node.TEXT_NODE) return
-    
-        const textLength = node.textContent?.length ?? 0
-        const safeOffset = Math.max(0, Math.min(offset, textLength))
-    
-        range.setStart(node, safeOffset)
-        range.collapse(true)
-    
-        selection.removeAllRanges()
-        selection.addRange(range)
     }
 
     private flattenBlocks(blocks: Block[], acc: Block[] = []): Block[] {
