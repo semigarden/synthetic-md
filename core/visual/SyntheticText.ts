@@ -380,6 +380,109 @@ export class SyntheticText extends HTMLElement {
             return
         }
 
+        const parentBlock = this.getParentBlock(ctx.block)
+        if (parentBlock) {
+            if (parentBlock.type === 'listItem') {
+                console.log('list item block', JSON.stringify(parentBlock, null, 2))
+
+                const listItem = parentBlock
+                const list = this.getParentBlock(parentBlock)
+                if (list && list.type === 'list') {
+                    const text = ctx.inline.text.symbolic
+
+                    const beforeText = text.slice(0, caretPosition)
+                    const afterText = text.slice(caretPosition)
+
+                    const beforeInlines = parseInlineContent(beforeText, ctx.block.id, ctx.inline.position.start)
+                    const afterInlines = parseInlineContent(afterText, ctx.block.id, ctx.inline.position.start + beforeText.length)
+
+                    const newParagraphInlines = afterInlines.concat(ctx.block.inlines.slice(ctx.inlineIndex + 1))
+                    ctx.block.inlines.splice(ctx.inlineIndex, ctx.block.inlines.length - ctx.inlineIndex, ...beforeInlines)
+
+                    const newListItem = {
+                        id: uuid(),
+                        type: 'listItem',
+                        text: listItem.text.slice(0, -ctx.block.text.length),
+                        position: listItem.position,
+                        blocks: [],
+                        inlines: [],
+                    } as ListItem
+
+                    const newParagraphText = newParagraphInlines.map(i => i.text.symbolic).join('')
+                    const newParagraph = {
+                        id: uuid(),
+                        type: ctx.block.type,
+                        text: newParagraphText,
+                        inlines: newParagraphInlines,
+                        position: { start: ctx.block.position.end, end: ctx.block.position.end + newParagraphText.length }
+                    } as Block
+
+                    if (newParagraphInlines.length === 0) {
+                        newParagraphInlines.push({
+                            id: uuid(),
+                            type: 'text',
+                            blockId: newParagraph.id,
+                            text: { symbolic: '', semantic: '' },
+                            position: { start: 0, end: 0 }
+                        })
+                    }
+
+                    newListItem.blocks.push(newParagraph)
+
+                    for (const inline of newParagraphInlines) {
+                        inline.blockId = newParagraph.id
+                    }
+
+                    const index = list.blocks.findIndex(b => b.id === listItem.id)
+                    list.blocks.splice(index + 1, 0, newListItem)
+
+
+                    const caretAtEnd = caretPosition === text.length
+
+                    let targetInline: Inline
+                    let targetOffset: number
+
+                    if (caretAtEnd && newParagraph.inlines.length === 0) {
+                        targetInline = beforeInlines[beforeInlines.length - 1]
+                        targetOffset = targetInline.text.symbolic.length
+                    } else if (caretAtEnd) {
+                        targetInline = newParagraph.inlines[0]
+                        targetOffset = 0
+                    } else {
+                        targetInline = newParagraph.inlines[0]
+                        targetOffset = 0
+                    }
+            
+                    if (targetInline) {
+                        this.caret.setInlineId(targetInline.id)
+                        this.caret.setBlockId(targetInline.blockId)
+                        this.caret.setPosition(targetOffset)
+                    }
+
+                    const selection = window.getSelection();
+                    if (selection && selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
+                            const el = range.startContainer as HTMLElement;
+                            if (el.firstChild?.nodeName === 'BR') {
+                                el.removeChild(el.firstChild);
+                            }
+                        }
+                    }
+
+                    renderBlock(ctx.block, this.syntheticEl!)
+                    renderBlock(newListItem, this.syntheticEl!, null, listItem)
+
+                    this.updateAST()
+                    this.restoreCaret()
+                    this.emitChange()
+
+                    this.isEditing = false
+                    return
+                }
+            }
+        }
+
         const text = ctx.inline.text.symbolic
 
         const beforeText = text.slice(0, caretPosition)
@@ -604,8 +707,6 @@ export class SyntheticText extends HTMLElement {
                             }
 
                             this.updateAST()
-
-                            console.log('ast', JSON.stringify(this.engine.ast, null, 2))
 
                             requestAnimationFrame(() => {
                                 this.restoreCaret()
