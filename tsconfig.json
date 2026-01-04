@@ -1,16 +1,20 @@
 {
-  "files": ["react/jsx.d.ts"],
+  "files": ["src/react/jsx.d.ts"],
   "compilerOptions": {
     "jsx": "react-jsx",
     "module": "ESNext",
     "target": "ESNext",
     "moduleResolution": "Bundler",
-    "strict": true
+    "strict": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "noEmit": false,
   },
   "include": [
-    "dev",
-    "core",
-    "react",
-    "**/*.d.ts"
+    "src",
+    "src/core",
+    "src/react",
+    "**/*.d.ts",
+    "src/db.ts"
   ]
 }

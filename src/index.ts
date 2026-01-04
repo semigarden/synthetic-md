@@ -6,4 +6,5 @@
 // const root = createRoot(document.getElementById('root')!)
 // root.render(<App />)
 
-export * from '../core'
+export * from './core'
+export * from './react'
