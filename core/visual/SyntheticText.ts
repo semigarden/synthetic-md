@@ -322,13 +322,6 @@ export class SyntheticText extends HTMLElement {
                         return
                         
                     }
-
-                    return
-                    // const listItemBlock = parentBlock
-                    // const listBlock = this.getParentBlock(parentBlock)
-                    // if (listBlock && listBlock.type === 'list') {
-                    //     const listBlockIndex = this.engine.ast.blocks.findIndex(b => b.id === listBlock.id)
-                    // }
                 }
             }
 
