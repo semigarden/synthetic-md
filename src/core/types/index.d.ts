@@ -5,15 +5,11 @@ export type EditContext = {
     inlineElement: HTMLElement
 }
 
-type AstEffect = {
-    type: 'mergeInline'
-    leftInlineId: string
-    rightInlineId: string
-}
+type AstEffect = 
+ | { type: 'mergeInline'; leftInlineId: string; rightInlineId: string }
+ | { type: 'mergeMarker'; blockId: string }
 
-type CaretEffect = {
-    moveToEndOfPreviousInline?: boolean
-}
+type CaretEffect = { moveToEndOfPreviousInline?: boolean }
 
 export type EditEffect = {
     preventDefault?: boolean

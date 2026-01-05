@@ -399,6 +399,27 @@ class Editor {
 
         if (caretPosition !== 0) return { preventDefault: false }
 
+        const block = this.ast.getBlockById(context.block.id)
+        if (!block) return { preventDefault: false }
+
+        const parentBlock = this.ast.getParentBlock(block)
+        if (parentBlock?.type === 'listItem') {
+            const listItem = parentBlock;
+            const list = this.ast.getParentBlock(listItem)
+            if (list?.type === 'list') {
+                const listItemIndex = list.blocks.findIndex(b => b.id === listItem.id)
+                if (listItemIndex === 0) {
+                    return {
+                        preventDefault: true,
+                        ast: [{
+                            type: 'mergeMarker',
+                            blockId: list.id,
+                        }],
+                    }
+                }
+            }
+        }
+
         const previousInline = this.findPreviousInline(context)
 
         if (!previousInline) return { preventDefault: false }
@@ -410,9 +431,6 @@ class Editor {
                 leftInlineId: previousInline.id,
                 rightInlineId: context.inline.id,
             }],
-            caret: {
-                moveToEndOfPreviousInline: true,
-            }
         }
     }
 
@@ -426,17 +444,6 @@ class Editor {
 
     //     if (context.inlineIndex === 0 && caretPosition === 0) {
     //         console.log('merge at start of block')
-
-    //         return {
-    //             preventDefault: true,
-    //             ast: [{
-    //                 type: 'mergeInlineWithPrevious',
-    //                 inlineId: context.inline.id,
-    //             }],
-    //             caret: {
-    //                 moveToEndOfPreviousInline: true,
-    //             }
-    //         }
             
     //     //     const blockIndex = flattenedBlocks.findIndex(b => b.id === context.block.id)
     //     //     if (blockIndex === -1 || blockIndex === 0) return { preventDefault: true }
