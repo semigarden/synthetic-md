@@ -19,7 +19,6 @@ class Selection {
     }
 
     private onSelectionChange() {
-        console.log('onSelectionChange')
         if (!this.rootElement) return
 
         if (this.rafId !== null) {
@@ -68,8 +67,6 @@ class Selection {
         let position = preRange.toString().length + inline.position.start + block.position.start
     
         this.caret?.setPosition(position)
-    
-        console.log('Caret moved to:', inlineId, 'position:', position)
     }
 }
 
