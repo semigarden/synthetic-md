@@ -18,7 +18,7 @@ class Selection {
         document.removeEventListener('selectionchange', this.onSelectionChange)
     }
 
-    private onSelectionChange() {
+    private onSelectionChange = () => {
         if (!this.rootElement) return
 
         if (this.rafId !== null) {
@@ -30,6 +30,8 @@ class Selection {
             if (!selection || selection.rangeCount === 0) return
         
             const range = selection.getRangeAt(0)
+
+            console.log('range', range)
 
             this.resolveRange(range)
         })
