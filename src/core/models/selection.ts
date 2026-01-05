@@ -52,24 +52,24 @@ class Selection {
 
             const range = selection.getRangeAt(0)
 
-            let syntheticOffset = 0;
+            let semanticOffset = 0;
             if (target.contains(range.startContainer)) {
                 const preRange = document.createRange()
                 preRange.selectNodeContents(target)
                 preRange.setEnd(range.startContainer, range.startOffset)
-                syntheticOffset = preRange.toString().length
+                semanticOffset = preRange.toString().length
             }
 
-            const syntheticVisibleLength = target.textContent?.length ?? 1
+            const semanticVisibleLength = target.textContent?.length ?? 1
 
             target.innerHTML = ''
             const newTextNode = document.createTextNode(inline.text.symbolic)
             target.appendChild(newTextNode)
 
-            const symbolicOffset = this.mapSyntheticOffsetToSymbolic(
-                syntheticVisibleLength,
+            const symbolicOffset = this.mapSemanticOffsetToSymbolic(
+                semanticVisibleLength,
                 inline.text.symbolic.length,
-                syntheticOffset
+                semanticOffset
             )
 
             const clampedOffset = Math.max(0, Math.min(symbolicOffset, inline.text.symbolic.length))
@@ -150,16 +150,16 @@ class Selection {
         this.caret?.setPosition(position)
     }
 
-    private mapSyntheticOffsetToSymbolic(
-        syntheticLength: number,
+    private mapSemanticOffsetToSymbolic(
+        semanticLength: number,
         symbolicLength: number,
-        syntheticOffset: number
+        semanticOffset: number
     ) {
-        if (syntheticOffset === 0) return 0
+        if (semanticOffset === 0) return 0
 
-        let ratio = symbolicLength / syntheticLength
+        let ratio = symbolicLength / semanticLength
         ratio = Math.max(0.5, Math.min(2.0, ratio))
-        let offset = Math.round(syntheticOffset * ratio)
+        let offset = Math.round(semanticOffset * ratio)
 
         return Math.max(0, Math.min(offset, symbolicLength))
     }
