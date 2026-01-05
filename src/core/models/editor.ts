@@ -9,13 +9,13 @@ import { Intent } from "../utils/key"
 class Editor {
     private ast: AST
     private caret: Caret
-    private root: HTMLElement
+    private rootElement: HTMLElement
     private emitChange: () => void
 
-    constructor(ast: AST, caret: Caret, root: HTMLElement, emitChange: () => void ) {
+    constructor(ast: AST, caret: Caret, rootElement: HTMLElement, emitChange: () => void ) {
         this.ast = ast
         this.caret = caret
-        this.root = root
+        this.rootElement = rootElement
         this.emitChange = emitChange
     }
 
@@ -58,7 +58,7 @@ class Editor {
 
         this.applyInlineNormalization(ctx.block, result)
     
-        renderBlock(ctx.block, this.root, result.caretInline?.id ?? null)
+        renderBlock(ctx.block, this.rootElement, result.caretInline?.id ?? null)
 
         // console.log(`inline ${ctx.inline.id} changed: ${ctx.inline.text.symbolic} > ${ctx.inlineEl.textContent ?? ''}`)
 
@@ -138,7 +138,7 @@ class Editor {
                         // this.engine.ast.blocks.splice(listBlockIndex, 1, listBlock)
                         listBlock.blocks.splice(index + 1, 0, newListItemBlock)
 
-                        renderBlock(newListItemBlock, this.root, null, listItemBlock)
+                        renderBlock(newListItemBlock, this.rootElement, null, listItemBlock)
 
                         this.caret.setInlineId(newParagraphInline.id)
                         this.caret.setBlockId(newParagraphBlock.id)
@@ -192,8 +192,8 @@ class Editor {
             this.caret.setBlockId(targetInline.blockId)
             this.caret.setPosition(0)
 
-            renderBlock(ctx.block, this.root)
-            renderBlock(newBlock, this.root, null, ctx.block)
+            renderBlock(ctx.block, this.rootElement)
+            renderBlock(newBlock, this.rootElement, null, ctx.block)
 
             this.updateAST()
 
@@ -298,8 +298,8 @@ class Editor {
                         }
                     }
 
-                    renderBlock(ctx.block, this.root)
-                    renderBlock(newListItem, this.root, null, listItem)
+                    renderBlock(ctx.block, this.rootElement)
+                    renderBlock(newListItem, this.rootElement, null, listItem)
 
                     this.updateAST()
                     this.caret?.restoreCaret()
@@ -379,8 +379,8 @@ class Editor {
             }
         }
 
-        renderBlock(ctx.block, this.root)
-        renderBlock(newBlock, this.root, null, ctx.block)
+        renderBlock(ctx.block, this.rootElement)
+        renderBlock(newBlock, this.rootElement, null, ctx.block)
 
         this.updateAST()
         this.caret?.restoreCaret()
@@ -432,7 +432,7 @@ class Editor {
                             if (detectedBlockType.type !== listItemBlock.type) {
                                 
                                 if (list.blocks.length === 1) {
-                                    const listBlockEl = this.root.querySelector(`[data-block-id="${list.id}"]`)
+                                    const listBlockEl = this.rootElement.querySelector(`[data-block-id="${list.id}"]`)
                                     if (listBlockEl) {
                                         listBlockEl.remove()
                                     }
@@ -454,7 +454,7 @@ class Editor {
                                     const prevBlock = this.ast.ast.blocks[listBlockIndex - 1]
 
                                     console.log('list', JSON.stringify(newBlock, null, 2))
-                                    renderBlock(newBlock, this.root, null, prevBlock)
+                                    renderBlock(newBlock, this.rootElement, null, prevBlock)
 
                                     this.caret.setInlineId(newBlockInlines[0].id)
                                     this.caret.setBlockId(newBlock.id)
@@ -522,9 +522,9 @@ class Editor {
                             this.caret.setBlockId(targetInline.blockId)
                             this.caret.setPosition(targetPosition)
 
-                            renderBlock(prevListItemParagraph, this.root)
+                            renderBlock(prevListItemParagraph, this.rootElement)
 
-                            const blockEl = this.root.querySelector(`[data-block-id="${listItemBlock.id}"]`)
+                            const blockEl = this.rootElement.querySelector(`[data-block-id="${listItemBlock.id}"]`)
                             if (blockEl) {
                                 blockEl.remove()
                             }
@@ -595,9 +595,9 @@ class Editor {
             this.caret.setBlockId(targetInline.blockId)
             this.caret.setPosition(targetPosition)
 
-            renderBlock(prevBlock, this.root)
+            renderBlock(prevBlock, this.rootElement)
 
-            const blockEl = this.root.querySelector(`[data-block-id="${ctx.block.id}"]`)
+            const blockEl = this.rootElement.querySelector(`[data-block-id="${ctx.block.id}"]`)
             if (blockEl) {
                 blockEl.remove()
             }
@@ -638,7 +638,7 @@ class Editor {
         this.caret.setBlockId(targetInline.blockId)
         this.caret.setPosition(targetInline.position.end)
 
-        renderBlock(ctx.block, this.root)
+        renderBlock(ctx.block, this.rootElement)
 
         this.updateAST()
         this.caret?.restoreCaret()
@@ -775,7 +775,7 @@ class Editor {
 
         const newBlock = buildBlocks(text, this.ast.ast)[0]
 
-        const oldBlockEl = this.root.querySelector(`[data-block-id="${block.id}"]`)
+        const oldBlockEl = this.rootElement.querySelector(`[data-block-id="${block.id}"]`)
         if (oldBlockEl) {
             oldBlockEl.remove()
         }
@@ -797,9 +797,9 @@ class Editor {
 
                 const prevBlock = this.ast.ast.blocks[blockIndex - 1]
                 if (prevBlock) {
-                    renderBlock(newBlock, this.root, null, prevBlock)
+                    renderBlock(newBlock, this.rootElement, null, prevBlock)
                 } else {
-                    renderBlock(newBlock, this.root)
+                    renderBlock(newBlock, this.rootElement)
                 }
 
                 this.updateAST()
@@ -814,9 +814,9 @@ class Editor {
 
         const prevBlock = this.ast.ast.blocks[blockIndex - 1]
         if (prevBlock) {
-            renderBlock(newBlock, this.root, null, prevBlock)
+            renderBlock(newBlock, this.rootElement, null, prevBlock)
         } else {
-            renderBlock(newBlock, this.root)
+            renderBlock(newBlock, this.rootElement)
         }
 
         this.updateAST()
@@ -859,7 +859,7 @@ class Editor {
         const inline = block.inlines[inlineIndex]
     
         // console.log('resolve 4')
-        const inlineEl = this.root.querySelector(
+        const inlineEl = this.rootElement.querySelector(
             `[data-inline-id="${inlineId}"]`
         ) as HTMLElement | null
     
