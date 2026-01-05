@@ -1,4 +1,4 @@
-import { buildAst } from '../ast/ast'
+import { buildAst, parseInlineContent } from '../ast/ast'
 import { AstEffect, Block, Document, Inline } from '../types'
 import { uuid } from '../utils/utils'
 
@@ -70,6 +70,15 @@ class AST {
             }
         }
         return null
+    }
+
+    public flattenInlines(blocks: Block[]): Inline[] {
+        const inlines: Inline[] = []
+        for (const b of blocks) {
+            inlines.push(...b.inlines)
+            if ('blocks' in b && b.blocks) inlines.push(...this.flattenInlines(b.blocks))
+        }
+        return inlines
     }
 
     public updateAST() {
@@ -148,8 +157,59 @@ class AST {
         // console.log('ast', JSON.stringify(ast, null, 2))
     }
 
-    public apply(effect: AstEffect) {
-      
+    public mergeInline(inlineAId: string, inlineBId: string): { targetBlocks: Block[], targetInline: Inline, targetPosition: number } | null {
+        const inlineA = this.getInlineById(inlineAId)
+        const inlineB = this.getInlineById(inlineBId)
+        if (!inlineA || !inlineB) return null
+
+        const flattenedInlines = this.flattenInlines(this.ast.blocks)
+        const inlineIndexA = flattenedInlines.findIndex(i => i.id === inlineAId)
+        const inlineIndexB = flattenedInlines.findIndex(i => i.id === inlineBId)
+        if (inlineIndexA === -1 || inlineIndexB === -1) return null
+
+        const [leftInline, rightInline] = inlineIndexA < inlineIndexB ? [inlineA, inlineB] : [inlineB, inlineA]
+
+        const currentBlock = this.getBlockById(leftInline.blockId)
+        if (!currentBlock) return null
+
+        const mergedText = leftInline.text.symbolic + rightInline.text.symbolic
+        const mergedInlines = parseInlineContent(mergedText, currentBlock.id, currentBlock.position.start)
+
+        const leftInlineIndex = currentBlock.inlines.findIndex(i => i.id === leftInline.id)
+
+        currentBlock.inlines.splice(leftInlineIndex, 1)
+        currentBlock.inlines.splice(leftInlineIndex, 0, ...mergedInlines)
+
+        const targetBlocks: Block[] = []
+        targetBlocks.push(currentBlock)
+
+        const previousBlock = this.getBlockById(rightInline.blockId)
+        if (previousBlock && currentBlock.id !== previousBlock.id) {
+            const rightInlineIndex = previousBlock.inlines.findIndex(i => i.id === rightInline.id)
+
+            previousBlock.inlines.splice(rightInlineIndex, 1)
+            previousBlock.text = previousBlock.inlines.map((i: Inline) => i.text.symbolic).join('')
+            previousBlock.position = { start: previousBlock.position.start, end: previousBlock.position.end - rightInline.text.symbolic.length }
+            targetBlocks.push(previousBlock)
+
+            if (previousBlock.inlines.length === 0) {
+                const previousBlockIndex = this.ast.blocks.findIndex(b => b.id === previousBlock.id)
+                this.ast.blocks.splice(previousBlockIndex, 1)
+            }
+        }
+
+        currentBlock.text = mergedText
+        currentBlock.position = { start: currentBlock.position.start, end: currentBlock.position.end - leftInline.text.symbolic.length + mergedText.length }
+
+        console.log('merged', JSON.stringify(currentBlock, null, 2))
+
+        const targetInline = mergedInlines.length > 0 ? mergedInlines[0] : leftInline
+
+        return {
+            targetBlocks: targetBlocks,
+            targetInline: targetInline,
+            targetPosition: leftInline.position.end,
+        }
     }
 }
 

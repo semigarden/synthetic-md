@@ -1,8 +1,8 @@
 import { Block } from "../types"
 import { renderInlines } from "./renderInline"
 
-export function renderBlock(block: Block, container: HTMLElement, focusedInlineId: string | null = null, beforeBlock: Block | null = null): HTMLElement {
-    let el: HTMLElement = container.querySelector(`[data-block-id="${block.id}"]`) as HTMLElement
+export function renderBlock(block: Block, rootElement: HTMLElement, focusedInlineId: string | null = null, beforeBlock: Block | null = null): HTMLElement {
+    let el: HTMLElement = rootElement.querySelector(`[data-block-id="${block.id}"]`) as HTMLElement
 
     const isNew = !el
     if (el) {
@@ -55,16 +55,16 @@ export function renderBlock(block: Block, container: HTMLElement, focusedInlineI
 
     if (isNew) {
       if (beforeBlock) {
-        const beforeEl = container.querySelector(
+        const beforeEl = rootElement.querySelector(
           `[data-block-id="${beforeBlock.id}"]`
         )
         if (beforeEl) {
           beforeEl.after(el)
         } else {
-          container.appendChild(el)
+          rootElement.appendChild(el)
         }
       } else {
-        container.appendChild(el)
+        rootElement.appendChild(el)
       }
     }
 

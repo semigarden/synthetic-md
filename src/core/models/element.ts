@@ -98,7 +98,13 @@ class Element extends HTMLElement {
             if (!context) return
             
             const effect = this.editor?.onIntent(intent, context)
-            if (effect) this.editor?.apply(effect)
+            if (effect) {
+                this.editor?.apply(effect)
+
+                if (effect.preventDefault) {
+                    event.preventDefault()
+                }
+            }
         })
 
         this.shadowRootElement.appendChild(div)

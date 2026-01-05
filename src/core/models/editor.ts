@@ -386,7 +386,7 @@ class Editor {
     }
 
     private findPreviousInline(context: EditContext): Inline | null {
-        const flattenedInlines = this.flattenInlines(this.ast.ast.blocks)
+        const flattenedInlines = this.ast.flattenInlines(this.ast.ast.blocks)
         const inlineIndex = flattenedInlines.findIndex(i => i.id === context.inline.id)
         if (inlineIndex === -1) return null
 
@@ -400,7 +400,7 @@ class Editor {
         if (caretPosition !== 0) return { preventDefault: false }
 
         const previousInline = this.findPreviousInline(context)
-        console.log('previousInline', JSON.stringify(previousInline, null, 2))
+
         if (!previousInline) return { preventDefault: false }
 
         return {
@@ -1102,17 +1102,35 @@ class Editor {
         return acc
     }
 
-    private flattenInlines(blocks: Block[]): Inline[] {
-        const inlines: Inline[] = []
-        for (const b of blocks) {
-            inlines.push(...b.inlines)
-            if ('blocks' in b && b.blocks) inlines.push(...this.flattenInlines(b.blocks))
-        }
-        return inlines
-    }
-
     public apply(effect: EditEffect) {
-        if (effect.ast) effect.ast.forEach(e => this.ast.apply(e))
+        if (effect.ast) {
+            effect.ast.forEach(effect => {
+                if (effect.type === 'mergeInline') {
+                    const result = this.ast.mergeInline(effect.leftInlineId, effect.rightInlineId)
+                    if (!result) return
+
+                    const { targetBlocks, targetInline, targetPosition } = result
+
+                    for (const block of targetBlocks) {
+                        renderBlock(block, this.rootElement)
+
+                        const blockEl = this.rootElement.querySelector(`[data-block-id="${block.id}"]`)
+                        if (block.inlines.length === 0 && blockEl) blockEl.remove()
+                    }
+
+                    this.ast.updateAST()
+
+                    this.caret.setInlineId(targetInline.id)
+                    this.caret.setBlockId(targetInline.blockId)
+                    this.caret.setPosition(targetPosition)
+                    this.caret.restoreCaret()
+
+                    this.emitChange()
+
+                    return { preventDefault: true }
+                }
+            })
+        }
         if (effect.caret) this.caret.apply(effect.caret)
     }
 }
