@@ -8,8 +8,8 @@ class Selection {
 
     constructor(
         private rootElement: HTMLElement,
+        private caret: Caret,
         private ast: AST,
-        private caret: Caret
     ) {}
 
     attach() {

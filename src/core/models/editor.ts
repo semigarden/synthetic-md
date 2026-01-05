@@ -11,8 +11,8 @@ class Editor {
 
     constructor(
         private rootElement: HTMLElement,
-        private ast: AST,
         private caret: Caret,
+        private ast: AST,
         emitChange: () => void
     ) {
         this.emitChange = emitChange

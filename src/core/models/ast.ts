@@ -73,7 +73,7 @@ class AST {
     }
 
     public updateAST() {
-        const ast = this.ast
+        console.log('updateAST', JSON.stringify(this.ast, null, 2))
         let globalPos = 0
 
         const updateBlock = (block: Block): string => {
@@ -134,16 +134,17 @@ class AST {
         }
 
         const parts: string[] = []
-        for (let i = 0; i < ast.blocks.length; i++) {
-            parts.push(updateBlock(ast.blocks[i]))
-            if (i < ast.blocks.length - 1) {
+        for (let i = 0; i < this.ast.blocks.length; i++) {
+            parts.push(updateBlock(this.ast.blocks[i]))
+            if (i < this.ast.blocks.length - 1) {
                 parts.push('\n')
                 globalPos += 1
             }
         }
 
-        ast.text = parts.join('')
-        this.ast.text = ast.text
+        this.text = parts.join('')
+
+
 
         // console.log('ast', JSON.stringify(ast, null, 2))
     }

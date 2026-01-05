@@ -33,8 +33,8 @@ class Element extends HTMLElement {
         this.render()
 
         this.caret = new Caret(this.rootElement!)
-        this.editor = new Editor(this.rootElement!, this.ast, this.caret, this.emitChange.bind(this))
-        this.selection = new Selection(this.rootElement!, this.ast, this.caret)
+        this.editor = new Editor(this.rootElement!, this.caret, this.ast, this.emitChange.bind(this))
+        this.selection = new Selection(this.rootElement!, this.caret, this.ast)
         this.selection.attach()
     }
 
@@ -102,6 +102,7 @@ class Element extends HTMLElement {
     }
 
     private emitChange() {
+        console.log('emitChange')
         this.dispatchEvent(new Event('change', {
             bubbles: true,
             composed: true,
