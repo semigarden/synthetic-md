@@ -1,7 +1,7 @@
 import { Inline } from "../ast/types"
 
 class Caret {
-    private root: HTMLElement
+    private rootElement: HTMLElement
     private inlineId: string | null = null
     private blockId: string | null = null
     private position: number | null = null
@@ -10,7 +10,7 @@ class Caret {
     public pendingTextRestore: { blockId: string; offset: number } | null = null
 
     constructor(root: HTMLElement, inlineId?: string, blockId?: string, position?: number, affinity?: 'start' | 'end') {
-        this.root = root
+        this.rootElement = root
         this.inlineId = inlineId ?? null
         this.blockId = blockId ?? null
         this.position = position ?? null
@@ -114,7 +114,7 @@ class Caret {
         const inlineId = this.getInlineId()!;
         const position = this.getPosition()!;
       
-        const inlineEl = this.root.querySelector(`[data-inline-id="${inlineId}"]`) as HTMLElement;
+        const inlineEl = this.rootElement.querySelector(`[data-inline-id="${inlineId}"]`) as HTMLElement;
         if (!inlineEl) {
           console.warn('Could not find inline element for caret restore:', inlineId);
           return;
