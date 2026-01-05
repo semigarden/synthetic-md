@@ -61,7 +61,7 @@ class Editor {
         // console.log(`inline ${context.inline.id} changed: ${context.inline.text.symbolic} > ${context.inlineElement.textContent ?? ''}`)
 
         
-        this.updateAST()
+        this.ast.updateAST()
         this.caret?.restoreCaret()
         this.emitChange()
 
@@ -136,7 +136,7 @@ class Editor {
                         this.caret.setBlockId(newParagraphBlock.id)
                         this.caret.setPosition(0)
 
-                        this.updateAST()
+                        this.ast.updateAST()
                         this.caret?.restoreCaret()
                         this.emitChange()
 
@@ -187,7 +187,7 @@ class Editor {
             renderBlock(context.block, this.rootElement)
             renderBlock(newBlock, this.rootElement, null, context.block)
 
-            this.updateAST()
+            this.ast.updateAST()
 
             requestAnimationFrame(() => {
                 this.caret?.restoreCaret()
@@ -293,7 +293,7 @@ class Editor {
                     renderBlock(context.block, this.rootElement)
                     renderBlock(newListItem, this.rootElement, null, listItem)
 
-                    this.updateAST()
+                    this.ast.updateAST()
                     this.caret?.restoreCaret()
                     this.emitChange()
 
@@ -374,7 +374,7 @@ class Editor {
         renderBlock(context.block, this.rootElement)
         renderBlock(newBlock, this.rootElement, null, context.block)
 
-        this.updateAST()
+        this.ast.updateAST()
         this.caret?.restoreCaret()
         this.emitChange()
 
@@ -445,7 +445,7 @@ class Editor {
                                     this.caret.setBlockId(newBlock.id)
                                     this.caret.setPosition(1)
 
-                                    this.updateAST()
+                                    this.ast.updateAST()
                                     this.caret?.restoreCaret()
                                     this.emitChange()
 
@@ -514,7 +514,7 @@ class Editor {
                                 blockEl.remove()
                             }
 
-                            this.updateAST()
+                            this.ast.updateAST()
 
                             requestAnimationFrame(() => {
                                 this.caret?.restoreCaret()
@@ -587,7 +587,7 @@ class Editor {
                 blockEl.remove()
             }
 
-            this.updateAST()
+            this.ast.updateAST()
 
             console.log('ast', JSON.stringify(this.ast.ast, null, 2))
 
@@ -625,7 +625,7 @@ class Editor {
 
         renderBlock(context.block, this.rootElement)
 
-        this.updateAST()
+        this.ast.updateAST()
         this.caret?.restoreCaret()
         this.emitChange()
 
@@ -788,7 +788,7 @@ class Editor {
                     renderBlock(newBlock, this.rootElement)
                 }
 
-                this.updateAST()
+                this.ast.updateAST()
                 this.caret?.restoreCaret()
                 this.emitChange()
             
@@ -805,7 +805,7 @@ class Editor {
             renderBlock(newBlock, this.rootElement)
         }
 
-        this.updateAST()
+        this.ast.updateAST()
         this.caret?.restoreCaret()
         this.emitChange()
 
@@ -823,117 +823,6 @@ class Editor {
           if ('blocks' in b && b.blocks) this.flattenBlocks(b.blocks, acc)
         }
         return acc
-    }
-
-    // private resolveInlineContext() {
-    //     const blockId = this.caret.getBlockId()
-    //     const inlineId = this.caret.getInlineId()
-    //     console.log('resolve 0')
-    
-    //     if (!blockId || !inlineId) return null
-    
-    //     // console.log('engine.ast', JSON.stringify(this.engine.ast, null, 2))
-    //     console.log('resolve 1', blockId, inlineId)
-    //     const block = this.ast.getBlockById(blockId)
-    //     if (!block) return null
-    
-    //     console.log('resolve 2', inlineId)
-    //     const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
-    //     if (inlineIndex === -1) return null
-    
-    //     console.log('resolve 3')
-    //     const inline = block.inlines[inlineIndex]
-    
-    //     console.log('resolve 4')
-    //     const inlineEl = this.rootElement.querySelector(
-    //         `[data-inline-id="${inlineId}"]`
-    //     ) as HTMLElement | null
-    
-    //     console.log('resolve 5')
-    //     if (!inlineEl) return null
-    
-    //     return {
-    //         inline,
-    //         block,
-    //         inlineIndex,
-    //         inlineEl
-    //     }
-    // }
-
-    private updateAST() {
-        const ast = this.ast.ast
-        let globalPos = 0
-
-        const updateBlock = (block: Block): string => {
-            const start = globalPos
-            let text = ''
-
-            if (!('blocks' in block) || !block.blocks) {
-                let localPos = 0
-
-                for (const inline of block.inlines) {
-                    if (!inline.id) inline.id = uuid()
-                        const len = inline.text.symbolic.length
-                        inline.position = {
-                        start: localPos,
-                        end: localPos + len,
-                    }
-                    localPos += len
-                }
-
-                text = block.inlines.map((i: Inline) => i.text.symbolic).join('')
-                block.text = text
-                block.position = { start, end: start + text.length }
-                globalPos += text.length
-
-                return text
-            }
-
-            if (block.type === 'list') {
-                const parts: string[] = []
-
-                for (let i = 0; i < block.blocks.length; i++) {
-                    const item = block.blocks[i]
-                    const itemText = updateBlock(item)
-                    parts.push(itemText)
-
-                    if (i < block.blocks.length - 1) {
-                        parts.push('\n')
-                        globalPos += 1
-                    }
-                }
-
-                text = parts.join('')
-            }
-
-            else if (block.type === 'listItem') {
-                const marker = '- '
-                text += marker
-                globalPos += marker.length
-
-                const content = updateBlock(block.blocks[0])
-                text += content
-            }
-
-            block.text = text
-            block.position = { start, end: globalPos }
-
-            return text
-        }
-
-        const parts: string[] = []
-        for (let i = 0; i < ast.blocks.length; i++) {
-            parts.push(updateBlock(ast.blocks[i]))
-            if (i < ast.blocks.length - 1) {
-                parts.push('\n')
-                globalPos += 1
-            }
-        }
-
-        ast.text = parts.join('')
-        this.ast.text = ast.text
-
-        // console.log('ast', JSON.stringify(ast, null, 2))
     }
 }
 
