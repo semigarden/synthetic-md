@@ -21,7 +21,7 @@ class Editor {
         if (intent === 'enter') {
             return this.onEnter(context)
         } else if (intent === 'merge') {
-            return this.merge(context)
+            return this.resolveMerge(context)
         }
 
         return { preventDefault: false }
@@ -385,27 +385,40 @@ class Editor {
         return { preventDefault: true }
     }
 
-    private merge(context: EditContext): EditEffect {
+    private findPreviousInline(context: EditContext): Inline | null {
+        const flattenedInlines = this.flattenInlines(this.ast.ast.blocks)
+        const inlineIndex = flattenedInlines.findIndex(i => i.id === context.inline.id)
+        if (inlineIndex === -1) return null
+
+        return flattenedInlines[inlineIndex - 1]
+    }
+
+    private resolveMerge(context: EditContext): EditEffect {
         console.log('merge')
         const caretPosition = this.caret.getPositionInInline(context.inlineElement)
 
         if (caretPosition !== 0) return { preventDefault: false }
 
-        const flattenedBlocks = this.flattenBlocks(this.ast.ast.blocks)
+        const previousInline = this.findPreviousInline(context)
+        console.log('previousInline', JSON.stringify(previousInline, null, 2))
+        if (!previousInline) return { preventDefault: false }
 
-        if (context.inlineIndex === 0 && caretPosition === 0) {
-            console.log('merge at start of block')
-
-            return {
-                preventDefault: true,
-                ast: [{
-                    type: 'mergeInlineWithPrevious',
-                    inlineId: context.inline.id,
-                }],
-                caret: {
-                    moveToEndOfPreviousInline: true,
-                }
+        return {
+            preventDefault: true,
+            ast: [{
+                type: 'mergeInline',
+                leftInlineId: previousInline.id,
+                rightInlineId: context.inline.id,
+            }],
+            caret: {
+                moveToEndOfPreviousInline: true,
             }
+        }
+
+        // const flattenedBlocks = this.flattenBlocks(this.ast.ast.blocks)
+
+        // if (context.inlineIndex === 0 && caretPosition === 0) {
+        //     console.log('merge at start of block')
             
         //     const blockIndex = flattenedBlocks.findIndex(b => b.id === context.block.id)
         //     if (blockIndex === -1 || blockIndex === 0) return { preventDefault: true }
@@ -607,39 +620,295 @@ class Editor {
         //     this.emitChange()
 
         //     return { preventDefault: true }
-        }
+        // }
 
-        console.log('context.block.inlines', JSON.stringify(context.block.inlines, null, 2))
+        // console.log('context.block.inlines', JSON.stringify(context.block.inlines, null, 2))
 
-        const previousInline = context.block.inlines[context.inlineIndex - 1]
+        // const previousInline = context.block.inlines[context.inlineIndex - 1]
 
-        const currentBlockText = context.block.inlines.map((i: Inline) => {
-            if (i.id === previousInline.id && previousInline.text.symbolic.length > 0) {
-                return i.text.symbolic.slice(0, -1)
-            }
-            return i.text.symbolic
-        }).join('')
+        // const currentBlockText = context.block.inlines.map((i: Inline) => {
+        //     if (i.id === previousInline.id && previousInline.text.symbolic.length > 0) {
+        //         return i.text.symbolic.slice(0, -1)
+        //     }
+        //     return i.text.symbolic
+        // }).join('')
 
-        const newInlines = parseInlineContent(currentBlockText, context.block.id, previousInline.position.end - 1)
+        // const newInlines = parseInlineContent(currentBlockText, context.block.id, previousInline.position.end - 1)
 
-        context.block.inlines = newInlines
+        // context.block.inlines = newInlines
 
-        console.log('newInlines', JSON.stringify(newInlines, null, 2))
+        // console.log('newInlines', JSON.stringify(newInlines, null, 2))
 
-        const targetInline = newInlines[context.inlineIndex - 1]
+        // const targetInline = newInlines[context.inlineIndex - 1]
 
-        this.caret.setInlineId(targetInline.id)
-        this.caret.setBlockId(targetInline.blockId)
-        this.caret.setPosition(targetInline.position.end)
+        // this.caret.setInlineId(targetInline.id)
+        // this.caret.setBlockId(targetInline.blockId)
+        // this.caret.setPosition(targetInline.position.end)
 
-        renderBlock(context.block, this.rootElement)
+        // renderBlock(context.block, this.rootElement)
 
-        this.ast.updateAST()
-        this.caret?.restoreCaret()
-        this.emitChange()
+        // this.ast.updateAST()
+        // this.caret?.restoreCaret()
+        // this.emitChange()
 
         return { preventDefault: true }
     }
+
+    // private merge(context: EditContext): EditEffect {
+    //     console.log('merge')
+    //     const caretPosition = this.caret.getPositionInInline(context.inlineElement)
+
+    //     if (caretPosition !== 0) return { preventDefault: false }
+
+    //     const flattenedBlocks = this.flattenBlocks(this.ast.ast.blocks)
+
+    //     if (context.inlineIndex === 0 && caretPosition === 0) {
+    //         console.log('merge at start of block')
+
+    //         return {
+    //             preventDefault: true,
+    //             ast: [{
+    //                 type: 'mergeInlineWithPrevious',
+    //                 inlineId: context.inline.id,
+    //             }],
+    //             caret: {
+    //                 moveToEndOfPreviousInline: true,
+    //             }
+    //         }
+            
+    //     //     const blockIndex = flattenedBlocks.findIndex(b => b.id === context.block.id)
+    //     //     if (blockIndex === -1 || blockIndex === 0) return { preventDefault: true }
+
+    //     //     const parentBlock = this.getParentBlock(context.block)
+    //     //     if (parentBlock) {
+    //     //         if (parentBlock.type === 'listItem') {
+    //     //             const listItemBlock = parentBlock
+    //     //             const list = this.getParentBlock(parentBlock)
+    //     //             if (list && list.type === 'list') {
+    //     //                 // console.log('list', JSON.stringify(listBlock, null, 2))
+    //     //                 const listBlockIndex = this.ast.ast.blocks.findIndex(b => b.id === list.id)
+    //     //                 const listItemBlockIndex = flattenedBlocks.findIndex(b => b.id === listItemBlock.id)
+    //     //                 const listItemIndex = list.blocks.findIndex(b => b.id === listItemBlock.id)
+
+    //     //                 if (listItemIndex === 0) {
+    //     //                     const newText = listItemBlock.text.slice(0, 1) + listItemBlock.text.slice(2, -1)
+    //     //                     console.log('newText', JSON.stringify(newText, null, 2))
+    //     //                     const detectedBlockType = this.detectBlockType(newText)
+    //     //                     if (detectedBlockType.type !== listItemBlock.type) {
+                                
+    //     //                         if (list.blocks.length === 1) {
+    //     //                             const listBlockEl = this.rootElement.querySelector(`[data-block-id="${list.id}"]`)
+    //     //                             if (listBlockEl) {
+    //     //                                 listBlockEl.remove()
+    //     //                             }
+    
+    //     //                             const newBlock = {
+    //     //                                 id: uuid(),
+    //     //                                 type: detectedBlockType.type,
+    //     //                                 text: newText,
+    //     //                                 inlines: [],
+    //     //                                 position: { start: listItemBlock.position.start, end: listItemBlock.position.start + newText.length }
+    //     //                             } as Block
+    
+    //     //                             const newBlockInlines = parseInlineContent(newText, newBlock.id, newBlock.position.start)
+    
+    //     //                             newBlock.inlines = newBlockInlines
+
+    //     //                             this.ast.ast.blocks.splice(listBlockIndex, 1, newBlock)
+
+    //     //                             const prevBlock = this.ast.ast.blocks[listBlockIndex - 1]
+
+    //     //                             console.log('list', JSON.stringify(newBlock, null, 2))
+    //     //                             renderBlock(newBlock, this.rootElement, null, prevBlock)
+
+    //     //                             this.caret.setInlineId(newBlockInlines[0].id)
+    //     //                             this.caret.setBlockId(newBlock.id)
+    //     //                             this.caret.setPosition(1)
+
+    //     //                             this.ast.updateAST()
+    //     //                             this.caret?.restoreCaret()
+    //     //                             this.emitChange()
+
+    //     //                             return { preventDefault: true }
+    //     //                         }
+    //     //                     }
+    //     //                 }
+
+    //     //                 if (listItemIndex > 0) {
+    //     //                     const prevListItem = list.blocks[listItemIndex - 1] as ListItem
+    //     //                     const prevListItemParagraph = prevListItem.blocks[0]
+
+    //     //                     const prevLastInlineIndex = prevListItemParagraph.inlines.length - 1
+    //     //                     const targetPosition = prevListItemParagraph.inlines[prevLastInlineIndex].position.end
+
+    //     //                     const prevText = prevListItemParagraph.inlines
+    //     //                         .map((i: Inline) => i.text.symbolic)
+    //     //                         .join('')
+
+    //     //                     const currText = context.block.inlines
+    //     //                         .map((i: Inline) => i.text.symbolic)
+    //     //                         .join('')
+
+    //     //                     const mergedText = prevText + currText
+
+    //     //                     const newInlines = parseInlineContent(
+    //     //                         mergedText,
+    //     //                         prevListItemParagraph.id,
+    //     //                         prevListItemParagraph.position.start
+    //     //                     )
+
+    //     //                     if (newInlines.length === 0) {
+    //     //                         newInlines.push({
+    //     //                             id: uuid(),
+    //     //                             type: 'text',
+    //     //                             blockId: prevListItemParagraph.id,
+    //     //                             text: { symbolic: '', semantic: '' },
+    //     //                             position: { start: 0, end: 0 }
+    //     //                         })
+    //     //                     }
+
+    //     //                     prevListItemParagraph.text = mergedText
+    //     //                     prevListItemParagraph.inlines = newInlines
+
+
+    //     //                     const index = list.blocks.findIndex(b => b.id === listItemBlock.id)
+
+    //     //                     list.blocks.splice(index, 1)
+
+    //     //                     let targetInlineIndex: number
+    //     //                     if (context.inline.type === prevListItemParagraph.inlines[prevLastInlineIndex].type && context.inline.type === 'text') {
+    //     //                         targetInlineIndex = prevLastInlineIndex
+    //     //                     } else {
+    //     //                         targetInlineIndex = prevLastInlineIndex + 1
+    //     //                     }
+    //     //                     const targetInline = newInlines[targetInlineIndex]
+
+    //     //                     this.caret.setInlineId(targetInline.id)
+    //     //                     this.caret.setBlockId(targetInline.blockId)
+    //     //                     this.caret.setPosition(targetPosition)
+
+    //     //                     renderBlock(prevListItemParagraph, this.rootElement)
+
+    //     //                     const blockEl = this.rootElement.querySelector(`[data-block-id="${listItemBlock.id}"]`)
+    //     //                     if (blockEl) {
+    //     //                         blockEl.remove()
+    //     //                     }
+
+    //     //                     this.ast.updateAST()
+
+    //     //                     requestAnimationFrame(() => {
+    //     //                         this.caret?.restoreCaret()
+    //     //                     })
+
+    //     //                     this.emitChange()
+
+    //     //                     return { preventDefault: true }
+    //     //                 }
+    //     //             }
+    //     //         }
+    //     //     }
+
+    //     //     const prevBlock = flattenedBlocks[blockIndex - 1]
+
+    //     //     const prevLastInlineIndex = prevBlock.inlines.length - 1
+    //     //     const targetPosition = prevBlock.inlines[prevLastInlineIndex].position.end
+    //     //     console.log('targetPosition', targetPosition)
+
+    //     //     const prevText = prevBlock.inlines
+    //     //         .map((i: Inline) => i.text.symbolic)
+    //     //         .join('')
+
+    //     //     const currText = context.block.inlines
+    //     //         .map((i: Inline) => i.text.symbolic)
+    //     //         .join('')
+
+    //     //     const mergedText = prevText + currText
+
+    //     //     const newInlines = parseInlineContent(
+    //     //         mergedText,
+    //     //         prevBlock.id,
+    //     //         prevBlock.position.start
+    //     //     )
+
+    //     //     if (newInlines.length === 0) {
+    //     //         newInlines.push({
+    //     //             id: uuid(),
+    //     //             type: 'text',
+    //     //             blockId: prevBlock.id,
+    //     //             text: { symbolic: '', semantic: '' },
+    //     //             position: { start: 0, end: 0 }
+    //     //         })
+    //     //     }
+
+    //     //     prevBlock.text = mergedText
+    //     //     prevBlock.inlines = newInlines
+
+
+    //     //     const index = this.ast.ast.blocks.findIndex(b => b.id === context.block.id)
+
+    //     //     this.ast.ast.blocks.splice(index, 1)
+
+    //     //     let targetInlineIndex: number
+    //     //     if (context.inline.type === prevBlock.inlines[prevLastInlineIndex].type && context.inline.type === 'text') {
+    //     //         targetInlineIndex = prevLastInlineIndex
+    //     //     } else {
+    //     //         targetInlineIndex = prevLastInlineIndex + 1
+    //     //     }
+    //     //     const targetInline = newInlines[targetInlineIndex]
+
+    //     //     this.caret.setInlineId(targetInline.id)
+    //     //     this.caret.setBlockId(targetInline.blockId)
+    //     //     this.caret.setPosition(targetPosition)
+
+    //     //     renderBlock(prevBlock, this.rootElement)
+
+    //     //     const blockEl = this.rootElement.querySelector(`[data-block-id="${context.block.id}"]`)
+    //     //     if (blockEl) {
+    //     //         blockEl.remove()
+    //     //     }
+
+    //     //     this.ast.updateAST()
+
+    //     //     requestAnimationFrame(() => {
+    //     //         this.caret?.restoreCaret()
+    //     //     })
+
+    //     //     this.emitChange()
+
+    //     //     return { preventDefault: true }
+    //     }
+
+    //     console.log('context.block.inlines', JSON.stringify(context.block.inlines, null, 2))
+
+    //     const previousInline = context.block.inlines[context.inlineIndex - 1]
+
+    //     const currentBlockText = context.block.inlines.map((i: Inline) => {
+    //         if (i.id === previousInline.id && previousInline.text.symbolic.length > 0) {
+    //             return i.text.symbolic.slice(0, -1)
+    //         }
+    //         return i.text.symbolic
+    //     }).join('')
+
+    //     const newInlines = parseInlineContent(currentBlockText, context.block.id, previousInline.position.end - 1)
+
+    //     context.block.inlines = newInlines
+
+    //     console.log('newInlines', JSON.stringify(newInlines, null, 2))
+
+    //     const targetInline = newInlines[context.inlineIndex - 1]
+
+    //     this.caret.setInlineId(targetInline.id)
+    //     this.caret.setBlockId(targetInline.blockId)
+    //     this.caret.setPosition(targetInline.position.end)
+
+    //     renderBlock(context.block, this.rootElement)
+
+    //     this.ast.updateAST()
+    //     this.caret?.restoreCaret()
+    //     this.emitChange()
+
+    //     return { preventDefault: true }
+    // }
 
     private detectBlockType(text: string) {
         return detectType(text)
@@ -831,6 +1100,15 @@ class Editor {
           if ('blocks' in b && b.blocks) this.flattenBlocks(b.blocks, acc)
         }
         return acc
+    }
+
+    private flattenInlines(blocks: Block[]): Inline[] {
+        const inlines: Inline[] = []
+        for (const b of blocks) {
+            inlines.push(...b.inlines)
+            if ('blocks' in b && b.blocks) inlines.push(...this.flattenInlines(b.blocks))
+        }
+        return inlines
     }
 
     public apply(effect: EditEffect) {

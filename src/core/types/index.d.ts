@@ -6,8 +6,9 @@ export type EditContext = {
 }
 
 type AstEffect = {
-    type: 'mergeInlineWithPrevious'
-    inlineId: string
+    type: 'mergeInline'
+    leftInlineId: string
+    rightInlineId: string
 }
 
 type CaretEffect = {
