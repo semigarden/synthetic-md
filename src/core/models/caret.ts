@@ -9,8 +9,8 @@ class Caret {
 
     public pendingTextRestore: { blockId: string; offset: number } | null = null
 
-    constructor(root: HTMLElement, inlineId?: string, blockId?: string, position?: number, affinity?: 'start' | 'end') {
-        this.rootElement = root
+    constructor(rootElement: HTMLElement, inlineId?: string, blockId?: string, position?: number, affinity?: 'start' | 'end') {
+        this.rootElement = rootElement
         this.inlineId = inlineId ?? null
         this.blockId = blockId ?? null
         this.position = position ?? null
