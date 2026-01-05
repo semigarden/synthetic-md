@@ -1,6 +1,6 @@
 import AST from "./ast"
 import Caret from "./caret"
-import { EditorContext } from "../ast/types"
+import { EditorContext } from "../types"
 
 class Selection {
     private rafId: number | null = null

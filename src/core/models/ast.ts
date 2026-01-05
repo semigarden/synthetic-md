@@ -1,5 +1,5 @@
 import { buildAst } from '../ast/ast'
-import { Block, Document, Inline } from '../ast/types'
+import { Block, Document, Inline } from '../types'
 import { uuid } from '../utils/utils'
 
 class AST {

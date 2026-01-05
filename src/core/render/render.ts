@@ -1,4 +1,4 @@
-import { Document } from '../ast/types'
+import { Document } from '../types'
 import { renderBlock } from './renderBlock'
 
 export function renderAST(

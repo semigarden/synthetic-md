@@ -1,4 +1,4 @@
-import { Block } from "../ast/types"
+import { Block } from "../types"
 import { renderInlines } from "./renderInline"
 
 export function renderBlock(block: Block, container: HTMLElement, focusedInlineId: string | null = null, beforeBlock: Block | null = null): HTMLElement {

@@ -1,4 +1,4 @@
-import { Inline } from "../ast/types"
+import { Inline } from "../types"
 
 
 export function renderInlines(

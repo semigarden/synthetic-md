@@ -1,6 +1,6 @@
 import { uuid, decodeHTMLEntity } from "../utils/utils";
-import { ParseState, Delimiter, DetectedBlock, Block, Inline } from './types';
-import { CodeBlock, ListItem, List, Paragraph, Table, TableRow, TableCell, Document } from './types';
+import { ParseState, Delimiter, DetectedBlock, Block, Inline } from '../types';
+import { CodeBlock, ListItem, List, Paragraph, Table, TableRow, TableCell, Document } from '../types';
 
 function levenshteinDistance(a: string, b: string): number {
     const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(0));

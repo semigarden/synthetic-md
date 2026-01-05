@@ -1,6 +1,6 @@
 import AST from "./ast"
 import Caret from "./caret"
-import { EditorContext, EditorActionResult, Block, Inline, ListItem } from "../ast/types"
+import { EditorContext, EditorActionResult, Block, Inline, ListItem } from "../types"
 import { parseInlineContent, detectType, buildBlocks } from "../ast/ast"
 import { uuid } from "../utils/utils"
 import { renderBlock } from "../render/renderBlock"

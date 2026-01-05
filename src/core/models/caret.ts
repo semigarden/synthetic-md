@@ -1,4 +1,4 @@
-import { Inline } from "../ast/types"
+import { Inline } from "../types"
 
 class Caret {
     private inlineId: string | null = null
@@ -89,24 +89,24 @@ class Caret {
         inlines: Inline[],
         positionInInlines: number
     ) {
-        let inline: Inline | null = null;
-        let position = 0;
-        let accumulatedLength = 0;
-        
-        for (const i of inlines) {
-            const textLength = i.text?.symbolic.length ?? 0;
-            if (accumulatedLength + textLength >= positionInInlines) {
-                inline = i;
-                position = positionInInlines - accumulatedLength;
-                break;
-            }
-            accumulatedLength += textLength;
-        }
+      let inline: Inline | null = null;
+      let position = 0;
+      let accumulatedLength = 0;
+      
+      for (const i of inlines) {
+          const textLength = i.text?.symbolic.length ?? 0;
+          if (accumulatedLength + textLength >= positionInInlines) {
+              inline = i;
+              position = positionInInlines - accumulatedLength;
+              break;
+          }
+          accumulatedLength += textLength;
+      }
 
-        return {
-            inline,
-            position
-        }
+      return {
+        inline,
+        position
+      }
     }
 
     public restoreCaret() {
