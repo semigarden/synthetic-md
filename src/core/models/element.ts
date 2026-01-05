@@ -9,7 +9,7 @@ import { onKey } from '../utils/key'
 class Element extends HTMLElement {
     private shadowRootElement: ShadowRoot
     private styled = false
-    private syntheticEl?: HTMLElement
+    private rootElement?: HTMLElement
     private ast = new AST()
     private caret: Caret | null = null
     private focusedInlineId: string | null = null
@@ -31,8 +31,8 @@ class Element extends HTMLElement {
         this.addDOM()
         this.render()
 
-        this.caret = new Caret(this.syntheticEl!)
-        this.editor = new Editor(this.ast, this.caret, this.syntheticEl!, this.emitChange.bind(this))
+        this.caret = new Caret(this.rootElement!)
+        this.editor = new Editor(this.ast, this.caret, this.rootElement!, this.emitChange.bind(this))
     }
 
     set value(value: string) {
@@ -51,11 +51,11 @@ class Element extends HTMLElement {
     }
 
     private render() {
-        if (!this.syntheticEl) return
+        if (!this.rootElement) return
         const ast = this.ast.getAst()
         if (!ast) return
 
-        renderAST(ast, this.syntheticEl)
+        renderAST(ast, this.rootElement)
     }
 
     private addStyles() {
@@ -69,14 +69,14 @@ class Element extends HTMLElement {
     }
 
     private addDOM() {
-        if (this.syntheticEl) return
+        if (this.rootElement) return
     
         const div = document.createElement('div')
         div.classList.add('element')
 
         document.addEventListener('selectionchange', () => {
             // console.log('selectionchange')
-            if (!this.syntheticEl) return;
+            if (!this.rootElement) return;
         
             requestAnimationFrame(() => {
                 const selection = window.getSelection();
@@ -93,7 +93,7 @@ class Element extends HTMLElement {
                 inlineEl = container.parentElement?.closest('[data-inline-id]') ?? null;
                 }
             
-                if (!inlineEl || !this.syntheticEl?.contains(inlineEl)) {
+                if (!inlineEl || !this.rootElement?.contains(inlineEl)) {
                 this.caret?.clear();
                 return;
                 }
@@ -163,7 +163,7 @@ class Element extends HTMLElement {
 
         div.addEventListener('focusout', (e) => {
             if (this.focusedInlineId !== null) {
-                const inlineEl = this.syntheticEl?.querySelector(`[data-inline-id="${this.focusedInlineId}"]`) as HTMLElement;
+                const inlineEl = this.rootElement?.querySelector(`[data-inline-id="${this.focusedInlineId}"]`) as HTMLElement;
                 if (!inlineEl) return;
 
                 const inline = this.ast.getInlineById(this.focusedInlineId);
@@ -175,7 +175,7 @@ class Element extends HTMLElement {
             }
 
             // console.log('focusout')
-            if (!this.syntheticEl?.contains(e.relatedTarget as Node)) {
+            if (!this.rootElement?.contains(e.relatedTarget as Node)) {
                 const target = e.target as HTMLElement
                 if (!target.dataset?.inlineId) return;
 
@@ -238,7 +238,7 @@ class Element extends HTMLElement {
         })
     
         this.shadowRootElement.appendChild(div)
-        this.syntheticEl = div
+        this.rootElement = div
     }
 
     private emitChange() {
