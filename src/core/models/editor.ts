@@ -1088,6 +1088,32 @@ class Editor {
         this.emitChange()
     }
 
+    private removeEmptyBlocks(blocks: Block[]) {
+        for (const block of blocks) {
+            const hasContent =
+                block.inlines.length > 0 ||
+                ('blocks' in block && block.blocks.some(b => b.inlines.length > 0 || ('blocks' in b && b.blocks.length > 0)))
+    
+            if (!hasContent) {
+                const blockEl = this.rootElement!.querySelector(`[data-block-id="${block.id}"]`)
+                if (blockEl) blockEl.remove()
+    
+                const parentBlock = this.ast.getParentBlock(block)
+                if (parentBlock && 'blocks' in parentBlock) {
+                    const idx = parentBlock.blocks.findIndex(b => b.id === block.id)
+                    if (idx !== -1) parentBlock.blocks.splice(idx, 1)
+                } else {
+                    const idx = this.ast.ast.blocks.findIndex(b => b.id === block.id)
+                    if (idx !== -1) this.ast.ast.blocks.splice(idx, 1)
+                }
+
+                if (parentBlock) {
+                    this.removeEmptyBlocks([parentBlock])
+                }
+            }
+        }
+    }
+
     public apply(effect: EditEffect) {
         if (effect.ast) {
             effect.ast.forEach(effect => {
@@ -1099,12 +1125,12 @@ class Editor {
 
                     for (const block of targetBlocks) {
                         renderBlock(block, this.rootElement)
-
-                        const blockEl = this.rootElement.querySelector(`[data-block-id="${block.id}"]`)
-                        if (block.inlines.length === 0 && blockEl) blockEl.remove()
                     }
 
+                    this.removeEmptyBlocks(targetBlocks)
                     this.ast.updateAST()
+
+                    console.log('ast', JSON.stringify(this.ast.getAst(), null, 2))
 
                     this.caret.setInlineId(targetInline.id)
                     this.caret.setBlockId(targetInline.blockId)

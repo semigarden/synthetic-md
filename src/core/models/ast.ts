@@ -224,8 +224,6 @@ class AST {
             previousBlock.position = { start: previousBlock.position.start, end: previousBlock.position.end - rightInline.text.symbolic.length }
             
             targetBlocks.push(previousBlock)
-
-            this.deleteEmptyBlock(previousBlock)
         }
 
         currentBlock.text = mergedText
