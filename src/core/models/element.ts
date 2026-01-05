@@ -82,16 +82,19 @@ class Element extends HTMLElement {
         const div = document.createElement('div')
         div.classList.add('element')
 
-        div.addEventListener('input', (e: Event) => {
-            this.editor?.onInput(e)
+        div.addEventListener('input', () => {
+            const context = this.selection?.resolveInlineContext()
+            if (!context) return
+            this.editor?.onInput(context)
         })
 
         div.addEventListener('keydown', (event: KeyboardEvent) => {
             const intent = onKey[event.key]
             if (!intent) return
 
-            event.preventDefault()
-            this.editor?.onIntent(intent, event)
+            const context = this.selection?.resolveInlineContext()
+            if (!context) return
+            this.editor?.onIntent(intent, event, context)
         })
 
         this.shadowRootElement.appendChild(div)

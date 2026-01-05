@@ -1,3 +1,10 @@
+export type EditorContext = {
+    block: Block
+    inline: Inline
+    inlineIndex: number
+    inlineElement: HTMLElement
+}
+
 interface BlockType<T extends string = string> {
     id: string
     type: T

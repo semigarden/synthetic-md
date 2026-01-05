@@ -1,5 +1,6 @@
 import AST from "./ast"
 import Caret from "./caret"
+import { EditorContext } from "../ast/types"
 
 class Selection {
     private rafId: number | null = null
@@ -183,6 +184,41 @@ class Selection {
         let position = preRange.toString().length + inline.position.start + block.position.start
     
         this.caret?.setPosition(position)
+    }
+
+    public resolveInlineContext(): EditorContext | null {
+        const blockId = this.caret.getBlockId()
+        const inlineId = this.caret.getInlineId()
+        console.log('resolve 0')
+    
+        if (!blockId || !inlineId) return null
+    
+        // console.log('engine.ast', JSON.stringify(this.engine.ast, null, 2))
+        console.log('resolve 1', blockId, inlineId)
+        const block = this.ast.getBlockById(blockId)
+        if (!block) return null
+    
+        console.log('resolve 2', inlineId)
+        const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
+        if (inlineIndex === -1) return null
+    
+        console.log('resolve 3')
+        const inline = block.inlines[inlineIndex]
+    
+        console.log('resolve 4')
+        const inlineElement = this.rootElement.querySelector(
+            `[data-inline-id="${inlineId}"]`
+        ) as HTMLElement | null
+    
+        console.log('resolve 5')
+        if (!inlineElement) return null
+    
+        return {
+            block,
+            inline,
+            inlineIndex,
+            inlineElement
+        }
     }
 
     private mapSemanticOffsetToSymbolic(

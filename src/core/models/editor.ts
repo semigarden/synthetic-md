@@ -1,6 +1,6 @@
 import AST from "./ast"
 import Caret from "./caret"
-import { Block, Inline, ListItem } from "../ast/types"
+import { EditorContext, Block, Inline, ListItem } from "../ast/types"
 import { parseInlineContent, detectType, buildBlocks } from "../ast/ast"
 import { uuid } from "../utils/utils"
 import { renderBlock } from "../render/renderBlock"
@@ -18,48 +18,46 @@ class Editor {
         this.emitChange = emitChange
     }
 
-    public onIntent(intent: Intent, event: KeyboardEvent) {
+    public onIntent(intent: Intent, event: KeyboardEvent, context: EditorContext) {
         if (intent === 'enter') {
-            this.onEnter(event)
+            this.onEnter(event, context)
         } else if (intent === 'backspace') {
-            this.onBackspace(event)
+            this.onBackspace(event, context)
         }
     }
 
-    public onInput(e: Event) {
+    public onInput(context: EditorContext) {
         console.log('onInput')
-        const ctx = this.resolveInlineContext()
-        if (!ctx) return
 
-        console.log('ctx', ctx.inlineEl.textContent)
-        const newText = ctx.inlineEl.textContent ?? ''
+        console.log('ctx', context.inlineElement.textContent)
+        const newText = context.inlineElement.textContent ?? ''
         const detectedBlockType = this.detectBlockType(newText)
 
         const blockTypeChanged =
-            detectedBlockType.type !== ctx.block.type ||
-            (detectedBlockType.type === 'heading' && ctx.block.type === 'heading' && detectedBlockType.level !== ctx.block.level)
+            detectedBlockType.type !== context.block.type ||
+            (detectedBlockType.type === 'heading' && context.block.type === 'heading' && detectedBlockType.level !== context.block.level)
         
         const ignoreTypes = ['blankLine', 'heading', 'thematicBreak', 'codeBlock']
         if (blockTypeChanged && !ignoreTypes.includes(detectedBlockType.type)) {
-            console.log('block type changed', detectedBlockType.type, ctx.block.type)
-            this.transformBlock(ctx.block, newText, detectedBlockType.type)
+            console.log('block type changed', detectedBlockType.type, context.block.type)
+            this.transformBlock(context.block, newText, detectedBlockType.type)
             return
         }
 
-        const caretOffset = this.caret.getPositionInInline(ctx.inlineEl)
+        const caretOffset = this.caret.getPositionInInline(context.inlineElement)
         const result = this.normalizeTextContext({
-            inline: ctx.inline,
-            block: ctx.block,
-            inlineIndex: ctx.inlineIndex,
-            value: ctx.inlineEl.textContent ?? '',
+            inline: context.inline,
+            block: context.block,
+            inlineIndex: context.inlineIndex,
+            value: context.inlineElement.textContent ?? '',
             caretOffset
         })
 
-        this.applyInlineNormalization(ctx.block, result)
+        this.applyInlineNormalization(context.block, result)
     
-        renderBlock(ctx.block, this.rootElement, result.caretInline?.id ?? null)
+        renderBlock(context.block, this.rootElement, result.caretInline?.id ?? null)
 
-        // console.log(`inline ${ctx.inline.id} changed: ${ctx.inline.text.symbolic} > ${ctx.inlineEl.textContent ?? ''}`)
+        // console.log(`inline ${context.inline.id} changed: ${context.inline.text.symbolic} > ${context.inlineElement.textContent ?? ''}`)
 
         
         this.updateAST()
@@ -70,27 +68,23 @@ class Editor {
 
     }
 
-    public onEnter(e: KeyboardEvent) {
+    public onEnter(event: KeyboardEvent, context: EditorContext) {
         console.log('enter')
-        const ctx = this.resolveInlineContext()
-        if (!ctx) return
-
-        e.preventDefault()
-
-        const caretPosition = this.caret.getPositionInInline(ctx.inlineEl)
+        event.preventDefault()
+        const caretPosition = this.caret.getPositionInInline(context.inlineElement)
         const blocks = this.ast.ast.blocks
         const flattenedBlocks = this.flattenBlocks(blocks)
-        const blockIndex = flattenedBlocks.findIndex(b => b.id === ctx.block.id)
+        const blockIndex = flattenedBlocks.findIndex(b => b.id === context.block.id)
 
-        console.log('blockIndex', blockIndex, 'ctx.block.id', ctx.block.id, 'blocks', JSON.stringify(blocks, null, 2))
+        console.log('blockIndex', blockIndex, 'context.block.id', context.block.id, 'blocks', JSON.stringify(blocks, null, 2))
         if (blockIndex === -1) return
 
         console.log('caretPosition', caretPosition)
 
-        if (ctx.inlineIndex === 0 && caretPosition === 0) {
+        if (context.inlineIndex === 0 && caretPosition === 0) {
             console.log('enter at start of block')
 
-            const parentBlock = this.getParentBlock(ctx.block)
+            const parentBlock = this.getParentBlock(context.block)
             if (parentBlock) {
                 if (parentBlock.type === 'listItem') {
                     console.log('list item block', JSON.stringify(parentBlock, null, 2))
@@ -101,7 +95,7 @@ class Editor {
                         const newListItemBlock = {
                             id: uuid(),
                             type: 'listItem',
-                            text: listItemBlock.text.slice(0, -ctx.block.text.length),
+                            text: listItemBlock.text.slice(0, -context.block.text.length),
                             position: listItemBlock.position,
                             blocks: [],
                             inlines: [],
@@ -110,25 +104,25 @@ class Editor {
                         const newParagraphBlock = {
                             id: uuid(),
                             type: 'paragraph',
-                            text: ctx.block.text,
-                            position: { start: ctx.block.position.start, end: ctx.block.position.end },
+                            text: context.block.text,
+                            position: { start: context.block.position.start, end: context.block.position.end },
                             inlines: [],
                         } as Block
 
                         const newParagraphInline = {
                             id: uuid(),
                             type: 'text',
-                            text: { symbolic: ctx.inline.text.symbolic, semantic: ctx.inline.text.semantic },
-                            position: { start: ctx.inline.position.start, end: ctx.inline.position.start + ctx.inline.text.symbolic.length },
+                            text: { symbolic: context.inline.text.symbolic, semantic: context.inline.text.semantic },
+                            position: { start: context.inline.position.start, end: context.inline.position.start + context.inline.text.symbolic.length },
                         } as Inline
 
                         newParagraphBlock.inlines.push(newParagraphInline)
 
                         newListItemBlock.blocks.push(newParagraphBlock)
 
-                        ctx.block.text = ''
-                        ctx.block.inlines[0].text = { symbolic: '', semantic: '' }
-                        ctx.block.position = { start: ctx.block.position.start, end: ctx.block.position.start }
+                        context.block.text = ''
+                        context.block.inlines[0].text = { symbolic: '', semantic: '' }
+                        context.block.position = { start: context.block.position.start, end: context.block.position.start }
 
                         console.log('newListItemBlock', JSON.stringify(newListItemBlock, null, 2))
 
@@ -155,29 +149,29 @@ class Editor {
             const emptyInline: Inline = {
                 id: uuid(),
                 type: 'text',
-                blockId: ctx.block.id,
+                blockId: context.block.id,
                 text: { symbolic: '', semantic: '' },
                 position: { start: 0, end: 0 }
             }
 
-            const inlines = ctx.block.inlines
+            const inlines = context.block.inlines
             const text = inlines.map((i: Inline) => i.text.symbolic).join('')
 
             const newBlock: Block = {
                 id: uuid(),
-                type: ctx.block.type,
+                type: context.block.type,
                 text: text,
                 inlines,
-                position: { start: ctx.block.position.start, end: ctx.block.position.start + text.length }
+                position: { start: context.block.position.start, end: context.block.position.start + text.length }
             } as Block
 
             for (const inline of newBlock.inlines) {
                 inline.blockId = newBlock.id
             }
 
-            ctx.block.text = ''
-            ctx.block.inlines = [emptyInline]
-            ctx.block.position = { start: ctx.block.position.start, end: ctx.block.position.start }
+            context.block.text = ''
+            context.block.inlines = [emptyInline]
+            context.block.position = { start: context.block.position.start, end: context.block.position.start }
 
             blocks.splice(blockIndex + 1, 0, newBlock)
 
@@ -190,8 +184,8 @@ class Editor {
             this.caret.setBlockId(targetInline.blockId)
             this.caret.setPosition(0)
 
-            renderBlock(ctx.block, this.rootElement)
-            renderBlock(newBlock, this.rootElement, null, ctx.block)
+            renderBlock(context.block, this.rootElement)
+            renderBlock(newBlock, this.rootElement, null, context.block)
 
             this.updateAST()
 
@@ -206,7 +200,7 @@ class Editor {
             return
         }
 
-        const parentBlock = this.getParentBlock(ctx.block)
+        const parentBlock = this.getParentBlock(context.block)
         if (parentBlock) {
             if (parentBlock.type === 'listItem') {
                 console.log('list item block', JSON.stringify(parentBlock, null, 2))
@@ -214,21 +208,21 @@ class Editor {
                 const listItem = parentBlock
                 const list = this.getParentBlock(parentBlock)
                 if (list && list.type === 'list') {
-                    const text = ctx.inline.text.symbolic
+                    const text = context.inline.text.symbolic
 
                     const beforeText = text.slice(0, caretPosition)
                     const afterText = text.slice(caretPosition)
 
-                    const beforeInlines = parseInlineContent(beforeText, ctx.block.id, ctx.inline.position.start)
-                    const afterInlines = parseInlineContent(afterText, ctx.block.id, ctx.inline.position.start + beforeText.length)
+                    const beforeInlines = parseInlineContent(beforeText, context.block.id, context.inline.position.start)
+                    const afterInlines = parseInlineContent(afterText, context.block.id, context.inline.position.start + beforeText.length)
 
-                    const newParagraphInlines = afterInlines.concat(ctx.block.inlines.slice(ctx.inlineIndex + 1))
-                    ctx.block.inlines.splice(ctx.inlineIndex, ctx.block.inlines.length - ctx.inlineIndex, ...beforeInlines)
+                    const newParagraphInlines = afterInlines.concat(context.block.inlines.slice(context.inlineIndex + 1))
+                    context.block.inlines.splice(context.inlineIndex, context.block.inlines.length - context.inlineIndex, ...beforeInlines)
 
                     const newListItem = {
                         id: uuid(),
                         type: 'listItem',
-                        text: listItem.text.slice(0, -ctx.block.text.length),
+                        text: listItem.text.slice(0, -context.block.text.length),
                         position: listItem.position,
                         blocks: [],
                         inlines: [],
@@ -237,10 +231,10 @@ class Editor {
                     const newParagraphText = newParagraphInlines.map(i => i.text.symbolic).join('')
                     const newParagraph = {
                         id: uuid(),
-                        type: ctx.block.type,
+                        type: context.block.type,
                         text: newParagraphText,
                         inlines: newParagraphInlines,
-                        position: { start: ctx.block.position.end, end: ctx.block.position.end + newParagraphText.length }
+                        position: { start: context.block.position.end, end: context.block.position.end + newParagraphText.length }
                     } as Block
 
                     if (newParagraphInlines.length === 0) {
@@ -296,7 +290,7 @@ class Editor {
                         }
                     }
 
-                    renderBlock(ctx.block, this.rootElement)
+                    renderBlock(context.block, this.rootElement)
                     renderBlock(newListItem, this.rootElement, null, listItem)
 
                     this.updateAST()
@@ -308,24 +302,24 @@ class Editor {
             }
         }
 
-        const text = ctx.inline.text.symbolic
+        const text = context.inline.text.symbolic
 
         const beforeText = text.slice(0, caretPosition)
         const afterText = text.slice(caretPosition)
 
-        const beforeInlines = parseInlineContent(beforeText, ctx.block.id, ctx.inline.position.start)
-        const afterInlines = parseInlineContent(afterText, ctx.block.id, ctx.inline.position.start + beforeText.length)
+        const beforeInlines = parseInlineContent(beforeText, context.block.id, context.inline.position.start)
+        const afterInlines = parseInlineContent(afterText, context.block.id, context.inline.position.start + beforeText.length)
 
-        const newBlockInlines = afterInlines.concat(ctx.block.inlines.slice(ctx.inlineIndex + 1))
-        ctx.block.inlines.splice(ctx.inlineIndex, ctx.block.inlines.length - ctx.inlineIndex, ...beforeInlines)
+        const newBlockInlines = afterInlines.concat(context.block.inlines.slice(context.inlineIndex + 1))
+        context.block.inlines.splice(context.inlineIndex, context.block.inlines.length - context.inlineIndex, ...beforeInlines)
 
         const newBlockText = newBlockInlines.map(i => i.text.symbolic).join('')
         const newBlock = {
             id: uuid(),
-            type: ctx.block.type,
+            type: context.block.type,
             text: newBlockText,
             inlines: newBlockInlines,
-            position: { start: ctx.block.position.end, end: ctx.block.position.end + newBlockText.length }
+            position: { start: context.block.position.end, end: context.block.position.end + newBlockText.length }
         } as Block
 
         if (newBlockInlines.length === 0) {
@@ -377,8 +371,8 @@ class Editor {
             }
         }
 
-        renderBlock(ctx.block, this.rootElement)
-        renderBlock(newBlock, this.rootElement, null, ctx.block)
+        renderBlock(context.block, this.rootElement)
+        renderBlock(newBlock, this.rootElement, null, context.block)
 
         this.updateAST()
         this.caret?.restoreCaret()
@@ -390,28 +384,23 @@ class Editor {
 
     }
 
-    public onBackspace(e: KeyboardEvent) {
+    public onBackspace(event: KeyboardEvent, context: EditorContext) {
         console.log('backspace')
-        const ctx = this.resolveInlineContext()
-        if (!ctx) return
+        const caretPosition = this.caret.getPositionInInline(context.inlineElement)
 
-        const caretPosition = this.caret.getPositionInInline(ctx.inlineEl)
+        if (caretPosition !== 0) return
 
-        if (caretPosition !== 0) {
-            return
-        }
-
-        e.preventDefault()
+        event.preventDefault()
 
         const flattenedBlocks = this.flattenBlocks(this.ast.ast.blocks)
 
-        if (ctx.inlineIndex === 0 && caretPosition === 0) {
+        if (context.inlineIndex === 0 && caretPosition === 0) {
             console.log('backspace at start of block')
             
-            const blockIndex = flattenedBlocks.findIndex(b => b.id === ctx.block.id)
+            const blockIndex = flattenedBlocks.findIndex(b => b.id === context.block.id)
             if (blockIndex === -1 || blockIndex === 0) return
 
-            const parentBlock = this.getParentBlock(ctx.block)
+            const parentBlock = this.getParentBlock(context.block)
             if (parentBlock) {
                 if (parentBlock.type === 'listItem') {
                     const listItemBlock = parentBlock
@@ -477,7 +466,7 @@ class Editor {
                                 .map((i: Inline) => i.text.symbolic)
                                 .join('')
 
-                            const currText = ctx.block.inlines
+                            const currText = context.block.inlines
                                 .map((i: Inline) => i.text.symbolic)
                                 .join('')
 
@@ -508,7 +497,7 @@ class Editor {
                             list.blocks.splice(index, 1)
 
                             let targetInlineIndex: number
-                            if (ctx.inline.type === prevListItemParagraph.inlines[prevLastInlineIndex].type && ctx.inline.type === 'text') {
+                            if (context.inline.type === prevListItemParagraph.inlines[prevLastInlineIndex].type && context.inline.type === 'text') {
                                 targetInlineIndex = prevLastInlineIndex
                             } else {
                                 targetInlineIndex = prevLastInlineIndex + 1
@@ -550,7 +539,7 @@ class Editor {
                 .map((i: Inline) => i.text.symbolic)
                 .join('')
 
-            const currText = ctx.block.inlines
+            const currText = context.block.inlines
                 .map((i: Inline) => i.text.symbolic)
                 .join('')
 
@@ -576,12 +565,12 @@ class Editor {
             prevBlock.inlines = newInlines
 
 
-            const index = this.ast.ast.blocks.findIndex(b => b.id === ctx.block.id)
+            const index = this.ast.ast.blocks.findIndex(b => b.id === context.block.id)
 
             this.ast.ast.blocks.splice(index, 1)
 
             let targetInlineIndex: number
-            if (ctx.inline.type === prevBlock.inlines[prevLastInlineIndex].type && ctx.inline.type === 'text') {
+            if (context.inline.type === prevBlock.inlines[prevLastInlineIndex].type && context.inline.type === 'text') {
                 targetInlineIndex = prevLastInlineIndex
             } else {
                 targetInlineIndex = prevLastInlineIndex + 1
@@ -594,7 +583,7 @@ class Editor {
 
             renderBlock(prevBlock, this.rootElement)
 
-            const blockEl = this.rootElement.querySelector(`[data-block-id="${ctx.block.id}"]`)
+            const blockEl = this.rootElement.querySelector(`[data-block-id="${context.block.id}"]`)
             if (blockEl) {
                 blockEl.remove()
             }
@@ -612,30 +601,30 @@ class Editor {
             return
         }
 
-        console.log('ctx.block.inlines', JSON.stringify(ctx.block.inlines, null, 2))
+        console.log('context.block.inlines', JSON.stringify(context.block.inlines, null, 2))
 
-        const previousInline = ctx.block.inlines[ctx.inlineIndex - 1]
+        const previousInline = context.block.inlines[context.inlineIndex - 1]
 
-        const currentBlockText = ctx.block.inlines.map((i: Inline) => {
+        const currentBlockText = context.block.inlines.map((i: Inline) => {
             if (i.id === previousInline.id && previousInline.text.symbolic.length > 0) {
                 return i.text.symbolic.slice(0, -1)
             }
             return i.text.symbolic
         }).join('')
 
-        const newInlines = parseInlineContent(currentBlockText, ctx.block.id, previousInline.position.end - 1)
+        const newInlines = parseInlineContent(currentBlockText, context.block.id, previousInline.position.end - 1)
 
-        ctx.block.inlines = newInlines
+        context.block.inlines = newInlines
 
         console.log('newInlines', JSON.stringify(newInlines, null, 2))
 
-        const targetInline = newInlines[ctx.inlineIndex - 1]
+        const targetInline = newInlines[context.inlineIndex - 1]
 
         this.caret.setInlineId(targetInline.id)
         this.caret.setBlockId(targetInline.blockId)
         this.caret.setPosition(targetInline.position.end)
 
-        renderBlock(ctx.block, this.rootElement)
+        renderBlock(context.block, this.rootElement)
 
         this.updateAST()
         this.caret?.restoreCaret()
@@ -836,40 +825,40 @@ class Editor {
         return acc
     }
 
-    private resolveInlineContext() {
-        const blockId = this.caret.getBlockId()
-        const inlineId = this.caret.getInlineId()
-        console.log('resolve 0')
+    // private resolveInlineContext() {
+    //     const blockId = this.caret.getBlockId()
+    //     const inlineId = this.caret.getInlineId()
+    //     console.log('resolve 0')
     
-        if (!blockId || !inlineId) return null
+    //     if (!blockId || !inlineId) return null
     
-        // console.log('engine.ast', JSON.stringify(this.engine.ast, null, 2))
-        console.log('resolve 1', blockId, inlineId)
-        const block = this.ast.getBlockById(blockId)
-        if (!block) return null
+    //     // console.log('engine.ast', JSON.stringify(this.engine.ast, null, 2))
+    //     console.log('resolve 1', blockId, inlineId)
+    //     const block = this.ast.getBlockById(blockId)
+    //     if (!block) return null
     
-        console.log('resolve 2', inlineId)
-        const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
-        if (inlineIndex === -1) return null
+    //     console.log('resolve 2', inlineId)
+    //     const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
+    //     if (inlineIndex === -1) return null
     
-        console.log('resolve 3')
-        const inline = block.inlines[inlineIndex]
+    //     console.log('resolve 3')
+    //     const inline = block.inlines[inlineIndex]
     
-        console.log('resolve 4')
-        const inlineEl = this.rootElement.querySelector(
-            `[data-inline-id="${inlineId}"]`
-        ) as HTMLElement | null
+    //     console.log('resolve 4')
+    //     const inlineEl = this.rootElement.querySelector(
+    //         `[data-inline-id="${inlineId}"]`
+    //     ) as HTMLElement | null
     
-        console.log('resolve 5')
-        if (!inlineEl) return null
+    //     console.log('resolve 5')
+    //     if (!inlineEl) return null
     
-        return {
-            inline,
-            block,
-            inlineIndex,
-            inlineEl
-        }
-    }
+    //     return {
+    //         inline,
+    //         block,
+    //         inlineIndex,
+    //         inlineEl
+    //     }
+    // }
 
     private updateAST() {
         const ast = this.ast.ast
