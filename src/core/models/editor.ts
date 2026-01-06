@@ -899,16 +899,32 @@ class Editor {
                     this.removeEmptyBlocks(targetBlocks)
                     this.ast.updateAST()
 
-                    console.log('ast', JSON.stringify(this.ast.getAst(), null, 2))
-
                     this.caret.setInlineId(targetInline.id)
                     this.caret.setBlockId(targetInline.blockId)
                     this.caret.setPosition(targetPosition)
                     this.caret.restoreCaret()
 
                     this.emitChange()
+                }
 
-                    return { preventDefault: true }
+                if (effect.type === 'mergeMarker') {
+                    const result = this.ast.mergeMarker(effect.blockId)
+                    if (!result) return
+
+                    const { removeBlock, targetBlock, targetInline, targetPosition } = result
+
+                    if (removeBlock) {
+                        const removeBlockElement = this.rootElement.querySelector(`[data-block-id="${removeBlock.id}"]`)
+                        if (removeBlockElement) {
+                            removeBlockElement.remove()
+                        }
+                    }
+
+                    renderBlock(targetBlock, this.rootElement, null, targetBlock)
+
+                    this.ast.updateAST()
+                    this.caret?.restoreCaret()
+                    this.emitChange()
                 }
             })
         }
