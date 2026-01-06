@@ -35,7 +35,7 @@ class Caret {
       
         const inlineEl = this.rootElement.querySelector(`[data-inline-id="${inlineId}"]`) as HTMLElement
         if (!inlineEl) {
-            console.warn('Could not find inline element for caret restore:', inlineId)
+            console.warn('could not find inline element for caret restore:', inlineId)
             return
         }
       
@@ -95,7 +95,7 @@ class Caret {
             inlineEl.scrollIntoView({ block: 'nearest' })
         
         } catch (err) {
-            console.warn('Failed to restore caret:', err)
+            console.warn('failed to restore caret:', err)
             inlineEl.focus()
         }
     }
