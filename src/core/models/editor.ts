@@ -394,44 +394,55 @@ class Editor {
     }
 
     private resolveMerge(context: EditContext): EditEffect {
-        console.log('merge')
-        const caretPosition = this.caret.getPositionInInline(context.inlineElement)
-
-        if (caretPosition !== 0) return { preventDefault: false }
-
-        const block = this.ast.getBlockById(context.block.id)
-        if (!block) return { preventDefault: false }
-
-        const parentBlock = this.ast.getParentBlock(block)
-        if (parentBlock?.type === 'listItem') {
-            const listItem = parentBlock;
-            const list = this.ast.getParentBlock(listItem)
-            if (list?.type === 'list') {
-                const listItemIndex = list.blocks.findIndex(b => b.id === listItem.id)
-                if (listItemIndex === 0) {
+        switch (this.getMergeType(context)) {
+            case 'marker':
+                const getRootParentBlock = (block: Block) => {
+                    let parentBlock = this.ast.getParentBlock(block)
+                    if (parentBlock?.type === 'listItem') {
+                        return getRootParentBlock(parentBlock)
+                    }
+                    return parentBlock
+                }
+                const rootParentBlock = getRootParentBlock(context.block)
+                if (rootParentBlock?.type === 'list') {
                     return {
                         preventDefault: true,
-                        ast: [{
-                            type: 'mergeMarker',
-                            blockId: list.id,
-                        }],
+                        ast: [{ type: 'mergeMarker', blockId: rootParentBlock.id }],
                     }
                 }
+                return { preventDefault: false }
+
+            case 'inline':
+                const previousInline = this.findPreviousInline(context)!
+            return {
+                preventDefault: true,
+                ast: [{
+                    type: 'mergeInline',
+                    leftInlineId: previousInline.id,
+                    rightInlineId: context.inline.id,
+                }],
+            }
+
+            default:
+                return { preventDefault: false }
+        }
+    }
+
+    private getMergeType(context: EditContext): 'marker' | 'inline' | 'none' {
+        if (this.caret.getPositionInInline(context.inlineElement) !== 0) return 'none'
+    
+        const block = this.ast.getBlockById(context.block.id)
+        if (!block) return 'none'
+    
+        const parent = this.ast.getParentBlock(block)
+        if (parent?.type === 'listItem') {
+            const list = this.ast.getParentBlock(parent)
+            if (list?.type === 'list' && list.blocks[0]?.id === parent.id) {
+                return 'marker'
             }
         }
-
-        const previousInline = this.findPreviousInline(context)
-
-        if (!previousInline) return { preventDefault: false }
-
-        return {
-            preventDefault: true,
-            ast: [{
-                type: 'mergeInline',
-                leftInlineId: previousInline.id,
-                rightInlineId: context.inline.id,
-            }],
-        }
+    
+        return this.findPreviousInline(context) ? 'inline' : 'none'
     }
 
     private detectBlockType(text: string) {
