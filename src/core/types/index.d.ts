@@ -12,12 +12,12 @@ type AstEffect =
 
 export type AstApplyEffect = {
     render: {
-        remove: Block
+        remove: Block[]
         insert: {
             at: 'current' | 'previous' | 'next'
             target: Block
             current: Block
-        }
+        }[]
     }
     caret: {
         blockId: string

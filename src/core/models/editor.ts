@@ -679,7 +679,25 @@ class Editor {
                     const result = this.ast.split(effect.blockId, effect.inlineId, effect.caretPosition)
                     if (!result) return
 
-                    const { targetBlocks, targetInline, targetPosition } = result
+                    const { render, caret } = result
+
+                    render.remove.forEach(block => {
+                        const removeBlockElement = this.rootElement.querySelector(`[data-block-id="${block.id}"]`)
+                        if (removeBlockElement) removeBlockElement.remove()
+                    })
+
+                    render.insert.forEach(render => {
+                        renderBlock(render.current, this.rootElement, null, render.at, render.target)
+                    })
+
+                    this.ast.updateAST()
+
+                    this.caret.setInlineId(caret.inlineId)
+                    this.caret.setBlockId(caret.blockId)
+                    this.caret.setPosition(caret.position)
+                    this.caret.restoreCaret()
+
+                    this.emitChange()
                 }
 
                 if (effect.type === 'mergeInline') {
@@ -709,12 +727,14 @@ class Editor {
 
                     const { render, caret } = result
 
-                    if (render.remove) {
-                        const removeBlockElement = this.rootElement.querySelector(`[data-block-id="${render.remove.id}"]`)
+                    render.remove.forEach(block => {
+                        const removeBlockElement = this.rootElement.querySelector(`[data-block-id="${block.id}"]`)
                         if (removeBlockElement) removeBlockElement.remove()
-                    }
+                    })
             
-                    renderBlock(render.insert.current, this.rootElement, null, render.insert.at, render.insert.target)
+                    render.insert.forEach(render => {
+                        renderBlock(render.current, this.rootElement, null, render.at, render.target)
+                    })
 
                     this.ast.updateAST()
 

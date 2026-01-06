@@ -171,18 +171,66 @@ class AST {
         // console.log('ast', JSON.stringify(ast, null, 2))
     }
 
-    public split(blockId: string, inlineId: string, caretPosition: number): { targetBlocks: Block[], targetInline: Inline, targetPosition: number } | null {
+    public split(blockId: string, inlineId: string, caretPosition: number): AstApplyEffect | null {
         const block = this.getBlockById(blockId)
         if (!block) return null
 
         const inline = this.getInlineById(inlineId)
         if (!inline) return null
-        
-        const targetBlocks: Block[] = []
-        const targetInline: Inline = inline
-        const targetPosition: number = caretPosition
 
-        return { targetBlocks, targetInline, targetPosition }
+        const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
+
+        const previousText = inline.text.symbolic.slice(0, caretPosition)
+        const nextText = inline.text.symbolic.slice(caretPosition)
+
+        const beforeInlines = block.inlines.slice(0, inlineIndex)
+        const afterInlines = block.inlines.slice(inlineIndex + 1)
+
+        const previousInlines = parseInlineContent(previousText, block.id, block.position.start)
+        const nextInlines = parseInlineContent(nextText, block.id, block.position.start + previousText.length).concat(afterInlines)
+
+        block.text = previousText + beforeInlines.map(i => i.text.symbolic).join('')
+        block.position = { start: block.position.start, end: block.position.start + previousText.length + beforeInlines.map(i => i.text.symbolic).join('').length }
+
+        const newBlock = {
+            id: uuid(),
+            type: block.type,
+            text: nextText + afterInlines.map(i => i.text.symbolic).join(''),
+            inlines: [],
+            position: { start: block.position.end, end: block.position.end + nextText.length + afterInlines.map(i => i.text.symbolic).join('').length }
+        } as Block
+
+        nextInlines.forEach(i => i.blockId = newBlock.id)
+        newBlock.inlines.push(...nextInlines)
+
+        block.inlines.splice(inlineIndex, 1)
+        block.inlines.splice(inlineIndex, 0, ...previousInlines)
+        
+        this.ast.blocks.splice(this.ast.blocks.findIndex(b => b.id === block.id), 1, block, newBlock)
+
+        return {
+            render: {
+                remove: [block],
+                insert: [
+                    {
+                        at: 'current',
+                        target: block,
+                        current: block,
+                    },
+                    {
+                        at: 'next',
+                        target: block,
+                        current: newBlock,
+                    },
+                ],
+            },
+            caret: {
+                blockId: newBlock.id,
+                inlineId: newBlock.inlines[0].id,
+                position: 0,
+                affinity: 'start'
+            },
+        }
     }
 
     public mergeInline(inlineAId: string, inlineBId: string): { targetBlocks: Block[], targetInline: Inline, targetPosition: number } | null {
@@ -261,12 +309,12 @@ class AST {
 
                 return {
                     render: {
-                        remove: list,
-                        insert: {
+                        remove: [list],
+                        insert: [{
                             at: 'current',
                             target: paragraph,
                             current: paragraph,
-                        }
+                        }]
                     },
                     caret: {
                         blockId: paragraph.id,
@@ -280,17 +328,14 @@ class AST {
                 this.ast.blocks.splice(listIndex, 1, paragraph)
                 this.ast.blocks.splice(listIndex + 1, 0, list)
 
-                console.log('mergedText', JSON.stringify(marker?.[0], null, 2), JSON.stringify(mergedText, null, 2))
-                console.log('ast', JSON.stringify(this.ast, null, 2))
-
                 return {
                     render: {
-                        remove: listItem,
-                        insert: {
+                        remove: [listItem],
+                        insert: [{
                             at: 'previous',
                             target: list,
                             current: paragraph,
-                        }
+                        }]
                     },
                     caret: {
                         blockId: paragraph.id,
