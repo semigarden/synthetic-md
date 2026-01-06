@@ -130,7 +130,7 @@ class Editor {
                         // this.engine.ast.blocks.splice(listBlockIndex, 1, listBlock)
                         listBlock.blocks.splice(index + 1, 0, newListItemBlock)
 
-                        renderBlock(newListItemBlock, this.rootElement, null, listItemBlock)
+                        renderBlock(newListItemBlock, this.rootElement, null, 'next', listItemBlock)
 
                         this.caret.setInlineId(newParagraphInline.id)
                         this.caret.setBlockId(newParagraphBlock.id)
@@ -185,7 +185,7 @@ class Editor {
             this.caret.setPosition(0)
 
             renderBlock(context.block, this.rootElement)
-            renderBlock(newBlock, this.rootElement, null, context.block)
+            renderBlock(newBlock, this.rootElement, null, 'next', context.block)
 
             this.ast.updateAST()
 
@@ -291,7 +291,7 @@ class Editor {
                     }
 
                     renderBlock(context.block, this.rootElement)
-                    renderBlock(newListItem, this.rootElement, null, listItem)
+                    renderBlock(newListItem, this.rootElement, null, 'next', listItem)
 
                     this.ast.updateAST()
                     this.caret?.restoreCaret()
@@ -372,7 +372,7 @@ class Editor {
         }
 
         renderBlock(context.block, this.rootElement)
-        renderBlock(newBlock, this.rootElement, null, context.block)
+        renderBlock(newBlock, this.rootElement, null, 'next', context.block)
 
         this.ast.updateAST()
         this.caret?.restoreCaret()
@@ -830,7 +830,7 @@ class Editor {
 
                 const prevBlock = this.ast.ast.blocks[blockIndex - 1]
                 if (prevBlock) {
-                    renderBlock(newBlock, this.rootElement, null, prevBlock)
+                    renderBlock(newBlock, this.rootElement, null, 'next', prevBlock)
                 } else {
                     renderBlock(newBlock, this.rootElement)
                 }
@@ -847,7 +847,7 @@ class Editor {
 
         const prevBlock = this.ast.ast.blocks[blockIndex - 1]
         if (prevBlock) {
-            renderBlock(newBlock, this.rootElement, null, prevBlock)
+            renderBlock(newBlock, this.rootElement, null, 'next', prevBlock)
         } else {
             renderBlock(newBlock, this.rootElement)
         }
@@ -911,7 +911,7 @@ class Editor {
                     const result = this.ast.mergeMarker(effect.blockId)
                     if (!result) return
 
-                    const { removeBlock, targetBlock, targetInline, targetPosition } = result
+                    const { renderAt, renderTargetBlock, removeBlock, targetBlock, targetInline, targetPosition } = result
 
                     if (removeBlock) {
                         const removeBlockElement = this.rootElement.querySelector(`[data-block-id="${removeBlock.id}"]`)
@@ -919,11 +919,17 @@ class Editor {
                             removeBlockElement.remove()
                         }
                     }
-
-                    renderBlock(targetBlock, this.rootElement, null, targetBlock)
+            
+                    renderBlock(targetBlock, this.rootElement, null, renderAt, renderTargetBlock)
 
                     this.ast.updateAST()
-                    this.caret?.restoreCaret()
+
+                    this.caret.setInlineId(targetInline.id)
+                    this.caret.setBlockId(targetInline.blockId)
+                    this.caret.setPosition(targetPosition)
+
+                    this.caret.restoreCaret()
+
                     this.emitChange()
                 }
             })

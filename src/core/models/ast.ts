@@ -245,43 +245,46 @@ class AST {
             const listIndex = this.ast.blocks.findIndex(b => b.id === list.id)
             const listItem = list.blocks[0] as ListItem
 
+            const marker = listItem.text.match(/^[-*+]\s/)
+            const listItemText = listItem.text.slice(marker?.[0]?.length ?? 0)
+            const mergedText = marker?.[0]?.slice(0, -1) + listItemText
+
+            const paragraph = {
+                id: uuid(),
+                type: 'paragraph',
+                text: mergedText,
+                inlines: [],
+                position: { start: listItem.position.start, end: listItem.position.start + mergedText.length }
+            } as Block
+
+            const newInlines = parseInlineContent(mergedText, paragraph.id, paragraph.position.start)
+            paragraph.inlines.push(...newInlines)
+
             if (list.blocks.length === 1) {
-                // const listBlockEl = this.rootElement.querySelector(`[data-block-id="${list.id}"]`)
-                // if (listBlockEl) {
-                //     listBlockEl.remove()
-                // }
- 
-                const marker = listItem.text.match(/^[-*+]\s/)
-                const listItemText = listItem.text.slice(marker?.[0]?.length ?? 0)
-                const mergedText = marker?.[0]?.slice(0, -1) + listItemText
-
-                const paragraph = {
-                    id: uuid(),
-                    type: 'paragraph',
-                    text: mergedText,
-                    inlines: [],
-                    position: { start: listItem.position.start, end: listItem.position.start + mergedText.length }
-                } as Block
-
-                const newInlines = parseInlineContent(mergedText, paragraph.id, paragraph.position.start)
-                paragraph.inlines.push(...newInlines)
-
                 this.ast.blocks.splice(listIndex, 1, paragraph)
 
-                console.log('mergedText', JSON.stringify(marker?.[0], null, 2), JSON.stringify(mergedText, null, 2))
-                console.log('ast', JSON.stringify(this.ast, null, 2))
-
                 return {
+                    renderAt: 'current',
+                    renderTargetBlock: list,
                     removeBlock: list,
                     targetBlock: paragraph,
                     targetInline: paragraph.inlines[0],
                     targetPosition: 1
                 }
             } else {
+                list.blocks.splice(0, 1)
+                this.ast.blocks.splice(listIndex, 1, paragraph)
+                this.ast.blocks.splice(listIndex + 1, 0, list)
+
+                console.log('mergedText', JSON.stringify(marker?.[0], null, 2), JSON.stringify(mergedText, null, 2))
+                console.log('ast', JSON.stringify(this.ast, null, 2))
+
                 return {
-                    removeBlock: list,
-                    targetBlock: listItem.blocks[0],
-                    targetInline: listItem.blocks[0].inlines[0],
+                    renderAt: 'previous',
+                    renderTargetBlock: list,
+                    removeBlock: listItem,
+                    targetBlock: paragraph,
+                    targetInline: paragraph.inlines[0],
                     targetPosition: 1
                 }
             }
