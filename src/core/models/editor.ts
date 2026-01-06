@@ -389,17 +389,6 @@ class Editor {
 
                     const { render, caret } = result
 
-                    // const selection = window.getSelection();
-                    // if (selection && selection.rangeCount > 0) {
-                    //     const range = selection.getRangeAt(0);
-                    //     if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
-                    //         const el = range.startContainer as HTMLElement;
-                    //         if (el.firstChild?.nodeName === 'BR') {
-                    //             el.removeChild(el.firstChild);
-                    //         }
-                    //     }
-                    // }
-
                     render.remove.forEach(block => {
                         const removeBlockElement = this.rootElement.querySelector(`[data-block-id="${block.id}"]`)
                         if (removeBlockElement) removeBlockElement.remove()
