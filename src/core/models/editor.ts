@@ -32,7 +32,7 @@ class Editor {
 
         console.log('ctx', context.inlineElement.textContent)
         const newText = context.inlineElement.textContent ?? ''
-        const detectedBlockType = this.detectBlockType(newText)
+        const detectedBlockType = detectType(newText)
 
         const blockTypeChanged =
             detectedBlockType.type !== context.block.type ||
@@ -152,10 +152,6 @@ class Editor {
     
             return null
         }
-    }
-
-    private detectBlockType(text: string) {
-        return detectType(text)
     }
 
     private normalizeTextContext(params: {
