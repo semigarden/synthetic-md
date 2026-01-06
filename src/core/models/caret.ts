@@ -31,8 +31,9 @@ class Caret {
         return caretPositionInInline
     }
 
-    public restoreCaret(inlineId: string, position: number) {
-      
+    public restoreCaret(inlineId: string | null = this.inlineId, position: number | null = this.position) {
+        if (!inlineId || !position) return
+
         const inlineEl = this.rootElement.querySelector(`[data-inline-id="${inlineId}"]`) as HTMLElement
         if (!inlineEl) {
             console.warn('could not find inline element for caret restore:', inlineId)
