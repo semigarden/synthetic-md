@@ -69,7 +69,6 @@ class Editor {
         }
     }
 
-
     private resolveMerge(context: EditContext): EditEffect {
         if (this.caret.getPositionInInline(context.inlineElement) !== 0) return { preventDefault: false }
 
