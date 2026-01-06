@@ -6,6 +6,7 @@ export type EditContext = {
 }
 
 type AstEffect = 
+ | { type: 'split'; blockId: string; inlineId: string; caretPosition: number }
  | { type: 'mergeInline'; leftInlineId: string; rightInlineId: string }
  | { type: 'mergeMarker'; blockId: string }
 

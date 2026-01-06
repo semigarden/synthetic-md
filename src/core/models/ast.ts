@@ -189,6 +189,20 @@ class AST {
         this.deleteEmptyBlock(parentBlock)
     }
 
+    public split(blockId: string, inlineId: string, caretPosition: number): { targetBlocks: Block[], targetInline: Inline, targetPosition: number } | null {
+        const block = this.getBlockById(blockId)
+        if (!block) return null
+
+        const inline = this.getInlineById(inlineId)
+        if (!inline) return null
+        
+        const targetBlocks: Block[] = []
+        const targetInline: Inline = inline
+        const targetPosition: number = caretPosition
+
+        return { targetBlocks, targetInline, targetPosition }
+    }
+
     public mergeInline(inlineAId: string, inlineBId: string): { targetBlocks: Block[], targetInline: Inline, targetPosition: number } | null {
         const inlineA = this.getInlineById(inlineAId)
         const inlineB = this.getInlineById(inlineBId)
