@@ -171,24 +171,6 @@ class AST {
         // console.log('ast', JSON.stringify(ast, null, 2))
     }
 
-    private deleteEmptyBlock(block: Block) {
-        if (block.inlines.length > 0) return
-    
-        const parentBlock = this.getParentBlock(block)
-        if (!parentBlock) {
-            const index = this.ast.blocks.findIndex(b => b.id === block.id)
-            if (index !== -1) this.ast.blocks.splice(index, 1)
-            return
-        }
-    
-        if ('blocks' in parentBlock) {
-            const index = parentBlock.blocks.findIndex(b => b.id === block.id)
-            if (index !== -1) parentBlock.blocks.splice(index, 1)
-        }
-    
-        this.deleteEmptyBlock(parentBlock)
-    }
-
     public split(blockId: string, inlineId: string, caretPosition: number): { targetBlocks: Block[], targetInline: Inline, targetPosition: number } | null {
         const block = this.getBlockById(blockId)
         if (!block) return null
