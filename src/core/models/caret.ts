@@ -1,4 +1,4 @@
-import { CaretEffect, Inline } from "../types"
+import { CaretEffect } from "../types"
 
 class Caret {
     private inlineId: string | null = null
@@ -74,43 +74,7 @@ class Caret {
         return caretPositionInInline
     }
 
-    getPositionInInlines(inlines: Inline[], inlineId: string, caretPositionInInline: number) {
-        let charsBeforeEditedInline = 0;
-        for (let i = 0; i < inlines.length; i++) {
-            if (inlines[i].id === inlineId) break;
-            charsBeforeEditedInline += inlines[i].text.symbolic.length;
-        }
-        
-        const caretPositionInInlines = charsBeforeEditedInline + caretPositionInInline;
-        return caretPositionInInlines
-    }
-
-    getInlineFromPositionInInlines(
-        inlines: Inline[],
-        positionInInlines: number
-    ) {
-      let inline: Inline | null = null;
-      let position = 0;
-      let accumulatedLength = 0;
-      
-      for (const i of inlines) {
-          const textLength = i.text?.symbolic.length ?? 0;
-          if (accumulatedLength + textLength >= positionInInlines) {
-              inline = i;
-              position = positionInInlines - accumulatedLength;
-              break;
-          }
-          accumulatedLength += textLength;
-      }
-
-      return {
-        inline,
-        position
-      }
-    }
-
     public restoreCaret() {
-        console.log('restoreCaret', this.getInlineId(), this.getPosition())
         if (!this.getInlineId() || this.getPosition() === null) {
           return;
         }
