@@ -1,7 +1,7 @@
 import { Intent } from "../types"
 
 const onKey: Record<string, Intent> = {
-    'Enter': 'enter',
+    'Enter': 'split',
     'Backspace': 'merge',
 }
 

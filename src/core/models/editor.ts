@@ -18,8 +18,8 @@ class Editor {
     }
 
     public onIntent(intent: Intent, context: EditContext): EditEffect {
-        if (intent === 'enter') {
-            return this.onEnter(context)
+        if (intent === 'split') {
+            return this.resolveSplit(context)
         } else if (intent === 'merge') {
             return this.resolveMerge(context)
         }
@@ -69,7 +69,7 @@ class Editor {
 
     }
 
-    public onEnter(context: EditContext): EditEffect {
+    public resolveSplit(context: EditContext): EditEffect {
         console.log('enter')
         const caretPosition = this.caret.getPositionInInline(context.inlineElement)
         const blocks = this.ast.ast.blocks

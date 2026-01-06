@@ -35,7 +35,7 @@ export type EditEffect = {
 }
 
 export type Intent =
-    | 'enter'
+    | 'split'
     | 'merge'
 
 interface BlockType<T extends string = string> {
