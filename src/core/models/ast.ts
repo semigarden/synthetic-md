@@ -292,7 +292,6 @@ class AST {
         const inlineA = this.getInlineById(inlineAId)
         const inlineB = this.getInlineById(inlineBId)
         if (!inlineA || !inlineB) return null
-        console.log('before ast', JSON.stringify(this.ast, null, 2))
 
         const flattenedInlines = this.flattenInlines(this.ast.blocks)
         const inlineIndexA = flattenedInlines.findIndex(i => i.id === inlineAId)
@@ -334,9 +333,6 @@ class AST {
         currentBlock.text = mergedText
         currentBlock.position = { start: currentBlock.position.start, end: currentBlock.position.end - leftInline.text.symbolic.length + mergedText.length }
 
-        console.log('ast', JSON.stringify(this.ast, null, 2))
-        console.log('merged text', JSON.stringify(mergedText, null, 2))
-        console.log('mergedInlines', JSON.stringify(mergedInlines, null, 2))
         return {
             render: {
                 remove: [],
