@@ -27,10 +27,11 @@ class Editor {
         return { preventDefault: false }
     }
 
-    public onInput(context: EditContext) {
+    public input(context: EditContext) {
         console.log('onInput')
 
-        console.log('ctx', context.inlineElement.textContent)
+        const caretPosition = this.caret.getPositionInInline(context.inlineElement)
+
         const newText = context.inlineElement.textContent ?? ''
         const detectedBlockType = detectType(newText)
 
@@ -45,28 +46,22 @@ class Editor {
             return
         }
 
-        const caretOffset = this.caret.getPositionInInline(context.inlineElement)
         const result = this.normalizeTextContext({
             inline: context.inline,
             block: context.block,
             inlineIndex: context.inlineIndex,
             value: context.inlineElement.textContent ?? '',
-            caretOffset
+            caretPosition
         })
 
         this.applyInlineNormalization(context.block, result)
     
         renderBlock(context.block, this.rootElement, result.caretInline?.id ?? null)
 
-        // console.log(`inline ${context.inline.id} changed: ${context.inline.text.symbolic} > ${context.inlineElement.textContent ?? ''}`)
 
-        
         this.ast.updateAST()
         this.caret?.restoreCaret()
         this.emitChange()
-
-        // console.log('ast', JSON.stringify(this.engine.ast, null, 2))
-
     }
 
     public resolveSplit(context: EditContext): EditEffect {
@@ -159,7 +154,7 @@ class Editor {
         block: Block
         inlineIndex: number
         value: string
-        caretOffset: number
+        caretPosition: number
     }): {
         contextStart: number
         contextEnd: number
@@ -168,7 +163,7 @@ class Editor {
         caretInline: Inline | null
         caretPosition: number
     } {
-        const { inline, block, inlineIndex, value, caretOffset } = params
+        let { inline, block, inlineIndex, value, caretPosition } = params
     
         let contextStart = inlineIndex
         let contextEnd = inlineIndex + 1
@@ -192,10 +187,9 @@ class Editor {
         const newInlines = parseInlineContent(contextText, inline.blockId, position)
     
         const caretPositionInContext =
-            this.caret.getPositionInInlines(oldInlines, inline.id, caretOffset)
+            this.caret.getPositionInInlines(oldInlines, inline.id, caretPosition)
     
         let caretInline: Inline | null = null
-        let caretPosition = 0
         let acc = 0
     
         for (const ni of newInlines) {

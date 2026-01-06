@@ -86,7 +86,7 @@ class Element extends HTMLElement {
             const context = this.selection?.resolveInlineContext()
             if (!context) return
 
-            const effect = this.editor?.onInput(context)
+            const effect = this.editor?.input(context)
             if (effect) this.editor?.apply(effect)
         })
 
