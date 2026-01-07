@@ -2,26 +2,6 @@ import { uuid, decodeHTMLEntity } from "../utils/utils";
 import { Delimiter, DetectedBlock, Block, Inline } from '../types';
 import { CodeBlock, Paragraph, TableCell } from '../types';
 
-export function parseInlinesRecursive(block: Block) {
-    switch (block.type) {
-        case "paragraph":
-        case "heading":
-        case "codeBlock": {
-            const newInlines = parseInlines(block);
-            block.inlines = newInlines;
-            break;
-        }
-
-        default:
-            if ('blocks' in block && Array.isArray(block.blocks)) {
-                for (const childBlock of block.blocks as Block[]) {
-                    parseInlinesRecursive(childBlock);
-                }
-            }
-            break;
-    }
-}
-
 function parseInlines(block: Block): Inline[] {
     const next: Inline[] = [];
     const text = block.text;
