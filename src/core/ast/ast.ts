@@ -186,30 +186,20 @@ export function buildBlocks(text: string): Block[] {
     return blocks;
 }
 
-function parseInlinesRecursive(block: Block, previousBlock?: Block) {
-    const prevInlines = previousBlock?.inlines || [];
-
+function parseInlinesRecursive(block: Block) {
     switch (block.type) {
         case "paragraph":
         case "heading":
         case "codeBlock": {
-            const newInlines = parseInlines(block, prevInlines);
+            const newInlines = parseInlines(block);
             block.inlines = newInlines;
             break;
         }
 
         default:
             if ('blocks' in block && Array.isArray(block.blocks)) {
-                const prevNestedMap = new Map<string, Block>();
-                if (previousBlock && 'blocks' in previousBlock && Array.isArray(previousBlock.blocks)) {
-                    previousBlock.blocks.forEach((b: Block) => {
-                        if (b.id) prevNestedMap.set(b.id, b);
-                    });
-                }
-
                 for (const childBlock of block.blocks as Block[]) {
-                    const prevChild = prevNestedMap.get(childBlock.id);
-                    parseInlinesRecursive(childBlock, prevChild);
+                    parseInlinesRecursive(childBlock);
                 }
             }
             break;
