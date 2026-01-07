@@ -5,6 +5,7 @@ import CodeSpanResolver from './codeSpanResolver'
 import EntityResolver from './entityResolver'
 import BackslashEscapeResolver from './backslashEscapeResolver'
 import EmphasisResolver from './emphasisResolver'
+import DelimiterLexer from './delimiterLexer'
 import { Block, Inline, CodeBlock, TableCell, Paragraph, Delimiter } from '../../types'
 import { uuid, decodeHTMLEntity } from '../../utils/utils'
 
@@ -15,6 +16,7 @@ class ParseInline {
     private entityResolver = new EntityResolver()
     private backslashEscapeResolver = new BackslashEscapeResolver()
     private emphasisResolver = new EmphasisResolver()
+    private delimiterLexer = new DelimiterLexer()
 
     public apply(block: Block): Inline[] {
         const inlines: Inline[] = []
@@ -202,42 +204,15 @@ class ParseInline {
                 }
             }
 
-            /* ---------------- emphasis delimiter scan ---------------- */
-            if (ch === '*' || ch === '_') {
+            /* ---------------- delimiter lexer ---------------- */
+            if (this.delimiterLexer.tryLex(
+                stream,
+                blockId,
+                position,
+                result,
+                delimiterStack
+            )) {
                 flushText()
-
-                const char = stream.next()!
-                let count = 1
-                while (stream.peek() === char) {
-                    stream.next()
-                    count++
-                }
-
-                const pos = result.length
-
-                result.push({
-                    id: uuid(),
-                    type: 'text',
-                    blockId,
-                    text: {
-                        symbolic: char.repeat(count),
-                        semantic: char.repeat(count),
-                    },
-                    position: {
-                        start: position + stream.position() - count,
-                        end: position + stream.position(),
-                    },
-                })
-
-                delimiterStack.push({
-                    type: char,
-                    length: count,
-                    position: pos,
-                    canOpen: true,
-                    canClose: true,
-                    active: true,
-                } as Delimiter)
-
                 textStart = stream.position()
                 continue
             }
