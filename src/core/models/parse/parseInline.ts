@@ -1,6 +1,7 @@
 import InlineStream from './inlineStream'
 import LinkResolver from './linkResolver'
 import ImageResolver from './imageResolver'
+import CodeSpanResolver from './codeSpanResolver'
 import EmphasisResolver from './emphasisResolver'
 import { Block, Inline, CodeBlock, TableCell, Paragraph, Delimiter } from '../../types'
 import { uuid, decodeHTMLEntity } from '../../utils/utils'
@@ -8,6 +9,7 @@ import { uuid, decodeHTMLEntity } from '../../utils/utils'
 class ParseInline {
     private linkResolver = new LinkResolver()
     private imageResolver = new ImageResolver()
+    private codeSpanResolver = new CodeSpanResolver()
     private emphasisResolver = new EmphasisResolver()
 
     public apply(block: Block): Inline[] {
@@ -186,65 +188,20 @@ class ParseInline {
 
             /* ---------------- code span ---------------- */
             if (ch === '`') {
-                const start = stream.checkpoint()
-                let ticks = 0
-
-                while (stream.peek() === '`') {
-                    stream.next()
-                    ticks++
+                const codeSpan = this.codeSpanResolver.tryParse(
+                    stream,
+                    text,
+                    blockId,
+                    position
+                )
+            
+                if (codeSpan) {
+                    flushText()
+                    result.push(codeSpan)
+                    textStart = stream.position()
+                    continue
                 }
-
-                const contentStart = stream.position()
-                let found = false
-
-                while (!stream.end()) {
-                    if (stream.peek() === '`') {
-                        let count = 0
-                        const mark = stream.checkpoint()
-                        while (stream.peek() === '`') {
-                            stream.next()
-                            count++
-                        }
-
-                        if (count === ticks) {
-                            const content = text.slice(contentStart, mark)
-                                .replace(/\n/g, ' ')
-                                .replace(/^ (.*) $/, '$1')
-
-                            flushText()
-
-                            result.push({
-                                id: uuid(),
-                                type: 'codeSpan',
-                                blockId,
-                                text: {
-                                    symbolic: text.slice(start, stream.position()),
-                                    semantic: content,
-                                },
-                                position: {
-                                    start: position + start,
-                                    end: position + stream.position(),
-                                },
-                            })
-
-                            textStart = stream.position()
-                            found = true
-                            break
-                        }
-
-                        stream.restore(mark)
-                    }
-
-                    stream.next()
-                }
-
-                if (!found) {
-                    stream.restore(start)
-                    stream.next()
-                }
-
-                continue
-            }
+            }            
 
             /* ---------------- image ---------------- */
             if (ch === '!' && stream.peek(1) === '[') {
