@@ -20,6 +20,7 @@ class AST {
     setText(text: string) {
         this.text = text
         this.blocks = this.parser.parse(text)
+        console.log('blocks', JSON.stringify(this.blocks, null, 2))
     }
 
     public get query() {
@@ -103,6 +104,8 @@ class AST {
         block.position = { start: block.position.start, end: block.position.start + block.text.length }
         block.inlines = newInlines
         newInlines.forEach((i: Inline) => i.blockId = block.id)
+
+        console.log('blocks', JSON.stringify(this.blocks, null, 2))
 
         return {
             renderEffect: {

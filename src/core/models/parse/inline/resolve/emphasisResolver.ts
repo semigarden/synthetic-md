@@ -55,16 +55,10 @@ class EmphasisResolver {
             const endNodeIndex = closer.position
 
             const affected = nodes.slice(startNodeIndex, endNodeIndex + 1)
+            const innerNodes = affected.slice(1, -1)
 
-            let symbolic = opener.type.repeat(useLength)
-            let semantic = ''
-
-            for (const node of affected.slice(1, -1)) {
-                symbolic += node.text.symbolic
-                semantic += node.text.semantic
-            }
-
-            symbolic += opener.type.repeat(useLength)
+            const symbolic = affected.map(n => n.text.symbolic).join('')
+            const semantic = innerNodes.map(n => n.text.semantic).join('')
 
             const emphNode: Inline = {
                 id: uuid(),

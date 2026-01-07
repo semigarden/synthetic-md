@@ -24,20 +24,14 @@ class ParseInline {
     }
 
     public apply(block: Block): Inline[] {
-        const inlines: Inline[] = []
         const text = block.text ?? ''
-        const blockId = block.id
-
-        if (text === '') {
-            inlines.push({
-                id: uuid(),
-                type: 'text',
-                blockId,
-                text: { symbolic: '', semantic: '' },
-                position: { start: 0, end: 0 },
-            })
-            return inlines
-        }
+        if (!text) return [{
+            id: uuid(),
+            type: 'text',
+            blockId: block.id,
+            text: { symbolic: '', semantic: '' },
+            position: { start: 0, end: 0 },
+        }]
 
         if (block.type === 'codeBlock') {
             const codeBlock = block as CodeBlock
@@ -45,26 +39,17 @@ class ParseInline {
                 ? this.extractFencedCodeContent(text, codeBlock.fence!)
                 : text
 
-            inlines.push({
+            return [{
                 id: uuid(),
                 type: 'text',
-                blockId,
-                text: {
-                    symbolic: text,
-                    semantic,
-                },
-                position: {
-                    start: 0,
-                    end: text.length,
-                },
-            })
-
-            return inlines
+                blockId: block.id,
+                text: { symbolic: text, semantic },
+                position: { start: 0, end: text.length },
+            }]
         }
 
         let parseText = text
         let textOffset = 0
-
         if (block.type === 'heading') {
             const match = text.match(/^(#{1,6})\s+/)
             if (match) {
@@ -73,38 +58,16 @@ class ParseInline {
             }
         }
 
-        const newInlines = this.lexInline(
-            parseText,
-            blockId,
-            textOffset
-        )
+        const inlines = this.lexInline(parseText, block.id, textOffset)
 
-        for (const inline of newInlines) {
-            inlines.push({
-                ...inline,
-                id: uuid(),
-                blockId,
-            })
-        }
-
-        return inlines
+        return inlines.map(i => ({ ...i, id: uuid(), blockId: block.id }))
     }
 
     public applyRecursive(block: Block) {
-        switch (block.type) {
-            case 'paragraph':
-            case 'heading':
-            case 'codeBlock': {
-                block.inlines = this.apply(block)
-                return
-            }
-
-            default:
-                if ('blocks' in block && Array.isArray(block.blocks)) {
-                    for (const child of block.blocks) {
-                        this.applyRecursive(child)
-                    }
-                }
+        if ('blocks' in block && Array.isArray(block.blocks)) {
+            block.blocks.forEach(b => this.applyRecursive(b))
+        } else if (['paragraph', 'heading', 'codeBlock'].includes(block.type)) {
+            block.inlines = this.apply(block)
         }
     }
 
@@ -123,14 +86,8 @@ class ParseInline {
                     id: uuid(),
                     type: 'text',
                     blockId,
-                    text: {
-                        symbolic: raw,
-                        semantic: decodeHTMLEntity(raw),
-                    },
-                    position: {
-                        start: position + textStart,
-                        end: position + end,
-                    },
+                    text: { symbolic: raw, semantic: decodeHTMLEntity(raw) },
+                    position: { start: position + textStart, end: position + end }
                 })
             }
             textStart = stream.position()
@@ -139,13 +96,8 @@ class ParseInline {
         while (!stream.end()) {
             const ch = stream.peek()!
 
-            // backslash escape
-            const escape = this.backslashEscapeResolver.tryParse(
-                stream,
-                blockId,
-                position
-            )
-
+            // Backslash escapes
+            const escape = this.backslashEscapeResolver.tryParse(stream, blockId, position)
             if (escape) {
                 flushText()
                 result.push(escape)
@@ -153,52 +105,40 @@ class ParseInline {
                 continue
             }
 
-            // entity
+            // HTML entities
             if (ch === '&') {
-                const entity = this.entityResolver.tryParse(
-                    stream,
-                    text,
-                    blockId,
-                    position
-                )
-            
+                const entity = this.entityResolver.tryParse(stream, text, blockId, position)
                 if (entity) {
                     flushText()
                     result.push(entity)
                     textStart = stream.position()
                     continue
                 }
-            }            
+            }
 
-            // code span
+            // Code spans
             if (ch === '`') {
-                const codeSpan = this.codeSpanResolver.tryParse(
-                    stream,
-                    text,
-                    blockId,
-                    position
-                )
-            
-                if (codeSpan) {
+                const code = this.codeSpanResolver.tryParse(stream, text, blockId, position)
+                if (code) {
                     flushText()
-                    result.push(codeSpan)
-                    textStart = stream.position()
-                    continue
-                }
-            }            
-
-            // image
-            if (ch === '!' && stream.peek(1) === '[') {
-                const image = this.imageResolver.tryParse(stream, blockId, position)
-                if (image) {
-                    flushText()
-                    result.push(image)
+                    result.push(code)
                     textStart = stream.position()
                     continue
                 }
             }
 
-            // link
+            // Images
+            if (ch === '!' && stream.peek(1) === '[') {
+                const img = this.imageResolver.tryParse(stream, blockId, position)
+                if (img) {
+                    flushText()
+                    result.push(img)
+                    textStart = stream.position()
+                    continue
+                }
+            }
+
+            // Links
             if (ch === '[') {
                 const link = this.linkResolver.tryParse(stream, blockId, position)
                 if (link) {
@@ -209,15 +149,8 @@ class ParseInline {
                 }
             }
 
-            // delimiter lexer
-            if (this.delimiterLexer.tryLex(
-                stream,
-                blockId,
-                position,
-                result,
-                delimiterStack
-            )) {
-                flushText()
+            // Delimiters (*, _)
+            if (this.delimiterLexer.tryLex(stream, blockId, position, result, delimiterStack)) {
                 textStart = stream.position()
                 continue
             }
@@ -235,8 +168,17 @@ class ParseInline {
                 type: 'text',
                 blockId,
                 text: { symbolic: '', semantic: '' },
-                position: { start: position, end: position },
+                position: { start: position, end: position }
             }]
+    }
+
+    private extractFencedCodeContent(text: string, fence: string): string {
+        const lines = text.split('\n')
+        if (lines.length <= 1) return ''
+        const content = lines.slice(1)
+        const closingPattern = new RegExp(`^\\s{0,3}${fence.charAt(0)}{${fence.length},}\\s*$`)
+        if (closingPattern.test(content[content.length - 1])) content.pop()
+        return content.join('\n')
     }
 
     private parseTableRow(line: string): TableCell[] {
@@ -244,82 +186,37 @@ class ParseInline {
         let current = ''
         let escaped = false
         let inCode = false
-        
+
         for (let i = 0; i < line.length; i++) {
             const char = line[i]
-            
-            if (escaped) {
-                current += char
-                escaped = false
-                continue
-            }
-            
-            if (char === '\\') {
-                escaped = true
-                current += char
-                continue
-            }
-            
-            if (char === '`') {
-                inCode = !inCode
-                current += char
-                continue
-            }
-            
-            if (char === '|' && !inCode) {
-                cellTexts.push(current)
-                current = ''
-                continue
-            }
-            
+            if (escaped) { current += char; escaped = false; continue }
+            if (char === '\\') { current += char; escaped = true; continue }
+            if (char === '`') { current += char; inCode = !inCode; continue }
+            if (char === '|' && !inCode) { cellTexts.push(current); current = ''; continue }
             current += char
         }
-        
-        if (current || cellTexts.length > 0) {
-            cellTexts.push(current)
-        }
-        
-        if (cellTexts.length > 0 && cellTexts[0].trim() === '') cellTexts.shift()
-        if (cellTexts.length > 0 && cellTexts[cellTexts.length - 1].trim() === '') cellTexts.pop()
 
-        let cells: TableCell[] = []
-        for (const cellText of cellTexts) {
+        if (current || cellTexts.length > 0) cellTexts.push(current)
+        if (cellTexts[0]?.trim() === '') cellTexts.shift()
+        if (cellTexts[cellTexts.length-1]?.trim() === '') cellTexts.pop()
+
+        return cellTexts.map(cellText => {
             const paragraph: Paragraph = {
                 id: uuid(),
                 type: 'paragraph',
                 text: cellText,
-                position: {
-                    start: 0,
-                    end: cellText.length,
-                },
+                position: { start: 0, end: cellText.length },
                 inlines: [],
-            };
-
-            cells.push({
+            }
+            return {
                 id: uuid(),
                 type: 'tableCell',
                 text: cellText,
-                position: {
-                    start: 0,
-                    end: cellText.length,
-                },
+                position: { start: 0, end: cellText.length },
                 blocks: [paragraph],
                 inlines: [],
-            });
-        }
-        
-        return cells;
-    }
-
-    private extractFencedCodeContent(text: string, fence: string): string {
-        const lines = text.split('\n');
-        if (lines.length <= 1) return '';
-        const contentLines = lines.slice(1);
-        const closingPattern = new RegExp(`^\\s{0,3}${fence.charAt(0)}{${fence.length},}\\s*$`);
-        if (contentLines.length > 0 && closingPattern.test(contentLines[contentLines.length - 1])) {
-            contentLines.pop();
-        }
-        return contentLines.join('\n');
+            }
+        })
     }
 }
 
