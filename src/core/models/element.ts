@@ -4,7 +4,6 @@ import Selection from './selection'
 import Editor from './editor'
 import Render from './render'
 import scss from '../styles/element.scss?inline'
-import { buildBlocks } from '../ast/ast'
 import { onKey } from '../utils/key'
 
 class Element extends HTMLElement {
@@ -26,8 +25,7 @@ class Element extends HTMLElement {
     connectedCallback() {
         const attrValue = this.getAttribute('value') ?? ''
 
-        this.ast.text = attrValue
-        this.ast.blocks = buildBlocks(attrValue)
+        this.ast.setText(attrValue)
 
         this.addStyles()
         this.addDOM()
@@ -49,8 +47,7 @@ class Element extends HTMLElement {
         if (value === this.ast.text) return
 
         if (!this.hasAcceptedExternalValue && value !== '') {
-            this.ast.text = value
-            this.ast.blocks = buildBlocks(value)
+            this.ast.setText(value)
             this.renderAST()
             this.hasAcceptedExternalValue = true
         }

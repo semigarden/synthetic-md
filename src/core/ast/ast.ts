@@ -180,7 +180,7 @@ export function buildBlocks(text: string): Block[] {
     return blocks;
 }
 
-function parseInlinesRecursive(block: Block) {
+export function parseInlinesRecursive(block: Block) {
     switch (block.type) {
         case "paragraph":
         case "heading":
@@ -840,7 +840,7 @@ export function parseInlineContent(text: string, blockId: string, offset: number
     return result;
 }
 
-function parseLinkReferenceDefinitions(text: string) {
+export function parseLinkReferenceDefinitions(text: string) {
     // Match: [label]: url "optional title"
     const refRegex = /^\[([^\]]+)\]:\s*<?([^\s>]+)>?(?:\s+["'(]([^"')]+)["')])?$/gm;
     let match;

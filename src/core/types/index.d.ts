@@ -5,6 +5,12 @@ export type EditContext = {
     inlineElement: HTMLElement
 }
 
+export type ParseBlockContext = {
+    isFencedCodeBlock: boolean
+    codeBlockFence: string
+    currentCodeBlock: Block | null
+}
+
 type AstEffect = 
  | { type: 'input'; blockId: string; inlineId: string; text: string; caretPosition: number }
  | { type: 'splitBlock'; blockId: string; inlineId: string; caretPosition: number }

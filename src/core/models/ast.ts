@@ -1,4 +1,6 @@
-import { buildBlocks, detectType, parseInlineContent } from '../ast/ast'
+import ParseBlock from './parse/parseBlock'
+import ParseInline from './parse/parseInline'
+import { buildBlocks, detectType, parseInlineContent, parseLinkReferenceDefinitions } from '../ast/ast'
 import { AstApplyEffect, Block, Inline, List, ListItem } from '../types'
 import { uuid } from '../utils/utils'
 
@@ -6,9 +8,35 @@ class AST {
     public text = ''
     public blocks: Block[] = []
 
-    constructor(text: string = '') {
+    private blockParse = new ParseBlock()
+    private inlineParse = new ParseInline()
+
+    constructor(text = '') {
         this.text = text
-        this.blocks = buildBlocks(text)
+    }
+
+    setText(text: string) {
+        this.text = text
+        this.blocks = this.parse(text)
+    }
+
+    private parse(text: string): Block[] {
+        parseLinkReferenceDefinitions(text)
+
+        const blocks: Block[] = []
+        let offset = 0
+
+        for (const line of text.split('\n')) {
+            const produced = this.blockParse.line(line, offset)
+            if (produced) blocks.push(...produced)
+            offset += line.length + 1
+        }
+
+        for (const block of blocks) {
+            this.inlineParse.applyRecursive(block)
+        }
+
+        return blocks
     }
 
     private transformBlock(
