@@ -1,4 +1,5 @@
 import AST from "./ast"
+import AstQuery from "./AstQuery"
 import ParseAst from "../parse/parseAst"
 import { Block, Inline, ListItem } from "../../types"
 import { uuid } from "../../utils/utils"
@@ -6,8 +7,12 @@ import { uuid } from "../../utils/utils"
 class AstMutation {
     constructor(
         private ast: AST,
-        private parser: ParseAst
+        private parser: ParseAst,
     ) {}
+
+    private get query() {
+        return new AstQuery(this.ast.blocks)
+    }
 
     public splitBlockPure(
         block: Block,
@@ -74,8 +79,8 @@ class AstMutation {
         leftBlock: Block
         removedBlock?: Block
     } | null {
-        const leftBlock = this.ast.getBlockById(leftInline.blockId)
-        const rightBlock = this.ast.getBlockById(rightInline.blockId)
+        const leftBlock = this.query.getBlockById(leftInline.blockId)
+        const rightBlock = this.query.getBlockById(rightInline.blockId)
         if (!leftBlock || !rightBlock) return null
     
         const mergedText =
@@ -148,20 +153,13 @@ class AstMutation {
         return paragraph
     }
 
-    public getListItemText(item: ListItem): string {
-        const marker = '- '
-        return marker + item.blocks
-            .map(b => b.inlines.map(i => i.text.symbolic).join(''))
-            .join('')
-    }
-
     public removeBlockCascade(block: Block) {
         const removed: Block[] = []
         let current: Block | null = block
     
         while (current) {
             removed.push(current)
-            const parent = this.ast.getParentBlock(current)
+            const parent = this.query.getParentBlock(current)
     
             if (!parent) {
                 const i = this.ast.blocks.findIndex(b => b.id === current!.id)

@@ -47,7 +47,7 @@ class Selection {
         const target = e.target as HTMLElement
             if (!target.dataset?.inlineId) return
           
-            const inline = this.ast.getInlineById(target.dataset.inlineId!)
+            const inline = this.ast.query.getInlineById(target.dataset.inlineId!)
             if (!inline) return
 
             const selection = window.getSelection()
@@ -93,7 +93,7 @@ class Selection {
             const inlineEl = this.rootElement?.querySelector(`[data-inline-id="${this.focusedInlineId}"]`) as HTMLElement
             if (!inlineEl) return
 
-            const inline = this.ast.getInlineById(this.focusedInlineId)
+            const inline = this.ast.query.getInlineById(this.focusedInlineId)
             if (inline) {
                 inlineEl.innerHTML = ''
                 const newTextNode = document.createTextNode(inline.text.semantic)
@@ -106,7 +106,7 @@ class Selection {
             if (!target.dataset?.inlineId) return
 
             const inlineId = target.dataset.inlineId!
-            const inline = this.ast.getInlineById(inlineId)
+            const inline = this.ast.query.getInlineById(inlineId)
             if (!inline) return
 
             target.innerHTML = ''
@@ -124,7 +124,7 @@ class Selection {
         }
 
         if (target.dataset?.blockId) {
-            const block = this.ast.getBlockById(target.dataset.blockId)
+            const block = this.ast.query.getBlockById(target.dataset.blockId)
             if (block) {
                 const lastInline = block.inlines.at(-1)
                 if (lastInline) {
@@ -161,10 +161,10 @@ class Selection {
         }
     
         const inlineId = inlineEl.dataset.inlineId!
-        const inline = this.ast.getInlineById(inlineId)
+        const inline = this.ast.query.getInlineById(inlineId)
         if (!inline) return
 
-        const block = this.ast.getBlockById(inline.blockId)
+        const block = this.ast.query.getBlockById(inline.blockId)
         if (!block) return
 
         this.caret.blockId = block.id
@@ -184,7 +184,7 @@ class Selection {
 
         if (!blockId || !inlineId) return null
     
-        const block = this.ast.getBlockById(blockId)
+        const block = this.ast.query.getBlockById(blockId)
         if (!block) return null
     
         const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)

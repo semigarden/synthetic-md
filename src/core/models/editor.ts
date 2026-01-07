@@ -43,7 +43,7 @@ class Editor {
     public resolveSplit(context: EditContext): EditEffect {
         const caretPosition = this.caret.getPositionInInline(context.inlineElement)
         
-        const parentBlock = this.ast.getParentBlock(context.block)
+        const parentBlock = this.ast.query.getParentBlock(context.block)
 
         if (parentBlock?.type === 'listItem') {
             return {
@@ -72,7 +72,7 @@ class Editor {
     private resolveMerge(context: EditContext): EditEffect {
         if (this.caret.getPositionInInline(context.inlineElement) !== 0) return { preventDefault: false }
 
-        const list = this.ast.getListForMarkerMerge(context.block)
+        const list = this.ast.query.getListForMarkerMerge(context.block)
         if (list) {
             return {
                 preventDefault: true,
@@ -80,7 +80,7 @@ class Editor {
             }
         }
 
-        const previousInline = this.ast.getPreviousInline(context.inline.id)
+        const previousInline = this.ast.query.getPreviousInline(context.inline.id)
         if (previousInline) {
             return {
                 preventDefault: true,

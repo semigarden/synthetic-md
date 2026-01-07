@@ -1,5 +1,6 @@
 import AstNormalizer from './AstNormalizer'
 import AstMutation from './AstMutation'
+import AstQuery from './AstQuery'
 import ParseAst from '../parse/parseAst'
 import { AstApplyEffect, Block, Inline, List, ListItem } from '../../types'
 import { uuid } from '../../utils/utils'
@@ -21,16 +22,25 @@ class AST {
         this.blocks = this.parser.parse(text)
     }
 
+    public get query() {
+        return new AstQuery(this.blocks)
+    }
+
+    public normalize() {
+        this.normalizer.apply(this.blocks)
+        this.text = this.normalizer.text
+    }
+
     private transformBlock(
         block: Block,
         text: string,
     ): AstApplyEffect | null {
-        const flat = this.flattenBlocks(this.blocks)
+        const flat = this.query.flattenBlocks(this.blocks)
         const index = flat.findIndex(b => b.id === block.id)
     
         const newBlocks = this.parser.reparseTextFragment(text, block.position.start)
     
-        const inline = this.getFirstInline(newBlocks)
+        const inline = this.query.getFirstInline(newBlocks)
         if (!inline) return null
     
         this.blocks.splice(index, 1, ...newBlocks)
@@ -59,149 +69,11 @@ class AST {
         }
     }
 
-    private getBlockByIdRecursive(targetId: string, blocks: Block[]): Block | null {
-        for (const block of blocks) {
-            if (block.id === targetId) {
-                return block
-            }
-            if ('blocks' in block && block.blocks) {
-                const found = this.getBlockByIdRecursive(targetId, block.blocks)
-                if (found) return found
-            }
-        }
-        return null
-    }
-
-    private getInlineByIdRecursive(targetId: string, blocks: Block[]): Inline | null {
-        for (const block of blocks) {
-            for (const inline of block.inlines) {
-                if (inline.id === targetId) {
-                    return inline
-                }
-            }
-
-            if ('blocks' in block && block.blocks) {
-                const found = this.getInlineByIdRecursive(targetId, block.blocks)
-                if (found) return found
-            }
-        }
-        return null
-    }
-
-    private getInlineAtPosition(
-        inlines: Inline[],
-        caretPosition: number
-    ): { inline: Inline; position: number } | null {
-        let acc = 0
-    
-        for (const inline of inlines) {
-            const len = inline.text.symbolic.length
-    
-            if (caretPosition <= acc + len) {
-                return {
-                    inline,
-                    position: Math.max(0, caretPosition - acc),
-                }
-            }
-    
-            acc += len
-        }
-
-        const last = inlines.at(-1)
-        if (!last) return null
-
-        return {
-            inline: last,
-            position: last.text.symbolic.length,
-        }
-    }
-
-    private getFirstInline(
-        blocks: Block[]
-    ): Inline | null {
-        for (const block of blocks) {
-            if (block.inlines && block.inlines.length > 0) {
-                const inline = block.inlines[0]
-                return inline
-            }
-    
-            if ('blocks' in block && block.blocks.length > 0) {
-                const found = this.getFirstInline(block.blocks)
-                if (found) return found
-            }
-        }
-        return null
-    }
-
-    public getBlockById(id: string): Block | null {
-        return this.getBlockByIdRecursive(id, this.blocks)
-    }
-
-    public getInlineById(id: string): Inline | null {
-        return this.getInlineByIdRecursive(id, this.blocks)
-    }
-
-    public getPreviousInline(inlineId: string): Inline | null {
-        const flattenedInlines = this.flattenInlines(this.blocks)
-        const inlineIndex = flattenedInlines.findIndex(i => i.id === inlineId)
-        if (inlineIndex === -1) return null
-
-        return flattenedInlines[inlineIndex - 1] ?? null
-    }
-
-    public getParentBlock(block: Block): Block | null {
-        const flattenedBlocks = this.flattenBlocks(this.blocks)
-        const parentBlock = flattenedBlocks.find(b => b.type === 'list' && b.blocks?.some(b => b.id === block.id)) ?? flattenedBlocks.find(b => b.type === 'listItem' && b.blocks?.some(b => b.id === block.id))
-        return parentBlock ?? null
-    }
-
-    public getListForMarkerMerge(block: Block): List | null {
-        let current: Block | null = block
-    
-        while (true) {
-            const parent = this.getParentBlock(current)
-            if (!parent) return null
-    
-            if (parent.type === 'listItem') {
-                current = parent
-                continue
-            }
-    
-            if (parent.type === 'list' && parent.blocks[0]?.id === current.id) {
-                return parent
-            }
-    
-            return null
-        }
-    }
-
-    public flattenBlocks(blocks: Block[], acc: Block[] = []): Block[] {
-        for (const b of blocks) {
-          acc.push(b)
-          if ('blocks' in b && b.blocks) this.flattenBlocks(b.blocks, acc)
-        }
-        return acc
-    }
-
-    public flattenInlines(blocks: Block[]): Inline[] {
-        const inlines: Inline[] = []
-        for (const b of blocks) {
-            inlines.push(...b.inlines)
-            if ('blocks' in b && b.blocks) inlines.push(...this.flattenInlines(b.blocks))
-        }
-        return inlines
-    }
-
-    public normalize() {
-        this.normalizer.apply(this.blocks)
-        this.text = this.normalizer.text
-    }
-
     public input(blockId: string, inlineId: string, text: string, caretPosition: number): AstApplyEffect | null {
-        const block = this.getBlockById(blockId)
+        const block = this.query.getBlockById(blockId)
         if (!block) return null
 
-        const inline = this.getInlineById(inlineId)
+        const inline = this.query.getInlineById(inlineId)
         if (!inline) return null
 
         const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
@@ -224,7 +96,7 @@ class AST {
         }
         
         const newInlines = this.parser.inline.parseInlineContent(newText, block.id, block.position.start)
-        const { inline: newInline, position } = this.getInlineAtPosition(newInlines, absoluteCaretPosition) ?? { inline: null, position: 0 }
+        const { inline: newInline, position } = this.query.getInlineAtPosition(newInlines, absoluteCaretPosition) ?? { inline: null, position: 0 }
         if (!newInline) return null
 
         block.text = newInlines.map((i: Inline) => i.text.symbolic).join('')
@@ -259,7 +131,7 @@ class AST {
     }
 
     public split(blockId: string, inlineId: string, caretPosition: number): AstApplyEffect | null {
-        const block = this.getBlockById(blockId)
+        const block = this.query.getBlockById(blockId)
         if (!block) return null
 
         const result = this.mutation.splitBlockPure(block, inlineId, caretPosition)
@@ -294,10 +166,10 @@ class AST {
     }
 
     public splitListItem(listItemId: string, blockId: string, inlineId: string, caretPosition: number): AstApplyEffect | null {
-        const listItem = this.getBlockById(listItemId) as ListItem
+        const listItem = this.query.getBlockById(listItemId) as ListItem
         if (!listItem) return null
 
-        const list = this.getParentBlock(listItem) as List
+        const list = this.query.getParentBlock(listItem) as List
         if (!list) return null
 
         const block = listItem.blocks.find(b => b.id === blockId)
@@ -325,8 +197,8 @@ class AST {
         const index = list.blocks.findIndex(b => b.id === listItem.id)
         list.blocks.splice(index + 1, 0, newListItem)
 
-        listItem.text = this.mutation.getListItemText(listItem)
-        newListItem.text = this.mutation.getListItemText(newListItem)
+        listItem.text = this.query.getListItemText(listItem)
+        newListItem.text = this.query.getListItemText(newListItem)
 
         return {
             renderEffect: {
@@ -352,11 +224,11 @@ class AST {
     }
 
     public mergeInline(inlineAId: string, inlineBId: string): AstApplyEffect | null {
-        const inlineA = this.getInlineById(inlineAId)
-        const inlineB = this.getInlineById(inlineBId)
+        const inlineA = this.query.getInlineById(inlineAId)
+        const inlineB = this.query.getInlineById(inlineBId)
         if (!inlineA || !inlineB) return null
 
-        const flattened = this.flattenInlines(this.blocks)
+        const flattened = this.query.flattenInlines(this.blocks)
         const iA = flattened.findIndex(i => i.id === inlineAId)
         const iB = flattened.findIndex(i => i.id === inlineBId)
         if (iA === -1 || iB === -1) return null
@@ -401,7 +273,7 @@ class AST {
     }
 
     public mergeMarker(blockId: string): AstApplyEffect | null {
-        const list = this.getBlockById(blockId)
+        const list = this.query.getBlockById(blockId)
         if (!list || list.type !== 'list') return null
 
         const listIndex = this.blocks.findIndex(b => b.id === list.id)
