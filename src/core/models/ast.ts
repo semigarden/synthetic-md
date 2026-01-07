@@ -1,6 +1,6 @@
 import ParseBlock from './parse/parseBlock'
 import ParseInline from './parse/parseInline'
-import { detectType, parseInlineContent, parseLinkReferenceDefinitions } from '../ast/ast'
+import { parseInlineContent, parseLinkReferenceDefinitions } from '../ast/ast'
 import { AstApplyEffect, Block, Inline, List, ListItem } from '../types'
 import { uuid } from '../utils/utils'
 
@@ -8,8 +8,8 @@ class AST {
     public text = ''
     public blocks: Block[] = []
 
-    private blockParse = new ParseBlock()
-    private inlineParse = new ParseInline()
+    private parseBlock = new ParseBlock()
+    private parseInline = new ParseInline()
 
     constructor(text = '') {
         this.text = text
@@ -27,13 +27,13 @@ class AST {
         let offset = 0
 
         for (const line of text.split('\n')) {
-            const produced = this.blockParse.line(line, offset)
+            const produced = this.parseBlock.line(line, offset)
             if (produced) blocks.push(...produced)
             offset += line.length + 1
         }
 
         for (const block of blocks) {
-            this.inlineParse.applyRecursive(block)
+            this.parseInline.applyRecursive(block)
         }
 
         return blocks
@@ -43,18 +43,18 @@ class AST {
         text: string,
         offset: number,
     ): Block[] {
-        this.blockParse.reset()
+        this.parseBlock.reset()
     
         const blocks: Block[] = []
 
         for (const line of text.split('\n')) {
-            const produced = this.blockParse.line(line, offset)
+            const produced = this.parseBlock.line(line, offset)
             if (produced) blocks.push(...produced)
             offset += line.length + 1
         }
     
         for (const block of blocks) {
-            this.inlineParse.applyRecursive(block)
+            this.parseInline.applyRecursive(block)
         }
     
         return blocks
@@ -497,7 +497,7 @@ class AST {
             + caretPosition
 
         const newText = block.inlines.slice(0, inlineIndex).map(i => i.text.symbolic).join('') + text + block.inlines.slice(inlineIndex + 1).map(i => i.text.symbolic).join('')
-        const detectedBlockType = detectType(newText)
+        const detectedBlockType = this.parseBlock.detectType(newText)
 
         const blockTypeChanged =
             detectedBlockType.type !== block.type ||

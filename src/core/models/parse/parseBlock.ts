@@ -1,5 +1,4 @@
-import { ParseBlockContext, Block, Inline } from "../../types"
-import { detectType } from "../../ast/ast"
+import { ParseBlockContext, Block, Inline, DetectedBlock } from "../../types"
 import { uuid } from "../../utils/utils"
 
 class ParseBlock {
@@ -42,7 +41,7 @@ class ParseBlock {
             return null
         }
 
-        const detected = detectType(line)
+        const detected = this.detectType(line)
         let block: Block
 
         switch (detected.type) {
@@ -183,7 +182,82 @@ class ParseBlock {
         return blocks
     }
 
-    reset() {
+    public detectType(line: string): DetectedBlock {
+        const trimmed = line.trim()
+    
+        if (trimmed === "") return { type: "blankLine" }
+    
+        const headingMatch = trimmed.match(/^(#{1,6})(?:\s+(.*))?$/)
+        if (headingMatch) {
+            return { type: 'heading', level: headingMatch[1].length }
+        }
+    
+        if (/^>/.test(line)) {
+            return { type: 'blockQuote' }
+        }
+    
+        if (/^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/.test(line)) {
+            return { type: 'thematicBreak' }
+        }
+    
+        if (/^\s{0,3}(```+|~~~+)/.test(line)) {
+            return { type: 'codeBlock' }
+        }
+    
+        if (/^ {4,}[^ ]/.test(line)) {
+            return { type: 'codeBlock' }
+        }
+    
+        const taskListMatch = /^\s{0,3}([-*+])\s+\[([ xX])\]\s+/.exec(line);
+        if (taskListMatch) {
+            return { 
+                type: 'taskListItem', 
+                ordered: false,
+                checked: taskListMatch[2].toLowerCase() === 'x'
+            }
+        }
+    
+        const unorderedListMatch = /^\s{0,3}([-*+])\s+/.exec(line);
+        if (unorderedListMatch) {
+            return { type: 'listItem', ordered: false }
+        }
+    
+        const orderedListMatch = /^\s{0,3}(\d{1,9})([.)])\s+/.exec(line);
+        if (orderedListMatch) {
+            return { 
+                type: 'listItem', 
+                ordered: true,
+                listStart: parseInt(orderedListMatch[1], 10)
+            }
+        }
+    
+        if (/\|/.test(trimmed) && !/^\|[-:\s|]+\|$/.test(trimmed)) {
+            if (!/^[-:\s|]+$/.test(trimmed.replace(/^\||\|$/g, ''))) {
+                return { type: 'table' }
+            }
+        }
+    
+        if (/^\[\^[^\]]+\]:/.test(trimmed)) {
+            return { type: 'footnote' }
+        }
+    
+        if (/^\s{0,3}<(?:script|pre|style|textarea)[\s>]/i.test(line) ||
+            /^\s{0,3}<!--/.test(line) ||
+            /^\s{0,3}<\?/.test(line) ||
+            /^\s{0,3}<![A-Z]/.test(line) ||
+            /^\s{0,3}<!\[CDATA\[/.test(line) ||
+            /^\s{0,3}<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h1|h2|h3|h4|h5|h6|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?:\s|\/?>|$)/i.test(line)) {
+            return { type: 'htmlBlock' }
+        }
+    
+        if (/^\s{0,3}\[([^\]]+)\]:\s*/.test(line)) {
+            return { type: 'paragraph' }
+        }
+    
+        return { type: 'paragraph' }
+    }
+
+    public reset() {
         this.context = {
             isFencedCodeBlock: false,
             codeBlockFence: '',
