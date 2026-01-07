@@ -1,6 +1,5 @@
 import AstNormalizer from './AstNormalizer'
-import ParseBlock from '../parse/parseBlock'
-import ParseInline from '../parse/parseInline'
+import ParseAst from '../parse/parseAst'
 import { AstApplyEffect, Block, Inline, List, ListItem } from '../../types'
 import { uuid } from '../../utils/utils'
 
@@ -9,8 +8,7 @@ class AST {
     public blocks: Block[] = []
 
     private normalizer = new AstNormalizer()
-    private parseBlock = new ParseBlock()
-    private parseInline = new ParseInline()
+    private parser = new ParseAst()
 
     constructor(text = '') {
         this.text = text
@@ -18,47 +16,7 @@ class AST {
 
     setText(text: string) {
         this.text = text
-        this.blocks = this.parse(text)
-    }
-
-    private parse(text: string): Block[] {
-        this.parseInline.parseLinkReferenceDefinitions(text)
-
-        const blocks: Block[] = []
-        let offset = 0
-
-        for (const line of text.split('\n')) {
-            const produced = this.parseBlock.line(line, offset)
-            if (produced) blocks.push(...produced)
-            offset += line.length + 1
-        }
-
-        for (const block of blocks) {
-            this.parseInline.applyRecursive(block)
-        }
-
-        return blocks
-    }
-
-    private reparseTextFragment(
-        text: string,
-        offset: number,
-    ): Block[] {
-        this.parseBlock.reset()
-    
-        const blocks: Block[] = []
-
-        for (const line of text.split('\n')) {
-            const produced = this.parseBlock.line(line, offset)
-            if (produced) blocks.push(...produced)
-            offset += line.length + 1
-        }
-    
-        for (const block of blocks) {
-            this.parseInline.applyRecursive(block)
-        }
-    
-        return blocks
+        this.blocks = this.parser.parse(text)
     }
 
     private transformBlock(
@@ -68,7 +26,7 @@ class AST {
         const flat = this.flattenBlocks(this.blocks)
         const index = flat.findIndex(b => b.id === block.id)
     
-        const newBlocks = this.reparseTextFragment(text, block.position.start)
+        const newBlocks = this.parser.reparseTextFragment(text, block.position.start)
     
         const inline = this.getFirstInline(newBlocks)
         if (!inline) return null
@@ -243,7 +201,7 @@ class AST {
         const mergedText =
             leftInline.text.symbolic + rightInline.text.symbolic
     
-        const mergedInlines = this.parseInline.parseInlineContent(
+        const mergedInlines = this.parser.inline.parseInlineContent(
             mergedText,
             leftBlock.id,
             leftBlock.position.start
@@ -310,7 +268,7 @@ class AST {
         const beforeInlines = block.inlines.slice(0, inlineIndex)
         const afterInlines = block.inlines.slice(inlineIndex + 1)
     
-        const leftInlines = this.parseInline.parseInlineContent(
+        const leftInlines = this.parser.inline.parseInlineContent(
             leftText,
             block.id,
             block.position.start
@@ -318,7 +276,7 @@ class AST {
     
         const rightBlockId = uuid()
     
-        const rightInlines = this.parseInline.parseInlineContent(
+        const rightInlines = this.parser.inline.parseInlineContent(
             rightText,
             rightBlockId,
             0
@@ -431,7 +389,7 @@ class AST {
             + caretPosition
 
         const newText = block.inlines.slice(0, inlineIndex).map(i => i.text.symbolic).join('') + text + block.inlines.slice(inlineIndex + 1).map(i => i.text.symbolic).join('')
-        const detectedBlockType = this.parseBlock.detectType(newText)
+        const detectedBlockType = this.parser.block.detectType(newText)
 
         const blockTypeChanged =
             detectedBlockType.type !== block.type ||
@@ -442,7 +400,7 @@ class AST {
             return this.transformBlock(block, newText)
         }
         
-        const newInlines = this.parseInline.parseInlineContent(newText, block.id, block.position.start)
+        const newInlines = this.parser.inline.parseInlineContent(newText, block.id, block.position.start)
         const { inline: newInline, position } = this.getInlineAtPosition(newInlines, absoluteCaretPosition) ?? { inline: null, position: 0 }
         if (!newInline) return null
 
