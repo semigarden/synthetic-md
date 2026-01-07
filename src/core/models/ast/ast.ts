@@ -67,6 +67,10 @@ class AST {
     }
 
     public input(blockId: string, inlineId: string, text: string, caretPosition: number): AstApplyEffect | null {
+        // const lex = this.parser.inline.lexInline('---', blockId, 0)
+        // console.log('lex', JSON.stringify(lex, null, 2))
+        // return null
+
         const block = this.query.getBlockById(blockId)
         if (!block) return null
 
@@ -143,7 +147,7 @@ class AST {
             renderEffect: {
                 type: 'update',
                 render: {
-                    remove: [block],
+                    remove: [],
                     insert: [
                         { at: 'current', target: block, current: left },
                         { at: 'next', target: block, current: right },
