@@ -3,6 +3,7 @@ import LinkResolver from './linkResolver'
 import ImageResolver from './imageResolver'
 import CodeSpanResolver from './codeSpanResolver'
 import EntityResolver from './entityResolver'
+import BackslashEscapeResolver from './backslashEscapeResolver'
 import EmphasisResolver from './emphasisResolver'
 import { Block, Inline, CodeBlock, TableCell, Paragraph, Delimiter } from '../../types'
 import { uuid, decodeHTMLEntity } from '../../utils/utils'
@@ -12,6 +13,7 @@ class ParseInline {
     private imageResolver = new ImageResolver()
     private codeSpanResolver = new CodeSpanResolver()
     private entityResolver = new EntityResolver()
+    private backslashEscapeResolver = new BackslashEscapeResolver()
     private emphasisResolver = new EmphasisResolver()
 
     public apply(block: Block): Inline[] {
@@ -130,29 +132,18 @@ class ParseInline {
         while (!stream.end()) {
             const ch = stream.peek()!
 
-            /* ---------------- backslash escapes ---------------- */
-            if (stream.consume('\\')) {
-                const next = stream.peek()
-                if (next) {
-                    flushText()
-                    stream.next()
+            /* ---------------- backslash escape ---------------- */
+            const escape = this.backslashEscapeResolver.tryParse(
+                stream,
+                blockId,
+                position
+            )
 
-                    result.push({
-                        id: uuid(),
-                        type: 'text',
-                        blockId,
-                        text: {
-                            symbolic: '\\' + next,
-                            semantic: next,
-                        },
-                        position: {
-                            start: position + textStart,
-                            end: position + stream.position(),
-                        },
-                    })
-                    textStart = stream.position()
-                    continue
-                }
+            if (escape) {
+                flushText()
+                result.push(escape)
+                textStart = stream.position()
+                continue
             }
 
             /* ---------------- entity ---------------- */
