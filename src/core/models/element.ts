@@ -1,4 +1,4 @@
-import AST from './ast'
+import AST from './ast/ast'
 import Caret from './caret'
 import Selection from './selection'
 import Editor from './editor'

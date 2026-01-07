@@ -1,12 +1,14 @@
-import ParseBlock from './parse/parseBlock'
-import ParseInline from './parse/parseInline'
-import { AstApplyEffect, Block, Inline, List, ListItem } from '../types'
-import { uuid } from '../utils/utils'
+import AstNormalizer from './AstNormalizer'
+import ParseBlock from '../parse/parseBlock'
+import ParseInline from '../parse/parseInline'
+import { AstApplyEffect, Block, Inline, List, ListItem } from '../../types'
+import { uuid } from '../../utils/utils'
 
 class AST {
     public text = ''
     public blocks: Block[] = []
 
+    private normalizer = new AstNormalizer()
     private parseBlock = new ParseBlock()
     private parseInline = new ParseInline()
 
@@ -409,77 +411,10 @@ class AST {
         return inlines
     }
 
-    public updateAST() {
-        let globalPos = 0
-
-        const updateBlock = (block: Block): string => {
-            const start = globalPos
-            let text = ''
-
-            if (!('blocks' in block) || !block.blocks) {
-                let localPos = 0
-
-                for (const inline of block.inlines) {
-                    if (!inline.id) inline.id = uuid()
-                        const len = inline.text.symbolic.length
-                        inline.position = {
-                        start: localPos,
-                        end: localPos + len,
-                    }
-                    localPos += len
-                }
-
-                text = block.inlines.map((i: Inline) => i.text.symbolic).join('')
-                block.text = text
-                block.position = { start, end: start + text.length }
-                globalPos += text.length
-
-                return text
-            }
-
-            if (block.type === 'list') {
-                const parts: string[] = []
-
-                for (let i = 0; i < block.blocks.length; i++) {
-                    const item = block.blocks[i]
-                    const itemText = updateBlock(item)
-                    parts.push(itemText)
-
-                    if (i < block.blocks.length - 1) {
-                        parts.push('\n')
-                        globalPos += 1
-                    }
-                }
-
-                text = parts.join('')
-            }
-
-            else if (block.type === 'listItem') {
-                const marker = '- '
-                text += marker
-                globalPos += marker.length
-
-                const content = updateBlock(block.blocks[0])
-                text += content
-            }
-
-            block.text = text
-            block.position = { start, end: globalPos }
-
-            return text
-        }
-
-        const parts: string[] = []
-        for (let i = 0; i < this.blocks.length; i++) {
-            parts.push(updateBlock(this.blocks[i]))
-            if (i < this.blocks.length - 1) {
-                parts.push('\n')
-                globalPos += 1
-            }
-        }
-
-        this.text = parts.join('')
-    } 
+    public normalize() {
+        this.normalizer.apply(this.blocks)
+        this.text = this.normalizer.text
+    }
 
     public input(blockId: string, inlineId: string, text: string, caretPosition: number): AstApplyEffect | null {
         const block = this.getBlockById(blockId)

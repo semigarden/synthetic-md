@@ -1,4 +1,4 @@
-import AST from "./ast"
+import AST from "./ast/ast"
 import Caret from "./caret"
 import Render from "./render"
 import { EditContext, EditEffect, AstApplyEffect, Intent } from "../types"
@@ -122,7 +122,7 @@ class Editor {
 
                     const { renderEffect, caretEffect } = result
 
-                    this.ast.updateAST()
+                    this.ast.normalize()
                     this.render.apply(renderEffect)
                     this.caret.apply(caretEffect)
                     this.emitChange()
