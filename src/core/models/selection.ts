@@ -7,9 +7,9 @@ class Selection {
     private focusedInlineId: string | null = null
 
     constructor(
-        private rootElement: HTMLElement,
-        private caret: Caret,
         private ast: AST,
+        private caret: Caret,
+        private rootElement: HTMLElement,
     ) {}
 
     attach() {

@@ -1,5 +1,6 @@
 import AST from "./ast"
 import Caret from "./caret"
+import Render from "./render"
 import { EditContext, EditEffect, AstApplyEffect, Intent, Block } from "../types"
 import { renderBlock } from "../render/renderBlock"
 
@@ -7,9 +8,10 @@ class Editor {
     private emitChange: () => void
 
     constructor(
-        private rootElement: HTMLElement,
-        private caret: Caret,
         private ast: AST,
+        private caret: Caret,
+        private render: Render,
+        private rootElement: HTMLElement,
         emitChange: () => void
     ) {
         this.emitChange = emitChange

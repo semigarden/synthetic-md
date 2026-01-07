@@ -2,6 +2,7 @@ import AST from './ast'
 import Caret from './caret'
 import Selection from './selection'
 import Editor from './editor'
+import Render from './render'
 import scss from '../styles/element.scss?inline'
 import { buildAst } from '../ast/ast'
 import { renderAST } from '../render/render'
@@ -11,6 +12,7 @@ class Element extends HTMLElement {
     private shadowRootElement: ShadowRoot
     private rootElement?: HTMLElement
     private ast = new AST()
+    private render: Render | null = null
     private caret: Caret | null = null
     private selection: Selection | null = null
     private editor: Editor | null = null
@@ -30,11 +32,12 @@ class Element extends HTMLElement {
 
         this.addStyles()
         this.addDOM()
-        this.render()
+        this.renderAST()
 
+        this.render = new Render(this.rootElement!)
         this.caret = new Caret(this.rootElement!)
-        this.editor = new Editor(this.rootElement!, this.caret, this.ast, this.emitChange.bind(this))
-        this.selection = new Selection(this.rootElement!, this.caret, this.ast)
+        this.editor = new Editor(this.ast, this.caret, this.render, this.rootElement!, this.emitChange.bind(this))
+        this.selection = new Selection(this.ast, this.caret, this.rootElement!)
         this.selection.attach()
     }
 
@@ -49,7 +52,7 @@ class Element extends HTMLElement {
         if (!this.hasAcceptedExternalValue && value !== '') {
             this.ast.text = value
             this.ast.ast = buildAst(value)
-            this.render()
+            this.renderAST()
             this.hasAcceptedExternalValue = true
         }
     }
@@ -58,7 +61,7 @@ class Element extends HTMLElement {
         return this.ast.text
     }
 
-    private render() {
+    private renderAST() {
         if (!this.rootElement) return
         const ast = this.ast.ast
         if (!ast) return
