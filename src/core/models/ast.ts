@@ -21,13 +21,16 @@ class AST {
         this.ast.blocks.splice(index, 1, ...newBlocks)
     
         return {
-            render: {
-                remove: [block],
-                insert: [{
-                    at: index > 0 ? 'next' : 'current',
-                    target: index > 0 ? this.ast.blocks[index - 1] : newBlocks[0],
-                    current: newBlocks[0],
-                }],
+            renderEffect: {
+                type: 'update',
+                render: {
+                    remove: [block],
+                    insert: [{
+                        at: index > 0 ? 'next' : 'current',
+                        target: index > 0 ? this.ast.blocks[index - 1] : newBlocks[0],
+                        current: newBlocks[0],
+                    }],
+                },
             },
             caretEffect: {
                 type: 'restore',
@@ -174,6 +177,29 @@ class AST {
         return inlines
     }
 
+    public removeEmptyBlocks(blocks: Block[]) {
+        for (const block of blocks) {
+            const hasContent =
+                block.inlines.length > 0 ||
+                ('blocks' in block && block.blocks.some(b => b.inlines.length > 0 || ('blocks' in b && b.blocks.length > 0)))
+    
+            if (!hasContent) {
+                const parentBlock = this.getParentBlock(block)
+                if (parentBlock && 'blocks' in parentBlock) {
+                    const idx = parentBlock.blocks.findIndex(b => b.id === block.id)
+                    if (idx !== -1) parentBlock.blocks.splice(idx, 1)
+                } else {
+                    const idx = this.ast.blocks.findIndex(b => b.id === block.id)
+                    if (idx !== -1) this.ast.blocks.splice(idx, 1)
+                }
+
+                if (parentBlock) {
+                    this.removeEmptyBlocks([parentBlock])
+                }
+            }
+        }
+    }
+
     public updateAST() {
         let globalPos = 0
 
@@ -282,15 +308,18 @@ class AST {
         newInlines.forEach(i => i.blockId = block.id)
 
         return {
-            render: {
-                remove: [],
-                insert: [
-                    {
-                        at: 'current',
-                        target: block,
-                        current: block,
-                    },
-                ],
+            renderEffect: {
+                type: 'update',
+                render: {
+                    remove: [],
+                    insert: [
+                        {
+                            at: 'current',
+                            target: block,
+                            current: block,
+                        },
+                    ],
+                },
             },
             caretEffect: {
                 type: 'restore',
@@ -342,20 +371,23 @@ class AST {
         this.ast.blocks.splice(this.ast.blocks.findIndex(b => b.id === block.id), 1, block, newBlock)
 
         return {
-            render: {
-                remove: [block],
-                insert: [
-                    {
-                        at: 'current',
-                        target: block,
-                        current: block,
-                    },
-                    {
-                        at: 'next',
-                        target: block,
-                        current: newBlock,
-                    },
-                ],
+            renderEffect: {
+                type: 'update',
+                render: {
+                    remove: [block],
+                    insert: [
+                        {
+                            at: 'current',
+                            target: block,
+                            current: block,
+                        },
+                        {
+                            at: 'next',
+                            target: block,
+                            current: newBlock,
+                        },
+                    ],
+                },
             },
             caretEffect: {
                 type: 'restore',
@@ -379,7 +411,7 @@ class AST {
         const split = this.split(blockId, inlineId, caretPosition)
         if (!split) return null
 
-        const [previousBlock, nextBlock] = [split.render.insert[1].target, split.render.insert[1].current]
+        const [previousBlock, nextBlock] = [split.renderEffect.render.insert[1].target, split.renderEffect.render.insert[1].current]
         const previousBlockIndex = this.ast.blocks.findIndex(b => b.id === previousBlock.id)
 
         const marker = listItem.text.match(/^[-*+]\s/)
@@ -400,20 +432,23 @@ class AST {
         this.ast.blocks.splice(previousBlockIndex, 2, list)
 
         return {
-            render: {
-                remove: [],
-                insert: [
-                    {
-                        at: 'current',
-                        target: listItem,
-                        current: listItem,
-                    },
-                    {
-                        at: 'next',
-                        target: listItem,
-                        current: newListItem,
-                    },
-                ],
+            renderEffect: {
+                type: 'update',
+                render: {
+                    remove: [],
+                    insert: [
+                        {
+                            at: 'current',
+                            target: listItem,
+                            current: listItem,
+                        },
+                        {
+                            at: 'next',
+                            target: listItem,
+                            current: newListItem,
+                        },
+                    ],
+                },
             },
             caretEffect: {
                 type: 'restore',
@@ -473,13 +508,16 @@ class AST {
         currentBlock.position = { start: currentBlock.position.start, end: currentBlock.position.end - leftInline.text.symbolic.length + mergedText.length }
 
         return {
-            render: {
-                remove: [],
-                insert: targetBlocks.map(block => ({
-                    at: 'current',
-                    target: block,
-                    current: block,
-                })),
+            renderEffect: {
+                type: 'update',
+                render: {
+                    remove: [],
+                    insert: targetBlocks.map(block => ({
+                        at: 'current',
+                        target: block,
+                        current: block,
+                    })),
+                },
             },
             caretEffect: {
                 type: 'restore',
@@ -521,15 +559,18 @@ class AST {
                 this.ast.blocks.splice(listIndex, 1, paragraph)
 
                 return {
-                    render: {
-                        remove: [list],
-                        insert: [
-                            {
-                                at: 'current',
-                                target: paragraph,
-                                current: paragraph,
-                            },
-                        ],
+                    renderEffect: {
+                        type: 'update',
+                        render: {
+                            remove: [list],
+                            insert: [
+                                {
+                                    at: 'current',
+                                    target: paragraph,
+                                    current: paragraph,
+                                },
+                            ],
+                        },
                     },
                     caretEffect: {
                         type: 'restore',
@@ -547,15 +588,18 @@ class AST {
                 this.ast.blocks.splice(listIndex + 1, 0, list)
 
                 return {
-                    render: {
-                        remove: [listItem],
-                        insert: [
-                            {
-                                at: 'previous',
-                                target: list,
-                                current: paragraph,
-                            },
-                        ],
+                    renderEffect: {
+                        type: 'update',
+                        render: {
+                            remove: [listItem],
+                            insert: [
+                                {
+                                    at: 'previous',
+                                    target: list,
+                                    current: paragraph,
+                                },
+                            ],
+                        },
                     },
                     caretEffect: {
                         type: 'restore',

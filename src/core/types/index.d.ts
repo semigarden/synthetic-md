@@ -13,15 +13,13 @@ type AstEffect =
  | { type: 'mergeMarker'; blockId: string }
 
 export type AstApplyEffect = {
-    render: {
-        remove: Block[]
-        insert: {
-            at: 'current' | 'previous' | 'next'
-            target: Block
-            current: Block
-        }[]
-    }
+    renderEffect: RenderEffect
     caretEffect: CaretEffect
+}
+
+type RenderEffect = {
+    type: 'update'
+    render: Render
 }
 
 type CaretEffect = { 
@@ -32,6 +30,17 @@ type CaretEffect = {
 export type EditEffect = {
     preventDefault?: boolean
     ast?: AstEffect[]
+}
+
+type RenderInsert = {
+    at: 'current' | 'previous' | 'next'
+    target: Block
+    current: Block
+}
+
+type Render = {
+    remove: Block[]
+    insert: RenderInsert[]
 }
 
 type Caret = {
