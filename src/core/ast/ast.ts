@@ -206,15 +206,14 @@ function parseInlinesRecursive(block: Block) {
     }
 }
 
-function parseInlines(block: Block, previousInlines: Inline[] = []): Inline[] {
+function parseInlines(block: Block): Inline[] {
     const next: Inline[] = [];
     const text = block.text;
     const blockId = block.id;
 
     if (text === "") {
-        const oldEmpty = previousInlines[0];
         next.push({
-            id: oldEmpty?.id || uuid(),
+            id: uuid(),
             type: "text",
             blockId,
             text: { symbolic: "", semantic: "" },
@@ -229,19 +228,8 @@ function parseInlines(block: Block, previousInlines: Inline[] = []): Inline[] {
             ? extractFencedCodeContent(text, codeBlock.fence!)
             : text;
 
-        const old = previousInlines[0];
-        const oldContent = old?.text.semantic || "";
-
-        const shouldReuse = old && (
-            codeContent.startsWith(oldContent) ||
-            codeContent.endsWith(oldContent) ||
-            oldContent.startsWith(codeContent) ||
-            oldContent.endsWith(codeContent) ||
-            Math.abs(codeContent.length - oldContent.length) < 50
-        );
-
         next.push({
-            id: shouldReuse ? old.id : uuid(),
+            id: uuid(),
             type: "text",
             blockId,
             text: { symbolic: text, semantic: codeContent },
