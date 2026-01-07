@@ -118,6 +118,185 @@ class AST {
         return null
     }
 
+    private getListItemText(item: ListItem): string {
+        const marker = '- '
+        return marker + item.blocks
+            .map(b => b.inlines.map(i => i.text.symbolic).join(''))
+            .join('')
+    }
+
+    private listItemToParagraph(listItem: ListItem): Block {
+        const block = listItem.blocks[0]
+    
+        const paragraph: Block = {
+            id: uuid(),
+            type: 'paragraph',
+            inlines: block.inlines,
+            text: block.inlines.map(i => i.text.symbolic).join(''),
+            position: { ...block.position },
+        }
+
+        paragraph.inlines.forEach(i => (i.blockId = paragraph.id))
+    
+        return paragraph
+    }
+
+    private isBlockEmpty(block: Block): boolean {
+        if ('inlines' in block && block.inlines.length > 0) return false
+        if ('blocks' in block && block.blocks.length > 0) return false
+        return true
+    }
+
+    private removeBlockCascade(block: Block) {
+        const removed: Block[] = []
+        let current: Block | null = block
+    
+        while (current) {
+            removed.push(current)
+            const parent = this.getParentBlock(current)
+    
+            if (!parent) {
+                const i = this.ast.blocks.findIndex(b => b.id === current!.id)
+                if (i !== -1) this.ast.blocks.splice(i, 1)
+                break
+            }
+    
+            if ('blocks' in parent) {
+                const i = parent.blocks.findIndex(b => b.id === current!.id)
+                if (i !== -1) parent.blocks.splice(i, 1)
+            }
+    
+            if (!this.isBlockEmpty(parent)) break
+
+            current = parent
+        }
+
+        return removed
+    }
+
+    private mergeInlinePure(
+        leftInline: Inline,
+        rightInline: Inline
+    ): {
+        leftBlock: Block
+        removedBlock?: Block
+    } | null {
+        const leftBlock = this.getBlockById(leftInline.blockId)
+        const rightBlock = this.getBlockById(rightInline.blockId)
+        if (!leftBlock || !rightBlock) return null
+    
+        const mergedText =
+            leftInline.text.symbolic + rightInline.text.symbolic
+    
+        const mergedInlines = parseInlineContent(
+            mergedText,
+            leftBlock.id,
+            leftBlock.position.start
+        )
+    
+        const sameBlock = leftBlock.id === rightBlock.id
+    
+        if (sameBlock) {
+            const leftIndex = leftBlock.inlines.findIndex(i => i.id === leftInline.id)
+            const rightIndex = leftBlock.inlines.findIndex(i => i.id === rightInline.id)
+            if (leftIndex === -1 || rightIndex === -1) return null
+    
+            leftBlock.inlines.splice(
+                leftIndex,
+                rightIndex === leftIndex + 1 ? 2 : 1,
+                ...mergedInlines
+            )
+    
+            leftBlock.text = leftBlock.inlines.map(i => i.text.symbolic).join('')
+            leftBlock.position.end =
+                leftBlock.position.start + leftBlock.text.length
+    
+            return { leftBlock }
+        }
+
+        const leftIndex = leftBlock.inlines.findIndex(i => i.id === leftInline.id)
+        const rightIndex = rightBlock.inlines.findIndex(i => i.id === rightInline.id)
+        if (leftIndex === -1 || rightIndex === -1) return null
+    
+        const tailInlines = rightBlock.inlines.slice(rightIndex + 1)
+    
+        tailInlines.forEach(i => (i.blockId = leftBlock.id))
+    
+        leftBlock.inlines.splice(
+            leftIndex,
+            1,
+            ...mergedInlines,
+            ...tailInlines
+        )
+    
+        leftBlock.text = leftBlock.inlines.map(i => i.text.symbolic).join('')
+        leftBlock.position.end =
+            leftBlock.position.start + leftBlock.text.length
+    
+        return {
+            leftBlock,
+            removedBlock: rightBlock,
+        }
+    }
+
+    private splitBlockPure(
+        block: Block,
+        inlineId: string,
+        caretPosition: number
+    ): { left: Block; right: Block } | null {
+        const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
+        if (inlineIndex === -1) return null
+    
+        const inline = block.inlines[inlineIndex]
+    
+        const leftText = inline.text.symbolic.slice(0, caretPosition)
+        const rightText = inline.text.symbolic.slice(caretPosition)
+    
+        const beforeInlines = block.inlines.slice(0, inlineIndex)
+        const afterInlines = block.inlines.slice(inlineIndex + 1)
+    
+        const leftInlines = parseInlineContent(
+            leftText,
+            block.id,
+            block.position.start
+        )
+    
+        const rightBlockId = uuid()
+    
+        const rightInlines = parseInlineContent(
+            rightText,
+            rightBlockId,
+            0
+        ).concat(afterInlines)
+    
+        rightInlines.forEach(i => (i.blockId = rightBlockId))
+    
+        const leftBlock: Block = {
+            ...block,
+            inlines: [...beforeInlines, ...leftInlines],
+        }
+    
+        leftBlock.text = leftBlock.inlines.map(i => i.text.symbolic).join('')
+        leftBlock.position = {
+            start: block.position.start,
+            end: block.position.start + leftBlock.text.length,
+        }
+    
+        const rightBlock = {
+            id: rightBlockId,
+            type: block.type,
+            inlines: rightInlines,
+            text: rightInlines.map(i => i.text.symbolic).join(''),
+            position: {
+                start: leftBlock.position.end,
+                end: leftBlock.position.end +
+                    rightInlines.map(i => i.text.symbolic).join('').length,
+            },
+        } as Block
+    
+        return { left: leftBlock, right: rightBlock }
+    }
+
     public getBlockById(id: string): Block | null {
         return this.getBlockByIdRecursive(id, this.ast?.blocks ?? [])
     }
@@ -202,6 +381,8 @@ class AST {
 
     public updateAST() {
         let globalPos = 0
+
+        console.log(JSON.stringify(this.ast.blocks, null, 2))
 
         const updateBlock = (block: Block): string => {
             const start = globalPos
@@ -337,55 +518,13 @@ class AST {
         const block = this.getBlockById(blockId)
         if (!block) return null
 
-        const inline = this.getInlineById(inlineId)
-        if (!inline) return null
+        const result = this.splitBlockPure(block, inlineId, caretPosition)
+        if (!result) return null
 
-        const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
-        if (inlineIndex === -1) return null
+        const { left, right } = result
 
-        const leftText = inline.text.symbolic.slice(0, caretPosition)
-        const rightText = inline.text.symbolic.slice(caretPosition)
-
-        const beforeInlines = block.inlines.slice(0, inlineIndex)
-        const afterInlines = block.inlines.slice(inlineIndex + 1)
-
-        const leftInlines = parseInlineContent(
-            leftText,
-            block.id,
-            block.position.start
-        )
-
-        const newBlockId = uuid()
-
-        const rightInlines = parseInlineContent(
-            rightText,
-            newBlockId,
-            0
-        ).concat(afterInlines)
-
-        rightInlines.forEach(i => (i.blockId = newBlockId))
-
-        block.inlines = [...beforeInlines, ...leftInlines]
-        block.text = block.inlines.map(i => i.text.symbolic).join('')
-        block.position = {
-            start: block.position.start,
-            end: block.position.start + block.text.length,
-        }
-
-        const newBlock = {
-            id: newBlockId,
-            type: block.type,
-            inlines: rightInlines,
-            text: rightInlines.map(i => i.text.symbolic).join(''),
-            position: {
-                start: block.position.end,
-                end: block.position.end +
-                    rightInlines.map(i => i.text.symbolic).join('').length,
-            },
-        } as Block
-
-        const blockIndex = this.ast.blocks.findIndex(b => b.id === block.id)
-        this.ast.blocks.splice(blockIndex, 1, block, newBlock)
+        const index = this.ast.blocks.findIndex(b => b.id === block.id)
+        this.ast.blocks.splice(index, 1, left, right)
 
         return {
             renderEffect: {
@@ -393,26 +532,18 @@ class AST {
                 render: {
                     remove: [block],
                     insert: [
-                        {
-                            at: 'current',
-                            target: block,
-                            current: block,
-                        },
-                        {
-                            at: 'next',
-                            target: block,
-                            current: newBlock,
-                        },
+                        { at: 'current', target: block, current: left },
+                        { at: 'next', target: block, current: right },
                     ],
                 },
             },
             caretEffect: {
                 type: 'restore',
                 caret: {
-                    blockId: newBlock.id,
-                    inlineId: newBlock.inlines[0].id,
+                    blockId: right.id,
+                    inlineId: right.inlines[0].id,
                     position: 0,
-                    affinity: 'start'
+                    affinity: 'start',
                 },
             },
         }
@@ -425,28 +556,33 @@ class AST {
         const list = this.getParentBlock(listItem) as List
         if (!list) return null
 
-        const split = this.split(blockId, inlineId, caretPosition)
-        if (!split) return null
+        const block = listItem.blocks.find(b => b.id === blockId)
+        if (!block) return null
 
-        const [previousBlock, nextBlock] = [split.renderEffect.render.insert[1].target, split.renderEffect.render.insert[1].current]
-        const previousBlockIndex = this.ast.blocks.findIndex(b => b.id === previousBlock.id)
+        const result = this.splitBlockPure(block, inlineId, caretPosition)
+        if (!result) return null
 
-        const marker = listItem.text.match(/^[-*+]\s/)
-        const newListItemText = marker?.[0] + nextBlock.text
-        const newListItem = {
+        const { left, right } = result
+
+        listItem.blocks = [left]
+
+        const newListItem: ListItem = {
             id: uuid(),
             type: 'listItem',
-            text: newListItemText,
-            position: { start: listItem.position.end, end: listItem.position.end + newListItemText.length },
-            blocks: [nextBlock],
+            blocks: [right],
             inlines: [],
-        } as ListItem
+            text: '',
+            position: {
+                start: listItem.position.end,
+                end: listItem.position.end,
+            },
+        }
 
-        listItem.text = listItem.text.slice(0, -previousBlock.text.length)
-        listItem.blocks = [previousBlock]
-        list.blocks.splice(list.blocks.findIndex(b => b.id === listItem.id), 1, listItem, newListItem)
+        const index = list.blocks.findIndex(b => b.id === listItem.id)
+        list.blocks.splice(index + 1, 0, newListItem)
 
-        this.ast.blocks.splice(previousBlockIndex, 2, list)
+        listItem.text = this.getListItemText(listItem)
+        newListItem.text = this.getListItemText(newListItem)
 
         return {
             renderEffect: {
@@ -454,26 +590,18 @@ class AST {
                 render: {
                     remove: [],
                     insert: [
-                        {
-                            at: 'current',
-                            target: listItem,
-                            current: listItem,
-                        },
-                        {
-                            at: 'next',
-                            target: listItem,
-                            current: newListItem,
-                        },
+                        { at: 'current', target: listItem, current: listItem },
+                        { at: 'next', target: listItem, current: newListItem },
                     ],
                 },
             },
             caretEffect: {
                 type: 'restore',
                 caret: {
-                    blockId: nextBlock.id,
-                    inlineId: nextBlock.inlines[0].id,
+                    blockId: right.id,
+                    inlineId: right.inlines[0].id,
                     position: 0,
-                    affinity: 'start'
+                    affinity: 'start',
                 },
             },
         }
@@ -484,195 +612,124 @@ class AST {
         const inlineB = this.getInlineById(inlineBId)
         if (!inlineA || !inlineB) return null
 
-        const flattenedInlines = this.flattenInlines(this.ast.blocks)
-        const inlineIndexA = flattenedInlines.findIndex(i => i.id === inlineAId)
-        const inlineIndexB = flattenedInlines.findIndex(i => i.id === inlineBId)
-        if (inlineIndexA === -1 || inlineIndexB === -1) return null
+        const flattened = this.flattenInlines(this.ast.blocks)
+        const iA = flattened.findIndex(i => i.id === inlineAId)
+        const iB = flattened.findIndex(i => i.id === inlineBId)
+        if (iA === -1 || iB === -1) return null
 
-        const [leftInline, rightInline] = inlineIndexA < inlineIndexB ? [inlineA, inlineB] : [inlineB, inlineA]
+        const [leftInline, rightInline] =
+            iA < iB ? [inlineA, inlineB] : [inlineB, inlineA]
 
-        const currentBlock = this.getBlockById(leftInline.blockId)
-        if (!currentBlock) return null
+        const result = this.mergeInlinePure(leftInline, rightInline)
+        if (!result) return null
 
-        const mergedText = leftInline.text.symbolic + rightInline.text.symbolic
-        const mergedInlines = parseInlineContent(mergedText, currentBlock.id, currentBlock.position.start)
-        
-        const removeBlocks: Block[] = []
-        const targetBlocks: Block[] = [currentBlock]
+        const { leftBlock, removedBlock } = result
 
-        const sameBlock = leftInline.blockId === rightInline.blockId
-
-        if (sameBlock) {
-            const leftIndex = currentBlock.inlines.findIndex(
-                i => i.id === leftInline.id
-            )
-            const rightIndex = currentBlock.inlines.findIndex(
-                i => i.id === rightInline.id
-            )
-    
-            if (leftIndex === -1 || rightIndex === -1) return null
-    
-            const deleteCount =
-                rightIndex === leftIndex + 1 ? 2 : 1
-    
-            currentBlock.inlines.splice(
-                leftIndex,
-                deleteCount,
-                ...mergedInlines
-            )
-    
-            currentBlock.text = mergedText
-            currentBlock.position = {
-                start: currentBlock.position.start,
-                end: currentBlock.position.start + mergedText.length
-            }
-        } else {
-            const previousBlock = this.getBlockById(rightInline.blockId)
-            if (!previousBlock) return null
-
-            const leftIndex = currentBlock.inlines.findIndex(
-                i => i.id === leftInline.id
-            )
-            const rightIndex = previousBlock.inlines.findIndex(
-                i => i.id === rightInline.id
-            )
-
-            if (leftIndex === -1 || rightIndex === -1) return null
-
-            const tailInlines = previousBlock.inlines.slice(rightIndex + 1)
-            const tailText = tailInlines
-                .map(i => i.text.symbolic)
-                .join('')
-
-            currentBlock.inlines.splice(
-                leftIndex,
-                1,
-                ...mergedInlines,
-                ...tailInlines
-            )
-
-            currentBlock.text = mergedText + tailText
-            currentBlock.position = {
-                start: currentBlock.position.start,
-                end: currentBlock.position.start + currentBlock.text.length
-            }
-
-            this.ast.blocks.splice(
-                this.ast.blocks.findIndex(b => b.id === previousBlock.id),
-                1
-            )
-
-            removeBlocks.push(previousBlock)
+        let removedBlocks: Block[] = []
+        if (removedBlock) {
+            removedBlocks = this.removeBlockCascade(removedBlock)
         }
 
         return {
             renderEffect: {
                 type: 'update',
                 render: {
-                    remove: removeBlocks,
-                    insert: targetBlocks.map(block => ({
-                        at: 'current',
-                        target: block,
-                        current: block,
-                    })),
+                    remove: removedBlocks,
+                    insert: [
+                        {
+                            at: 'current',
+                            target: leftBlock,
+                            current: leftBlock,
+                        },
+                    ],
                 },
             },
             caretEffect: {
                 type: 'restore',
                 caret: {
-                    blockId: currentBlock.id,
-                    inlineId: mergedInlines[0].id,
+                    blockId: leftBlock.id,
+                    inlineId: leftBlock.inlines[0].id,
                     position: leftInline.position.end,
-                    affinity: 'start'
+                    affinity: 'start',
                 },
             },
         }
     }
 
     public mergeMarker(blockId: string): AstApplyEffect | null {
-        const block = this.getBlockById(blockId)
-        if (!block) return null
+        const list = this.getBlockById(blockId)
+        if (!list || list.type !== 'list') return null
 
-        if (block.type === 'list') {
-            const list = block
-            const listIndex = this.ast.blocks.findIndex(b => b.id === list.id)
-            const listItem = list.blocks[0] as ListItem
+        const listIndex = this.ast.blocks.findIndex(b => b.id === list.id)
+        if (listIndex === -1) return null
 
-            const marker = listItem.text.match(/^[-*+]\s/)
-            const listItemText = listItem.text.slice(marker?.[0]?.length ?? 0)
-            const mergedText = marker?.[0]?.slice(0, -1) + listItemText
+        const listItem = list.blocks[0] as ListItem
+        if (!listItem || listItem.blocks.length === 0) return null
 
-            const paragraph = {
-                id: uuid(),
-                type: 'paragraph',
-                text: mergedText,
-                inlines: [],
-                position: { start: listItem.position.start, end: listItem.position.start + mergedText.length }
-            } as Block
+        const paragraph = this.listItemToParagraph(listItem)
 
-            const newInlines = parseInlineContent(mergedText, paragraph.id, paragraph.position.start)
-            paragraph.inlines.push(...newInlines)
+        if (list.blocks.length === 1) {
+            this.ast.blocks.splice(listIndex, 1, paragraph)
 
-            if (list.blocks.length === 1) {
-                this.ast.blocks.splice(listIndex, 1, paragraph)
-
-                return {
-                    renderEffect: {
-                        type: 'update',
-                        render: {
-                            remove: [list],
-                            insert: [
-                                {
-                                    at: 'current',
-                                    target: paragraph,
-                                    current: paragraph,
-                                },
-                            ],
-                        },
+            return {
+                renderEffect: {
+                    type: 'update',
+                    render: {
+                        remove: [list],
+                        insert: [
+                            {
+                                at: 'current',
+                                target: list,
+                                current: paragraph,
+                            },
+                        ],
                     },
-                    caretEffect: {
-                        type: 'restore',
-                        caret: {
-                            blockId: paragraph.id,
-                            inlineId: paragraph.inlines[0].id,
-                            position: 1,
-                            affinity: 'start'
-                        },
+                },
+                caretEffect: {
+                    type: 'restore',
+                    caret: {
+                        blockId: paragraph.id,
+                        inlineId: paragraph.inlines[0].id,
+                        position: 0,
+                        affinity: 'start',
                     },
-                }
-            } else {
-                list.blocks.splice(0, 1)
-                this.ast.blocks.splice(listIndex, 1, paragraph)
-                this.ast.blocks.splice(listIndex + 1, 0, list)
-
-                return {
-                    renderEffect: {
-                        type: 'update',
-                        render: {
-                            remove: [listItem],
-                            insert: [
-                                {
-                                    at: 'previous',
-                                    target: list,
-                                    current: paragraph,
-                                },
-                            ],
-                        },
-                    },
-                    caretEffect: {
-                        type: 'restore',
-                        caret: {
-                            blockId: paragraph.id,
-                            inlineId: paragraph.inlines[0].id,
-                            position: 1,
-                            affinity: 'start'
-                        },
-                    },
-                }
+                },
             }
         }
 
-        return null
+        list.blocks.splice(0, 1)
+
+        this.ast.blocks.splice(
+            listIndex,
+            1,
+            paragraph,
+            list
+        )
+
+        return {
+            renderEffect: {
+                type: 'update',
+                render: {
+                    remove: [],
+                    insert: [
+                        {
+                            at: 'previous',
+                            target: list,
+                            current: paragraph,
+                        },
+                    ],
+                },
+            },
+            caretEffect: {
+                type: 'restore',
+                caret: {
+                    blockId: paragraph.id,
+                    inlineId: paragraph.inlines[0].id,
+                    position: 0,
+                    affinity: 'start',
+                },
+            },
+        }
     }
 }
 
