@@ -11,7 +11,7 @@ class ParseAst {
 
     public parse(text: string): Block[] {
         this.linkReferences.reset()
-        this.inline.parseLinkReferenceDefinitions(text)
+        this.parseLinkReferenceDefinitions(text)
 
         const blocks: Block[] = []
         let offset = 0
@@ -48,6 +48,23 @@ class ParseAst {
         }
     
         return blocks
+    }
+
+    private parseLinkReferenceDefinitions(text: string) {
+        const refRegex = /^\[([^\]]+)\]:\s*<?([^\s>]+)>?(?:\s+["'(]([^"')]+)["')])?$/gm
+
+        let match: RegExpExecArray | null
+
+        while ((match = refRegex.exec(text)) !== null) {
+            const label = match[1].toLowerCase().trim()
+            const url = match[2]
+            const title = match[3]
+
+            this.linkReferences.set(label, {
+                url,
+                title,
+            })
+        }
     }
 }
 

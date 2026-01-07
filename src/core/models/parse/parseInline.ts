@@ -321,23 +321,6 @@ class ParseInline {
         }
         return contentLines.join('\n');
     }
-
-    public parseLinkReferenceDefinitions(text: string) {
-        const refRegex = /^\[([^\]]+)\]:\s*<?([^\s>]+)>?(?:\s+["'(]([^"')]+)["')])?$/gm
-
-        let match: RegExpExecArray | null
-
-        while ((match = refRegex.exec(text)) !== null) {
-            const label = match[1].toLowerCase().trim()
-            const url = match[2]
-            const title = match[3]
-
-            this.linkReferences.set(label, {
-                url,
-                title,
-            })
-        }
-    }
 }
 
 export default ParseInline
