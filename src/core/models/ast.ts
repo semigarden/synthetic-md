@@ -1,6 +1,6 @@
 import ParseBlock from './parse/parseBlock'
 import ParseInline from './parse/parseInline'
-import { buildBlocks, detectType, parseInlineContent, parseLinkReferenceDefinitions } from '../ast/ast'
+import { detectType, parseInlineContent, parseLinkReferenceDefinitions } from '../ast/ast'
 import { AstApplyEffect, Block, Inline, List, ListItem } from '../types'
 import { uuid } from '../utils/utils'
 
@@ -39,6 +39,27 @@ class AST {
         return blocks
     }
 
+    private reparseTextFragment(
+        text: string,
+        offset: number,
+    ): Block[] {
+        this.blockParse.reset()
+    
+        const blocks: Block[] = []
+
+        for (const line of text.split('\n')) {
+            const produced = this.blockParse.line(line, offset)
+            if (produced) blocks.push(...produced)
+            offset += line.length + 1
+        }
+    
+        for (const block of blocks) {
+            this.inlineParse.applyRecursive(block)
+        }
+    
+        return blocks
+    }
+
     private transformBlock(
         block: Block,
         text: string,
@@ -46,7 +67,7 @@ class AST {
         const flat = this.flattenBlocks(this.blocks)
         const index = flat.findIndex(b => b.id === block.id)
     
-        const newBlocks = buildBlocks(text)
+        const newBlocks = this.reparseTextFragment(text, block.position.start)
     
         const inline = this.getFirstInline(newBlocks)
         if (!inline) return null
