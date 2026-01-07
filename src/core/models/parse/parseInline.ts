@@ -1,11 +1,13 @@
 import InlineStream from './inlineStream'
 import LinkResolver from './linkResolver'
+import ImageResolver from './imageResolver'
 import EmphasisResolver from './emphasisResolver'
 import { Block, Inline, CodeBlock, TableCell, Paragraph, Delimiter } from '../../types'
 import { uuid, decodeHTMLEntity } from '../../utils/utils'
 
 class ParseInline {
     private linkResolver = new LinkResolver()
+    private imageResolver = new ImageResolver()
     private emphasisResolver = new EmphasisResolver()
 
     public apply(block: Block): Inline[] {
@@ -244,6 +246,17 @@ class ParseInline {
                 continue
             }
 
+            /* ---------------- image ---------------- */
+            if (ch === '!' && stream.peek(1) === '[') {
+                const image = this.imageResolver.tryParse(stream, blockId, position)
+                if (image) {
+                    flushText()
+                    result.push(image)
+                    textStart = stream.position()
+                    continue
+                }
+            }
+
             /* ---------------- link ---------------- */
             if (ch === '[') {
                 const link = this.linkResolver.tryParse(stream, blockId, position)
@@ -407,170 +420,6 @@ class ParseInline {
             //     linkReferences.set(label, { url, title });
             // }
         }
-    }
-
-    private parseImage(text: string, start: number, blockId: string, offset: number): { inline: Inline; end: number } | null {
-        // start is at "!"
-        if (text[start + 1] !== '[') return null;
-        
-        // Find matching ]
-        let bracketDepth = 1;
-        let pos = start + 2;
-        while (pos < text.length && bracketDepth > 0) {
-            if (text[pos] === '\\') {
-                pos += 2;
-                continue;
-            }
-            if (text[pos] === '[') bracketDepth++;
-            if (text[pos] === ']') bracketDepth--;
-            pos++;
-        }
-        
-        if (bracketDepth !== 0) return null;
-        
-        const altTextEnd = pos - 1;
-        const altText = text.slice(start + 2, altTextEnd);
-        
-        // Inline image: ![alt](url "title")
-        if (pos < text.length && text[pos] === '(') {
-            const destResult = this.parseLinkDestinationAndTitle(text, pos);
-            if (destResult) {
-                const symbolic = text.slice(start, destResult.end);
-                return {
-                    inline: {
-                        id: uuid(),
-                        type: 'image',
-                        blockId,
-                        text: {
-                            symbolic,
-                            semantic: altText,
-                        },
-                        position: {
-                            start: offset + start,
-                            end: offset + destResult.end,
-                        },
-                        url: destResult.url,
-                        alt: altText,
-                        title: destResult.title,
-                    },
-                    end: destResult.end,
-                };
-            }
-        }
-        
-        // Reference image: ![alt][ref] or ![alt][] or ![alt]
-        let refLabel = '';
-        let refEnd = pos;
-        
-        if (pos < text.length && text[pos] === '[') {
-            const refClosePos = text.indexOf(']', pos + 1);
-            if (refClosePos !== -1) {
-                refLabel = text.slice(pos + 1, refClosePos).toLowerCase().trim();
-                refEnd = refClosePos + 1;
-            }
-        }
-        
-        if (refLabel === '') {
-            refLabel = altText.toLowerCase().trim();
-        }
-        
-        // const ref = linkReferences.get(refLabel);
-        // if (ref) {
-        //     return {
-        //         inline: {
-        //             id: uuid(),
-        //             type: "image",
-        //             blockId,
-        //             text: {
-        //                 symbolic: text.slice(start, refEnd),
-        //                 semantic: altText,
-        //             },
-        //             position: {
-        //                 start: offset + start,
-        //                 end: offset + refEnd,
-        //             },
-        //             url: ref.url,
-        //             alt: altText,
-        //             title: ref.title,
-        //         },
-        //         end: refEnd,
-        //     };
-        // }
-        
-        return null;
-    }
-
-    private parseLinkDestinationAndTitle(text: string, start: number): { url: string; title?: string; end: number } | null {
-        let pos = start;
-        if (pos >= text.length || text[pos] !== '(') return null;
-        pos++;
-
-        // Skip whitespace
-        while (pos < text.length && /[ \t\n]/.test(text[pos])) pos++;
-        if (pos >= text.length) return null;
-
-        let url = '';
-        
-        // Angle-bracketed destination
-        if (text[pos] === '<') {
-            pos++;
-            const urlStart = pos;
-            while (pos < text.length && text[pos] !== '>' && text[pos] !== '\n') {
-                if (text[pos] === '\\') pos++;
-                pos++;
-            }
-            if (pos >= text.length || text[pos] !== '>') return null;
-            url = text.slice(urlStart, pos);
-            pos++;
-        } else {
-            // Unbracketed destination - count parentheses
-            const urlStart = pos;
-            let parenDepth = 0;
-            while (pos < text.length) {
-                const ch = text[pos];
-                if (ch === '\\') {
-                    pos += 2;
-                    continue;
-                }
-                if (/[ \t\n]/.test(ch) && parenDepth === 0) break;
-                if (ch === '(') {
-                    parenDepth++;
-                } else if (ch === ')') {
-                    if (parenDepth === 0) break;
-                    parenDepth--;
-                }
-                pos++;
-            }
-            url = text.slice(urlStart, pos);
-        }
-
-        // Skip whitespace
-        while (pos < text.length && /[ \t\n]/.test(text[pos])) pos++;
-
-        // Optional title
-        let title: string | undefined;
-        if (pos < text.length && (text[pos] === '"' || text[pos] === "'" || text[pos] === "(")) {
-            const quoteChar = text[pos];
-            const closeChar = quoteChar === '(' ? ')' : quoteChar;
-            pos++;
-            const titleStart = pos;
-            while (pos < text.length && text[pos] !== closeChar) {
-                if (text[pos] === '\\') pos++;
-                pos++;
-            }
-            if (pos >= text.length) return null;
-            title = text.slice(titleStart, pos);
-            pos++;
-        }
-
-        // Skip whitespace
-        while (pos < text.length && /[ \t\n]/.test(text[pos])) pos++;
-
-        // Must end with )
-        if (pos >= text.length || text[pos] !== ")") return null;
-        pos++;
-
-        return { url, title, end: pos };
     }
 }
 

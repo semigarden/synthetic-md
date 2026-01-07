@@ -3,7 +3,7 @@ import { parseLinkDestination } from './parseLinkDestination'
 import { Inline } from '../../types'
 import { uuid } from '../../utils/utils'
 
-class LinkResolver {
+class ImageResolver {
     public tryParse(
         stream: InlineStream,
         blockId: string,
@@ -11,9 +11,13 @@ class LinkResolver {
     ): Inline | null {
         const start = stream.checkpoint()
 
-        if (!stream.consume('[')) return null
+        if (!stream.consume('!')) return null
+        if (!stream.consume('[')) {
+            stream.restore(start)
+            return null
+        }
 
-        const textStart = stream.position()
+        const altStart = stream.position()
         while (!stream.end() && stream.peek() !== ']') {
             stream.next()
         }
@@ -23,7 +27,7 @@ class LinkResolver {
             return null
         }
 
-        const label = stream.slice(textStart, stream.position() - 1)
+        const alt = stream.slice(altStart, stream.position() - 1)
 
         const dest = parseLinkDestination(stream)
         if (!dest) {
@@ -33,11 +37,11 @@ class LinkResolver {
 
         return {
             id: uuid(),
-            type: 'link',
+            type: 'image',
             blockId,
             text: {
                 symbolic: stream.slice(start, stream.position()),
-                semantic: label,
+                semantic: alt,
             },
             position: {
                 start: position + start,
@@ -45,8 +49,9 @@ class LinkResolver {
             },
             url: dest.url,
             title: dest.title,
+            alt,
         } as Inline
     }
 }
 
-export default LinkResolver
+export default ImageResolver
