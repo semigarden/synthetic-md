@@ -1,4 +1,4 @@
-import InlineStream from '../inlineStream'
+import InlineStream from './inlineStream'
 
 export interface LinkDestination {
     url: string

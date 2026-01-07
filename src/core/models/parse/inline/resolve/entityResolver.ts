@@ -1,4 +1,4 @@
-import InlineStream from '../../inlineStream'
+import InlineStream from '../inlineStream'
 import { Inline } from '../../../../types'
 import { uuid, decodeHTMLEntity } from '../../../../utils/utils'
 

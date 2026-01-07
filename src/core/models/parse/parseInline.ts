@@ -1,4 +1,4 @@
-import InlineStream from './inlineStream'
+import InlineStream from './inline/inlineStream'
 import LinkResolver from './inline/resolve/linkResolver'
 import ImageResolver from './inline/resolve/imageResolver'
 import CodeSpanResolver from './inline/resolve/codeSpanResolver'
