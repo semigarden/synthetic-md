@@ -31,10 +31,7 @@ class AST {
         this.text = this.normalizer.text
     }
 
-    private transformBlock(
-        block: Block,
-        text: string,
-    ): AstApplyEffect | null {
+    private transformBlock(block: Block, text: string): AstApplyEffect | null {
         const flat = this.query.flattenBlocks(this.blocks)
         const index = flat.findIndex(b => b.id === block.id)
     
@@ -326,7 +323,7 @@ class AST {
             renderEffect: {
                 type: 'update',
                 render: {
-                    remove: [],
+                    remove: [listItem],
                     insert: [
                         {
                             at: 'previous',

@@ -143,14 +143,15 @@ class Render {
     public apply(effect: RenderEffect) {
         switch (effect.type) {
             case 'update':
+                effect.render.insert.forEach(render => {
+                    this.renderBlock(render.current, this.rootElement, render.at, render.target)
+                })
+
                 effect.render.remove.forEach(block => {
                     const removeBlockElement = this.rootElement.querySelector(`[data-block-id="${block.id}"]`)
                     if (removeBlockElement) removeBlockElement.remove()
                 })
 
-                effect.render.insert.forEach(render => {
-                    this.renderBlock(render.current, this.rootElement, render.at, render.target)
-                })
                 break
         }
     }
