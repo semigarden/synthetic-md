@@ -134,7 +134,7 @@ class Selection {
         }
 
         if (target.classList.contains('element')) {
-            const lastBlock = this.ast.ast.blocks.at(-1)
+            const lastBlock = this.ast.blocks.at(-1)
             if (lastBlock) {
                 const lastInline = lastBlock.inlines.at(-1)
                 if (lastInline) {

@@ -1,27 +1,8 @@
 import { uuid, decodeHTMLEntity } from "../utils/utils";
 import { ParseState, Delimiter, DetectedBlock, Block, Inline } from '../types';
-import { CodeBlock, Paragraph, TableCell, Document } from '../types';
+import { CodeBlock, Paragraph, TableCell } from '../types';
 
-function buildAst(text: string, previousAst: Document | null = null): Document {
-    const blocks = buildBlocks(text, previousAst);
-    const syntheticText = text.replace(/\n/g, '');
-
-    const ast: Document = {
-        id: previousAst?.id || uuid(),
-        type: "document",
-        text,
-        position: {
-            start: 0,
-            end: syntheticText.length,
-        },
-        blocks,
-        inlines: [],
-    };
-
-    return ast;
-}
-
-export function buildBlocks(text: string, previousAst: Document | null = null): Block[] {
+export function buildBlocks(text: string): Block[] {
     const lines = text.split("\n");
     let offset = 0;
     const blocks: Block[] = [];
@@ -198,14 +179,8 @@ export function buildBlocks(text: string, previousAst: Document | null = null): 
         offset = end;
     }
 
-    const prevBlockMap = new Map<string, Block>();
-    previousAst?.blocks.forEach(b => {
-        if (b.id) prevBlockMap.set(b.id, b);
-    });
-
     for (const block of blocks) {
-        const previousVersion = prevBlockMap.get(block.id);
-        parseInlinesRecursive(block, previousVersion);
+        parseInlinesRecursive(block);
     }
 
     return blocks;
@@ -1333,5 +1308,3 @@ export function detectType(line: string): DetectedBlock {
     // Default fallback -> paragraph
     return { type: "paragraph" };
 }
-
-export { buildAst }

@@ -1,24 +1,29 @@
-import { buildAst, buildBlocks, detectType, parseInlineContent } from '../ast/ast'
+import { buildBlocks, detectType, parseInlineContent } from '../ast/ast'
 import { AstApplyEffect, Block, Document, Inline, List, ListItem } from '../types'
 import { uuid } from '../utils/utils'
 
 class AST {
     public text = ''
-    public ast: Document = buildAst('')
+    public blocks: Block[] = []
+
+    constructor(text: string = '') {
+        this.text = text
+        this.blocks = buildBlocks(text)
+    }
 
     private transformBlock(
         block: Block,
         text: string,
     ): AstApplyEffect | null {
-        const flat = this.flattenBlocks(this.ast.blocks)
+        const flat = this.flattenBlocks(this.blocks)
         const index = flat.findIndex(b => b.id === block.id)
     
-        const newBlocks = buildBlocks(text, this.ast)
+        const newBlocks = buildBlocks(text)
     
         const inline = this.getFirstInline(newBlocks)
         if (!inline) return null
     
-        this.ast.blocks.splice(index, 1, ...newBlocks)
+        this.blocks.splice(index, 1, ...newBlocks)
     
         return {
             renderEffect: {
@@ -27,7 +32,7 @@ class AST {
                     remove: [block],
                     insert: [{
                         at: index > 0 ? 'next' : 'current',
-                        target: index > 0 ? this.ast.blocks[index - 1] : newBlocks[0],
+                        target: index > 0 ? this.blocks[index - 1] : newBlocks[0],
                         current: newBlocks[0],
                     }],
                 },
@@ -156,8 +161,8 @@ class AST {
             const parent = this.getParentBlock(current)
     
             if (!parent) {
-                const i = this.ast.blocks.findIndex(b => b.id === current!.id)
-                if (i !== -1) this.ast.blocks.splice(i, 1)
+                const i = this.blocks.findIndex(b => b.id === current!.id)
+                if (i !== -1) this.blocks.splice(i, 1)
                 break
             }
     
@@ -298,15 +303,15 @@ class AST {
     }
 
     public getBlockById(id: string): Block | null {
-        return this.getBlockByIdRecursive(id, this.ast?.blocks ?? [])
+        return this.getBlockByIdRecursive(id, this.blocks)
     }
 
     public getInlineById(id: string): Inline | null {
-        return this.getInlineByIdRecursive(id, this.ast?.blocks ?? [])
+        return this.getInlineByIdRecursive(id, this.blocks)
     }
 
     public getPreviousInline(inlineId: string): Inline | null {
-        const flattenedInlines = this.flattenInlines(this.ast.blocks)
+        const flattenedInlines = this.flattenInlines(this.blocks)
         const inlineIndex = flattenedInlines.findIndex(i => i.id === inlineId)
         if (inlineIndex === -1) return null
 
@@ -314,7 +319,7 @@ class AST {
     }
 
     public getParentBlock(block: Block): Block | null {
-        const flattenedBlocks = this.flattenBlocks(this.ast.blocks)
+        const flattenedBlocks = this.flattenBlocks(this.blocks)
         const parentBlock = flattenedBlocks.find(b => b.type === 'list' && b.blocks?.some(b => b.id === block.id)) ?? flattenedBlocks.find(b => b.type === 'listItem' && b.blocks?.some(b => b.id === block.id))
         return parentBlock ?? null
     }
@@ -417,9 +422,9 @@ class AST {
         }
 
         const parts: string[] = []
-        for (let i = 0; i < this.ast.blocks.length; i++) {
-            parts.push(updateBlock(this.ast.blocks[i]))
-            if (i < this.ast.blocks.length - 1) {
+        for (let i = 0; i < this.blocks.length; i++) {
+            parts.push(updateBlock(this.blocks[i]))
+            if (i < this.blocks.length - 1) {
                 parts.push('\n')
                 globalPos += 1
             }
@@ -498,8 +503,8 @@ class AST {
 
         const { left, right } = result
 
-        const index = this.ast.blocks.findIndex(b => b.id === block.id)
-        this.ast.blocks.splice(index, 1, left, right)
+        const index = this.blocks.findIndex(b => b.id === block.id)
+        this.blocks.splice(index, 1, left, right)
 
         return {
             renderEffect: {
@@ -587,7 +592,7 @@ class AST {
         const inlineB = this.getInlineById(inlineBId)
         if (!inlineA || !inlineB) return null
 
-        const flattened = this.flattenInlines(this.ast.blocks)
+        const flattened = this.flattenInlines(this.blocks)
         const iA = flattened.findIndex(i => i.id === inlineAId)
         const iB = flattened.findIndex(i => i.id === inlineBId)
         if (iA === -1 || iB === -1) return null
@@ -635,7 +640,7 @@ class AST {
         const list = this.getBlockById(blockId)
         if (!list || list.type !== 'list') return null
 
-        const listIndex = this.ast.blocks.findIndex(b => b.id === list.id)
+        const listIndex = this.blocks.findIndex(b => b.id === list.id)
         if (listIndex === -1) return null
 
         const listItem = list.blocks[0] as ListItem
@@ -644,7 +649,7 @@ class AST {
         const paragraph = this.listItemToParagraph(listItem)
 
         if (list.blocks.length === 1) {
-            this.ast.blocks.splice(listIndex, 1, paragraph)
+            this.blocks.splice(listIndex, 1, paragraph)
 
             return {
                 renderEffect: {
@@ -674,7 +679,7 @@ class AST {
 
         list.blocks.splice(0, 1)
 
-        this.ast.blocks.splice(
+        this.blocks.splice(
             listIndex,
             1,
             paragraph,

@@ -4,7 +4,7 @@ import Selection from './selection'
 import Editor from './editor'
 import Render from './render'
 import scss from '../styles/element.scss?inline'
-import { buildAst } from '../ast/ast'
+import { buildBlocks } from '../ast/ast'
 import { onKey } from '../utils/key'
 
 class Element extends HTMLElement {
@@ -27,7 +27,7 @@ class Element extends HTMLElement {
         const attrValue = this.getAttribute('value') ?? ''
 
         this.ast.text = attrValue
-        this.ast.ast = buildAst(attrValue)
+        this.ast.blocks = buildBlocks(attrValue)
 
         this.addStyles()
         this.addDOM()
@@ -50,7 +50,7 @@ class Element extends HTMLElement {
 
         if (!this.hasAcceptedExternalValue && value !== '') {
             this.ast.text = value
-            this.ast.ast = buildAst(value)
+            this.ast.blocks = buildBlocks(value)
             this.renderAST()
             this.hasAcceptedExternalValue = true
         }
@@ -62,10 +62,9 @@ class Element extends HTMLElement {
 
     private renderAST() {
         if (!this.rootElement) return
-        const ast = this.ast.ast
-        if (!ast || !this.render) return
+        if (!this.render) return
 
-        this.render.render(ast.blocks, this.rootElement)
+        this.render.render(this.ast.blocks, this.rootElement)
     }
 
     private addStyles() {
