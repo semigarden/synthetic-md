@@ -1,5 +1,5 @@
 import { buildBlocks, detectType, parseInlineContent } from '../ast/ast'
-import { AstApplyEffect, Block, Document, Inline, List, ListItem } from '../types'
+import { AstApplyEffect, Block, Inline, List, ListItem } from '../types'
 import { uuid } from '../utils/utils'
 
 class AST {

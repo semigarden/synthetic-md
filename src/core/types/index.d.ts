@@ -66,7 +66,6 @@ interface BlockType<T extends string = string> {
 }
 
 export type Block =
-    | Document
     | Paragraph
     | Heading
     | BlockQuote
@@ -81,10 +80,6 @@ export type Block =
     | Footnote
     | TaskListItem
     | BlankLine
-
-interface Document extends BlockType<'document'> {
-    blocks: Block[]
-}
 
 interface Paragraph extends BlockType<'paragraph'> {
 }
