@@ -83,18 +83,15 @@ class AstMutation {
         const rightBlock = this.query.getBlockById(rightInline.blockId)
         if (!leftBlock || !rightBlock) return null
     
-        const mergedText =
-            leftInline.text.symbolic + rightInline.text.symbolic
-    
-        const mergedInlines = this.parser.inline.lexInline(
-            mergedText,
-            leftBlock.id,
-            leftBlock.position.start
-        )
-    
         const sameBlock = leftBlock.id === rightBlock.id
-    
         if (sameBlock) {
+            const mergedText = leftInline.text.symbolic.slice(0, -1) + rightInline.text.symbolic
+            const mergedInlines = this.parser.inline.lexInline(
+                mergedText,
+                leftBlock.id,
+                leftBlock.position.start
+            )
+
             const leftIndex = leftBlock.inlines.findIndex(i => i.id === leftInline.id)
             const rightIndex = leftBlock.inlines.findIndex(i => i.id === rightInline.id)
             if (leftIndex === -1 || rightIndex === -1) return null
@@ -111,6 +108,13 @@ class AstMutation {
     
             return { leftBlock }
         }
+
+        const mergedText = leftInline.text.symbolic + rightInline.text.symbolic
+        const mergedInlines = this.parser.inline.lexInline(
+            mergedText,
+            leftBlock.id,
+            leftBlock.position.start
+        )
 
         const leftIndex = leftBlock.inlines.findIndex(i => i.id === leftInline.id)
         const rightIndex = rightBlock.inlines.findIndex(i => i.id === rightInline.id)
