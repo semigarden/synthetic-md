@@ -117,6 +117,7 @@ class ParseInline {
     
             // Code spans
             if (ch === '`') {
+                flushText()
                 const code = this.codeSpanResolver.tryParse(stream, text, blockId, position)
                 if (code) {
                     result.push(code)

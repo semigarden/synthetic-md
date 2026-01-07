@@ -5,20 +5,13 @@ import { Block, Inline, ListItem } from "../../types"
 import { uuid } from "../../utils/utils"
 
 class AstMutation {
-    constructor(
-        private ast: AST,
-        private parser: ParseAst,
-    ) {}
+    constructor(private ast: AST, private parser: ParseAst) {}
 
     private get query() {
         return new AstQuery(this.ast.blocks)
     }
 
-    public splitBlockPure(
-        block: Block,
-        inlineId: string,
-        caretPosition: number
-    ): { left: Block; right: Block } | null {
+    public splitBlockPure(block: Block, inlineId: string, caretPosition: number): { left: Block; right: Block } | null {
         const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
         if (inlineIndex === -1) return null
     
@@ -72,13 +65,7 @@ class AstMutation {
         return { left: leftBlock, right: rightBlock }
     }
 
-    public mergeInlinePure(
-        leftInline: Inline,
-        rightInline: Inline
-    ): {
-        leftBlock: Block
-        removedBlock?: Block
-    } | null {
+    public mergeInlinePure(leftInline: Inline, rightInline: Inline): { leftBlock: Block; mergedInline: Inline; removedBlock?: Block } | null {
         const leftBlock = this.query.getBlockById(leftInline.blockId)
         const rightBlock = this.query.getBlockById(rightInline.blockId)
         if (!leftBlock || !rightBlock) return null
@@ -106,7 +93,7 @@ class AstMutation {
             leftBlock.position.end =
                 leftBlock.position.start + leftBlock.text.length
     
-            return { leftBlock }
+            return { leftBlock, mergedInline: mergedInlines[0] }
         }
 
         const mergedText = leftInline.text.symbolic + rightInline.text.symbolic
@@ -137,6 +124,7 @@ class AstMutation {
     
         return {
             leftBlock,
+            mergedInline: mergedInlines[0],
             removedBlock: rightBlock,
         }
     }

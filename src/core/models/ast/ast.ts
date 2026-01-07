@@ -67,10 +67,6 @@ class AST {
     }
 
     public input(blockId: string, inlineId: string, text: string, caretPosition: number): AstApplyEffect | null {
-        // const lex = this.parser.inline.lexInline('---', blockId, 0)
-        // console.log('lex', JSON.stringify(text, null, 2))
-        // return null
-
         const block = this.query.getBlockById(blockId)
         if (!block) return null
 
@@ -240,7 +236,7 @@ class AST {
         const result = this.mutation.mergeInlinePure(leftInline, rightInline)
         if (!result) return null
 
-        const { leftBlock, removedBlock } = result
+        const { leftBlock, mergedInline, removedBlock } = result
 
         let removedBlocks: Block[] = []
         if (removedBlock) {
@@ -265,7 +261,7 @@ class AST {
                 type: 'restore',
                 caret: {
                     blockId: leftBlock.id,
-                    inlineId: leftBlock.inlines[leftBlock.inlines.length - 1].id,
+                    inlineId: mergedInline.id,
                     position: removedBlock ? leftInline.text.symbolic.length : leftInline.text.symbolic.length - 1,
                     affinity: 'start',
                 },
