@@ -113,7 +113,7 @@ class Selection {
             const newTextNode = document.createTextNode(inline.text.semantic)
             target.appendChild(newTextNode)
 
-            this.caret?.clear()
+            this.caret.clear()
             this.focusedInlineId = null
         }
     }

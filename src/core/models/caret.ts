@@ -32,7 +32,7 @@ class Caret {
     }
 
     public restoreCaret(inlineId: string | null = this.inlineId, position: number | null = this.position) {
-        if (!inlineId || !position) return
+        if (inlineId === null || position === null) return
 
         const inlineEl = this.rootElement.querySelector(`[data-inline-id="${inlineId}"]`) as HTMLElement
         if (!inlineEl) {
@@ -104,7 +104,6 @@ class Caret {
     public apply(effect: CaretEffect) {
         switch (effect.type) {
             case 'restore':
-                console.log('restore caret', effect.caret)
                 this.restoreCaret(effect.caret.inlineId, effect.caret.position)
                 break
         }
