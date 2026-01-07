@@ -239,7 +239,7 @@ interface DetectedBlock {
     label?: string;
 }
 
-interface LinkReference {
+export interface LinkReference {
     url: string;
     title?: string;
 }

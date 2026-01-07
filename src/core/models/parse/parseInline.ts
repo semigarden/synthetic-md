@@ -6,17 +6,22 @@ import EntityResolver from './inline/resolve/entityResolver'
 import BackslashEscapeResolver from './inline/resolve/backslashEscapeResolver'
 import EmphasisResolver from './inline/resolve/emphasisResolver'
 import DelimiterLexer from './inline/delimiterLexer'
+import LinkReferenceState from './linkReferenceState'
 import { Block, Inline, CodeBlock, TableCell, Paragraph, Delimiter } from '../../types'
 import { uuid, decodeHTMLEntity } from '../../utils/utils'
 
 class ParseInline {
-    private linkResolver = new LinkResolver()
+    private linkResolver: LinkResolver
     private imageResolver = new ImageResolver()
     private codeSpanResolver = new CodeSpanResolver()
     private entityResolver = new EntityResolver()
     private backslashEscapeResolver = new BackslashEscapeResolver()
     private emphasisResolver = new EmphasisResolver()
     private delimiterLexer = new DelimiterLexer()
+
+    constructor(private linkReferences: LinkReferenceState) {
+        this.linkResolver = new LinkResolver(this.linkReferences)
+    }
 
     public apply(block: Block): Inline[] {
         const inlines: Inline[] = []
@@ -318,16 +323,19 @@ class ParseInline {
     }
 
     public parseLinkReferenceDefinitions(text: string) {
-        // Match: [label]: url "optional title"
-        const refRegex = /^\[([^\]]+)\]:\s*<?([^\s>]+)>?(?:\s+["'(]([^"')]+)["')])?$/gm;
-        let match;
+        const refRegex = /^\[([^\]]+)\]:\s*<?([^\s>]+)>?(?:\s+["'(]([^"')]+)["')])?$/gm
+
+        let match: RegExpExecArray | null
+
         while ((match = refRegex.exec(text)) !== null) {
-            const label = match[1].toLowerCase().trim();
-            const url = match[2];
-            const title = match[3];
-            // if (!linkReferences.has(label)) {
-            //     linkReferences.set(label, { url, title });
-            // }
+            const label = match[1].toLowerCase().trim()
+            const url = match[2]
+            const title = match[3]
+
+            this.linkReferences.set(label, {
+                url,
+                title,
+            })
         }
     }
 }

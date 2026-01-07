@@ -1,12 +1,16 @@
-import ParseBlock from "./parseBlock"
-import ParseInline from "./parseInline"
-import { Block } from "../../types"
+import ParseBlock from './parseBlock'
+import ParseInline from './parseInline'
+import LinkReferenceState from './linkReferenceState'
+import { Block } from '../../types'
 
 class ParseAst {
+    public linkReferences = new LinkReferenceState()
+
     public block = new ParseBlock()
-    public inline = new ParseInline()
+    public inline = new ParseInline(this.linkReferences)
 
     public parse(text: string): Block[] {
+        this.linkReferences.reset()
         this.inline.parseLinkReferenceDefinitions(text)
 
         const blocks: Block[] = []

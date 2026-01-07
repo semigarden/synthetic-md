@@ -1,9 +1,12 @@
 import InlineStream from '../inlineStream'
+import LinkReferenceState from '../../linkReferenceState'
 import { parseLinkDestination } from '../parseLinkDestination'
 import { Inline } from '../../../../types'
 import { uuid } from '../../../../utils/utils'
 
 class LinkResolver {
+    constructor(private linkReferences: LinkReferenceState) {}
+
     public tryParse(
         stream: InlineStream,
         blockId: string,
@@ -31,6 +34,9 @@ class LinkResolver {
             return null
         }
 
+        const reference = this.linkReferences.get(label)
+        if (!reference) return null
+
         return {
             id: uuid(),
             type: 'link',
@@ -43,8 +49,8 @@ class LinkResolver {
                 start: position + start,
                 end: position + stream.position(),
             },
-            url: dest.url,
-            title: dest.title,
+            url: reference.url,
+            title: reference.title,
         } as Inline
     }
 }
