@@ -359,8 +359,6 @@ class AST {
     public updateAST() {
         let globalPos = 0
 
-        console.log(JSON.stringify(this.ast.blocks, null, 2))
-
         const updateBlock = (block: Block): string => {
             const start = globalPos
             let text = ''

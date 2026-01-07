@@ -122,8 +122,8 @@ class Editor {
 
                     const { renderEffect, caretEffect } = result
 
-                    this.render.apply(renderEffect)
                     this.ast.updateAST()
+                    this.render.apply(renderEffect)
                     this.caret.apply(caretEffect)
                     this.emitChange()
                 }
