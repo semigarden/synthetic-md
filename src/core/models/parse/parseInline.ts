@@ -119,7 +119,6 @@ class ParseInline {
             if (ch === '`') {
                 const code = this.codeSpanResolver.tryParse(stream, text, blockId, position)
                 if (code) {
-                    flushText()
                     result.push(code)
                     textStart = stream.position()
                     continue
