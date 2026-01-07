@@ -67,10 +67,6 @@ class AST {
     }
 
     public input(blockId: string, inlineId: string, text: string, caretPosition: number): AstApplyEffect | null {
-        // const lex = this.parser.inline.lexInline('---', blockId, 0)
-        // console.log('lex', JSON.stringify(lex, null, 2))
-        // return null
-
         const block = this.query.getBlockById(blockId)
         if (!block) return null
 
@@ -265,8 +261,8 @@ class AST {
                 type: 'restore',
                 caret: {
                     blockId: leftBlock.id,
-                    inlineId: leftBlock.inlines[0].id,
-                    position: leftInline.position.end,
+                    inlineId: leftBlock.inlines[leftBlock.inlines.length - 1].id,
+                    position: leftInline.text.symbolic.length,
                     affinity: 'start',
                 },
             },
