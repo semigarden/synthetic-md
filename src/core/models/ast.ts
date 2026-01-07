@@ -356,29 +356,6 @@ class AST {
         return inlines
     }
 
-    public removeEmptyBlocks(blocks: Block[]) {
-        for (const block of blocks) {
-            const hasContent =
-                block.inlines.length > 0 ||
-                ('blocks' in block && block.blocks.some(b => b.inlines.length > 0 || ('blocks' in b && b.blocks.length > 0)))
-    
-            if (!hasContent) {
-                const parentBlock = this.getParentBlock(block)
-                if (parentBlock && 'blocks' in parentBlock) {
-                    const idx = parentBlock.blocks.findIndex(b => b.id === block.id)
-                    if (idx !== -1) parentBlock.blocks.splice(idx, 1)
-                } else {
-                    const idx = this.ast.blocks.findIndex(b => b.id === block.id)
-                    if (idx !== -1) this.ast.blocks.splice(idx, 1)
-                }
-
-                if (parentBlock) {
-                    this.removeEmptyBlocks([parentBlock])
-                }
-            }
-        }
-    }
-
     public updateAST() {
         let globalPos = 0
 

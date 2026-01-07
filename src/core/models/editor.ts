@@ -123,12 +123,8 @@ class Editor {
                     const { renderEffect, caretEffect } = result
 
                     this.render.apply(renderEffect)
-
-                    this.ast.removeEmptyBlocks(renderEffect.render.insert.map(render => render.current))
                     this.ast.updateAST()
-
                     this.caret.apply(caretEffect)
-
                     this.emitChange()
                 }
             })
