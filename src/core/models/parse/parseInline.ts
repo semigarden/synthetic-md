@@ -1,5 +1,6 @@
 import InlineStream from './inline/inlineStream'
 import LinkResolver from './inline/resolve/linkResolver'
+import AutoLinkResolver from './inline/resolve/autoLinkResolver'
 import ImageResolver from './inline/resolve/imageResolver'
 import CodeSpanResolver from './inline/resolve/codeSpanResolver'
 import EntityResolver from './inline/resolve/entityResolver'
@@ -12,6 +13,7 @@ import { uuid, decodeHTMLEntity } from '../../utils/utils'
 
 class ParseInline {
     private linkResolver: LinkResolver
+    private autoLinkResolver: AutoLinkResolver
     private imageResolver = new ImageResolver()
     private codeSpanResolver = new CodeSpanResolver()
     private entityResolver = new EntityResolver()
@@ -21,6 +23,7 @@ class ParseInline {
 
     constructor(private linkReferences: LinkReferenceState) {
         this.linkResolver = new LinkResolver(this.linkReferences)
+        this.autoLinkResolver = new AutoLinkResolver(this.linkReferences)
     }
 
     public apply(block: Block): Inline[] {
@@ -146,6 +149,17 @@ class ParseInline {
                     textStart = stream.position()
                     continue
                 }
+            }
+
+            // Autolinks
+            if (ch === '<') {
+                const autolink = this.autoLinkResolver.tryParse(stream, blockId, position)
+                if (autolink) {
+                    flushText()
+                    result.push(autolink)
+                    textStart = stream.position()
+                    continue
+                }   
             }
     
             // Delimiters (*, _)
