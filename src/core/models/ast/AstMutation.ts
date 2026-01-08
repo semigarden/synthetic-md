@@ -117,7 +117,7 @@ class AstMutation {
             ...mergedInlines,
             ...tailInlines
         )
-    
+
         leftBlock.text = leftBlock.inlines.map(i => i.text.symbolic).join('')
         leftBlock.position.end =
             leftBlock.position.start + leftBlock.text.length

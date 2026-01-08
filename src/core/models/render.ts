@@ -1,14 +1,9 @@
 import { Block, Inline, RenderEffect } from "../types"
 
 class Render {
-    constructor(
-        private rootElement: HTMLElement,
-    ) {}
+    constructor(private rootElement: HTMLElement) {}
 
-    public render(
-        blocks: Block[],
-        container: HTMLElement
-    ) {
+    public render(blocks: Block[], container: HTMLElement) {
         container.replaceChildren()
         for (const block of blocks) {
             container.appendChild(this.renderBlock(block, container))
@@ -104,10 +99,7 @@ class Render {
         return element
     }
 
-    public renderInlines(
-        inlines: Inline[],
-        parent: HTMLElement,
-    ) {
+    public renderInlines(inlines: Inline[], parent: HTMLElement) {
         parent.replaceChildren()
     
         for (const inline of inlines) {
