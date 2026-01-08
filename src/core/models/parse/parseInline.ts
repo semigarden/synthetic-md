@@ -111,9 +111,9 @@ class ParseInline {
     
             // HTML entities
             if (ch === '&') {
+                flushText()
                 const entity = this.entityResolver.tryParse(stream, text, blockId, position)
                 if (entity) {
-                    flushText()
                     result.push(entity)
                     textStart = stream.position()
                     continue
