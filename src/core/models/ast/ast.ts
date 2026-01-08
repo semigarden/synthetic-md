@@ -46,10 +46,10 @@ class AST {
             renderEffect: {
                 type: 'update',
                 render: {
-                    remove: [block],
+                    remove: [],
                     insert: [{
-                        at: index > 0 ? 'next' : 'current',
-                        target: index > 0 ? this.blocks[index - 1] : newBlocks[0],
+                        at: 'current',
+                        target: block,
                         current: newBlocks[0],
                     }],
                 },
