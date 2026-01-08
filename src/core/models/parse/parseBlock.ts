@@ -174,16 +174,6 @@ class ParseBlock {
                     position: { start, end },
                     inlines: [],
                 }
-
-                const inline: Inline = {
-                    id: uuid(),
-                    type: 'text',
-                    blockId: block.id,
-                    text: { symbolic: '', semantic: '' },
-                    position: { start: 0, end: 0 },
-                }
-
-                block.inlines.push(inline)
                 blocks.push(block)
                 break
             }

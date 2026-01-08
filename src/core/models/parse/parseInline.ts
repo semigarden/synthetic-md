@@ -27,6 +27,7 @@ class ParseInline {
 
     public apply(block: Block): Inline[] {
         const text = block.text ?? ''
+
         if (!text) return [{
             id: uuid(),
             type: 'text',

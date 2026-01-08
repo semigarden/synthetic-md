@@ -31,7 +31,7 @@ class AST {
         this.text = this.normalizer.text
     }
 
-    private transformBlock(block: Block, text: string): AstApplyEffect | null {
+    private transformBlock(block: Block, text: string, caretPosition: number | null = null): AstApplyEffect | null {
         const flat = this.query.flattenBlocks(this.blocks)
         const index = flat.findIndex(b => b.id === block.id)
     
@@ -41,7 +41,7 @@ class AST {
         if (!inline) return null
     
         this.blocks.splice(index, 1, ...newBlocks)
-    
+
         return {
             renderEffect: {
                 type: 'update',
@@ -59,7 +59,7 @@ class AST {
                 caret: {
                     blockId: inline.blockId,
                     inlineId: inline.id,
-                    position: inline.position.start,
+                    position: caretPosition ?? inline.position.start,
                     affinity: 'start',
                 },
             },
@@ -243,6 +243,27 @@ class AST {
             removedBlocks = this.mutation.removeBlockCascade(removedBlock)
         }
 
+        const caretPositionInMergedInline = removedBlock ? leftInline.text.symbolic.length : leftInline.text.symbolic.length - 1
+        const caretPosition = leftBlock.inlines
+            .slice(0, leftBlock.inlines.findIndex(i => i.id === mergedInline.id))
+            .reduce((s, i) => s + i.text.symbolic.length, 0)
+        + caretPositionInMergedInline
+
+        const newText = leftBlock.inlines.map(i => i.text.symbolic).join('')
+        const detectedBlockType = this.parser.block.detectType(newText)
+
+        const blockTypeChanged =
+        detectedBlockType.type !== leftBlock.type ||
+        (
+            detectedBlockType.type === 'heading' &&
+            leftBlock.type === 'heading' &&
+            detectedBlockType.level !== leftBlock.level
+        )
+
+        if (blockTypeChanged) {
+            return this.transformBlock(leftBlock, newText, caretPosition)
+        }
+
         return {
             renderEffect: {
                 type: 'update',
@@ -262,7 +283,7 @@ class AST {
                 caret: {
                     blockId: leftBlock.id,
                     inlineId: mergedInline.id,
-                    position: removedBlock ? leftInline.text.symbolic.length : leftInline.text.symbolic.length - 1,
+                    position: caretPositionInMergedInline,
                     affinity: 'start',
                 },
             },
