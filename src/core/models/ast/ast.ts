@@ -89,7 +89,7 @@ class AST {
         
         const ignoreTypes = ['blankLine', 'thematicBreak', 'codeBlock']
         if (blockTypeChanged && !ignoreTypes.includes(detectedBlockType.type)) {
-            return this.transformBlock(block, newText)
+            return this.transformBlock(block, newText, caretPosition)
         }
         
         const newInlines = this.parser.inline.lexInline(newText, block.id, block.position.start)
