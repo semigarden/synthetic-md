@@ -53,9 +53,6 @@ class Render {
                 case 'table':
                     element = document.createElement('table')
                     element.classList.add('table')
-                    const tbody = document.createElement('tbody')
-                    element.appendChild(tbody)
-                    element = tbody
                     break
                 
                 case 'tableRow':
