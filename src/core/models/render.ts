@@ -35,6 +35,11 @@ class Render {
                     this.renderInlines(block.inlines, code)
                     break
 
+                case 'blockQuote':
+                    element = document.createElement('blockquote')
+                    element.classList.add('blockQuote')
+                    break
+
                 case 'list':
                     element = document.createElement(block.ordered ? 'ol' : 'ul')
                     element.classList.add('list')
@@ -59,19 +64,24 @@ class Render {
             element.classList.add('block')
         }
 
-        if (block.type === 'codeBlock') {
-            const code = element.querySelector('code') as HTMLElement || document.createElement('code')
-            code.innerHTML = ''
-            this.renderInlines(block.inlines, code)
-            if (!element.querySelector('code')) element.appendChild(code)
-        }
-
-        if (block.type === 'list' || block.type === 'listItem') {
-            for (const child of block.blocks) {
-                this.renderBlock(child, element)
-            }
-        } else {
-            this.renderInlines(block.inlines, element)
+        switch (block.type) {
+            case 'blockQuote':
+            case 'list':
+            case 'listItem':
+                for (const child of block.blocks) {
+                    this.renderBlock(child, element)
+                }
+                break
+        
+            case 'codeBlock':
+                const code = element.querySelector('code') as HTMLElement || document.createElement('code')
+                code.innerHTML = ''
+                this.renderInlines(block.inlines, code)
+                if (!element.querySelector('code')) element.appendChild(code)
+                break
+        
+            default:
+                this.renderInlines(block.inlines, element)
         }
 
         if (isNew) {

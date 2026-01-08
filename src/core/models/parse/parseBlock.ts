@@ -59,15 +59,22 @@ class ParseBlock {
             }
 
             case 'blockQuote': {
-                const content = line.replace(/^>\s?/, '')
+                const match = line.match(/^(\s{0,3}> ?)(.*)$/)
+
+                const marker = match ? match[1] : '>'
+                const content = match ? match[2] : ''
+
+                const innerBlocks = this.line(content, start + marker.length) ?? []
+
                 block = {
                     id: uuid(),
                     type: 'blockQuote',
-                    text: content,
+                    text: line,
                     position: { start, end },
-                    blocks: [],
+                    blocks: innerBlocks,
                     inlines: [],
                 }
+
                 blocks.push(block)
                 break
             }

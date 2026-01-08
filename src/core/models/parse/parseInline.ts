@@ -77,7 +77,7 @@ class ParseInline {
 
             return result
         }
-    
+
         const flushText = () => {
             const end = stream.position()
             if (end > textStart) {

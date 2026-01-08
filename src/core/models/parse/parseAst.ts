@@ -43,11 +43,13 @@ class ParseAst {
             if (produced) blocks.push(...produced)
             offset += line.length + 1
         }
-    
+
         for (const block of blocks) {
             this.inline.applyRecursive(block)
         }
 
+        console.log('blocks', JSON.stringify(blocks, null, 2))
+    
         return blocks
     }
 

@@ -32,6 +32,29 @@ class AstNormalizer {
                 return text
             }
 
+            if (block.type === 'blockQuote') {
+                const parts: string[] = []
+            
+                for (let i = 0; i < block.blocks.length; i++) {
+                    const child = block.blocks[i]
+            
+                    const childText = updateBlock(child)
+            
+                    parts.push('> ' + childText)
+            
+                    if (i < block.blocks.length - 1) {
+                        parts.push('\n')
+                        globalPos += 1
+                    }
+                }
+            
+                text = parts.join('')
+                block.text = text
+                block.position = { start, end: globalPos }
+            
+                return text
+            }
+
             if (block.type === 'list') {
                 const parts: string[] = []
 
@@ -49,7 +72,7 @@ class AstNormalizer {
                 text = parts.join('')
             }
 
-            else if (block.type === 'listItem') {
+            if (block.type === 'listItem') {
                 const marker = '- '
                 text += marker
                 globalPos += marker.length
