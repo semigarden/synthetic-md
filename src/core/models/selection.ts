@@ -45,47 +45,46 @@ class Selection {
 
     private onFocusIn = (e: FocusEvent) => {
         const target = e.target as HTMLElement
-            if (!target.dataset?.inlineId) return
-          
-            const inline = this.ast.query.getInlineById(target.dataset.inlineId!)
-            if (!inline) return
-
-            const selection = window.getSelection()
-            if (!selection || selection.rangeCount === 0) return
-
-            const range = selection.getRangeAt(0)
-
-            let semanticOffset = 0;
-            if (target.contains(range.startContainer)) {
-                const preRange = document.createRange()
-                preRange.selectNodeContents(target)
-                preRange.setEnd(range.startContainer, range.startOffset)
-                semanticOffset = preRange.toString().length
-            }
-
-            const semanticVisibleLength = target.textContent?.length ?? 1
-
-            target.innerHTML = ''
-            const newTextNode = document.createTextNode(inline.text.symbolic)
-            target.appendChild(newTextNode)
-
-            const symbolicOffset = this.mapSemanticOffsetToSymbolic(
-                semanticVisibleLength,
-                inline.text.symbolic.length,
-                semanticOffset
-            )
-
-            const clampedOffset = Math.max(0, Math.min(symbolicOffset, inline.text.symbolic.length))
-            
-            const newRange = document.createRange()
-            newRange.setStart(newTextNode, clampedOffset)
-            newRange.collapse(true)
-
-            selection.removeAllRanges()
-            selection.addRange(newRange)
-
-            this.focusedInlineId = inline.id
+        if (!target.dataset?.inlineId) return
         
+        const inline = this.ast.query.getInlineById(target.dataset.inlineId!)
+        if (!inline) return
+
+        const selection = window.getSelection()
+        if (!selection || selection.rangeCount === 0) return
+
+        const range = selection.getRangeAt(0)
+
+        let semanticOffset = 0;
+        if (target.contains(range.startContainer)) {
+            const preRange = document.createRange()
+            preRange.selectNodeContents(target)
+            preRange.setEnd(range.startContainer, range.startOffset)
+            semanticOffset = preRange.toString().length
+        }
+
+        const semanticVisibleLength = target.textContent?.length ?? 1
+
+        target.innerHTML = ''
+        const newTextNode = document.createTextNode(inline.text.symbolic)
+        target.appendChild(newTextNode)
+
+        const symbolicOffset = this.mapSemanticOffsetToSymbolic(
+            semanticVisibleLength,
+            inline.text.symbolic.length,
+            semanticOffset
+        )
+
+        const clampedOffset = Math.max(0, Math.min(symbolicOffset, inline.text.symbolic.length))
+        
+        const newRange = document.createRange()
+        newRange.setStart(newTextNode, clampedOffset)
+        newRange.collapse(true)
+
+        selection.removeAllRanges()
+        selection.addRange(newRange)
+
+        this.focusedInlineId = inline.id
     }
 
     private onFocusOut = (e: FocusEvent) => {
@@ -95,9 +94,24 @@ class Selection {
 
             const inline = this.ast.query.getInlineById(this.focusedInlineId)
             if (inline) {
-                inlineEl.innerHTML = ''
-                const newTextNode = document.createTextNode(inline.text.semantic)
-                inlineEl.appendChild(newTextNode)
+                if (inline.type === 'image') {
+                    const imageElement = document.createElement('img')
+                    imageElement.id = inline.id
+                    imageElement.dataset.inlineId = inline.id
+                    imageElement.contentEditable = 'true'
+                    imageElement.classList.add('inline', 'image');
+
+                    (imageElement as HTMLImageElement).src = inline.url || '';
+                    (imageElement as HTMLImageElement).alt = inline.alt || '';
+                    (imageElement as HTMLImageElement).title = inline.title || '';
+                    imageElement.textContent = '';
+
+                    inlineEl.replaceWith(imageElement)
+                } else {
+                    inlineEl.innerHTML = ''
+                    const newTextNode = document.createTextNode(inline.text.semantic)
+                    inlineEl.appendChild(newTextNode)
+                }
             }
         }
 
@@ -121,6 +135,38 @@ class Selection {
     private onClick = (e: MouseEvent) => {
         const target = e.target as HTMLElement
         if (target.dataset?.inlineId) {
+            const inline = this.ast.query.getInlineById(target.dataset.inlineId!)
+            if (!inline) return
+
+            if (inline.type === 'image' && inline.id !== this.focusedInlineId) {
+                const focusedImage = document.createElement('span')
+                focusedImage.classList.add('inline', 'image', 'focus')
+                focusedImage.id = inline.id
+                focusedImage.dataset.inlineId = inline.id
+                focusedImage.contentEditable = 'true'
+
+                target.replaceWith(focusedImage)
+
+                const textNode = document.createTextNode(inline.text.symbolic)
+                focusedImage.appendChild(textNode)
+
+                const caretOffset = textNode.length
+
+                const selection = window.getSelection()
+                if (!selection || selection.rangeCount === 0) return
+
+                const newRange = document.createRange()
+                newRange.setStart(textNode, caretOffset)
+                newRange.collapse(true)
+
+                selection.removeAllRanges()
+                selection.addRange(newRange)
+
+                focusedImage.focus()
+
+                this.focusedInlineId = inline.id
+                return
+            }
         }
 
         if (target.dataset?.blockId) {

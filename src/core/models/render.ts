@@ -117,14 +117,38 @@ class Render {
     
     private renderInline(inline: Inline): Node {
         const tag = this.getInlineTag(inline)
-        const inlineEl = document.createElement(tag)
-        inlineEl.id = inline.id
-        inlineEl.dataset.inlineId = inline.id
-        inlineEl.textContent = inline.text.semantic
-        inlineEl.contentEditable = 'true'
-        inlineEl.classList.add('inline')
+        const inlineElement = document.createElement(tag)
+        inlineElement.id = inline.id
+        inlineElement.dataset.inlineId = inline.id
+        inlineElement.textContent = inline.text.semantic
+        inlineElement.contentEditable = 'true'
+        inlineElement.classList.add('inline')
+
+        if (inline.type === 'link') {
+            (inlineElement as HTMLAnchorElement).href = inline.url || '';
+            (inlineElement as HTMLAnchorElement).title = inline.title || '';
+        }
+
+        if (inline.type === 'autolink') {
+            (inlineElement as HTMLAnchorElement).href = inline.url || '';
+        }
+
+        if (inline.type === 'image') {
+            (inlineElement as HTMLImageElement).src = inline.url || '';
+            (inlineElement as HTMLImageElement).alt = inline.alt || '';
+            (inlineElement as HTMLImageElement).title = inline.title || '';
+            inlineElement.textContent = '';
+        }
+
+        // if (inline.type === 'strikethrough') {
+        //     inlineElement.classList.add('strikethrough')
+        // }
+
+        // if (inline.type === 'emphasis') {
+        //     inlineElement.classList.add('emphasis')
+        // }
     
-        return inlineEl
+        return inlineElement
     }
     
     private getInlineTag(inline: Inline): string {
@@ -135,6 +159,14 @@ class Render {
                 return 'em'
             case 'strong':
                 return 'strong'
+            case 'link':
+                return 'a'
+            case 'autolink':
+                return 'a'
+            case 'image':
+                return 'img'
+            case 'strikethrough':
+                return 's'
             default:
                 return 'span'
         }

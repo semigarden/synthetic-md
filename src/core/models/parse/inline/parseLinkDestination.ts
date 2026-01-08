@@ -66,7 +66,6 @@ export function parseLinkDestination(
         }
 
         url = stream.slice(urlStart, stream.position())
-        console.log('url', url)
     }
 
     // skip whitespace
