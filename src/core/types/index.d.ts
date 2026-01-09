@@ -239,7 +239,7 @@ interface Entity extends InlineType<'entity'> {
 }
 
 interface DetectedBlock {
-    type: Block["type"];
+    type: Block['type'];
     level?: number;
     ordered?: boolean;
     listStart?: number;
@@ -267,4 +267,11 @@ export type FlatEntry = {
     block: Block
     parent: Block | null
     index: number
+}
+
+export interface OpenBlock {
+    block: Block
+    type: Block['type']
+    indent: number
+    marker?: string
 }
