@@ -189,6 +189,12 @@ class Selection {
             if (blockElement?.dataset?.blockId) {
                 const block = this.ast.query.getBlockById(blockElement.dataset.blockId)
                 if (block && (block.type === 'table' || block.type === 'tableRow' || block.type === 'tableCell' || block.type === 'tableHeader')) {
+                    const result = this.findClosestInlineAndPosition(block, e.clientX, e.clientY)
+                    if (result) {
+                        this.caret.restoreCaret(result.inline.id, result.position)
+                        return
+                    }
+
                     const lastInline = this.ast.query.getLastInline(block)
                     if (lastInline) {
                         this.caret.restoreCaret(lastInline.id, lastInline.text.symbolic.length)
@@ -259,9 +265,14 @@ class Selection {
                 }
 
                 if (block.type === 'table' || block.type === 'tableRow' || block.type === 'tableCell' || block.type === 'tableHeader') {
-                    const lastInline = this.ast.query.getLastInline(block)
-                    if (lastInline) {
-                        this.caret.restoreCaret(lastInline.id, lastInline.text.symbolic.length)
+                    const result = this.findClosestInlineAndPosition(block, e.clientX, e.clientY)
+                    if (result) {
+                        this.caret.restoreCaret(result.inline.id, result.position)
+                    } else {
+                        const lastInline = this.ast.query.getLastInline(block)
+                        if (lastInline) {
+                            this.caret.restoreCaret(lastInline.id, lastInline.text.symbolic.length)
+                        }
                     }
                 } else {
                     const lastInline = block.inlines.at(-1)
@@ -357,6 +368,120 @@ class Selection {
         let offset = Math.round(semanticOffset * ratio)
 
         return Math.max(0, Math.min(offset, symbolicLength))
+    }
+
+    private findClosestInlineAndPosition(block: any, clickX: number, clickY: number): { inline: any; position: number } | null {
+        const blockElement = this.rootElement?.querySelector(`[data-block-id="${block.id}"]`) as HTMLElement
+        if (!blockElement) return null
+
+        const inlineElements = Array.from(blockElement.querySelectorAll('[data-inline-id]')) as HTMLElement[]
+        if (inlineElements.length === 0) return null
+
+        let closestInline: HTMLElement | null = null
+        let minDistance = Infinity
+        let horizontallyAlignedInline: HTMLElement | null = null
+        let minVerticalDistance = Infinity
+
+        for (const inlineEl of inlineElements) {
+            const rect = inlineEl.getBoundingClientRect()
+            
+            const isHorizontallyAligned = clickX >= rect.left && clickX <= rect.right
+            
+            if (isHorizontallyAligned) {
+                const verticalDistance = Math.abs(clickY - (rect.top + rect.height / 2))
+                if (verticalDistance < minVerticalDistance) {
+                    minVerticalDistance = verticalDistance
+                    horizontallyAlignedInline = inlineEl
+                }
+            } else {
+                const horizontalDistance = Math.min(Math.abs(clickX - rect.left), Math.abs(clickX - rect.right))
+                const verticalDistance = Math.abs(clickY - (rect.top + rect.height / 2))
+                const distance = horizontalDistance + verticalDistance
+                
+                if (distance < minDistance) {
+                    minDistance = distance
+                    closestInline = inlineEl
+                }
+            }
+        }
+
+        if (horizontallyAlignedInline) {
+            closestInline = horizontallyAlignedInline
+        }
+
+        if (!closestInline) return null
+
+        const inlineId = closestInline.dataset.inlineId
+        if (!inlineId) return null
+
+        let inline = this.ast.query.getInlineById(inlineId)
+        if (!inline) return null
+
+        const rect = closestInline.getBoundingClientRect()
+        const relativeX = Math.max(0, Math.min(rect.width, clickX - rect.left))
+        const textLength = inline.text.symbolic.length
+        
+        let position = Math.round((relativeX / Math.max(1, rect.width)) * textLength)
+        
+        const projectedClickY = rect.top + rect.height / 2
+        
+        if (document.caretRangeFromPoint) {
+            const range = document.caretRangeFromPoint(clickX, projectedClickY)
+            if (range) {
+                let targetInlineEl = closestInline
+                let targetRect = rect
+                
+                if (!closestInline.contains(range.startContainer)) {
+                    const rangeInlineEl = (range.startContainer.nodeType === Node.TEXT_NODE 
+                        ? range.startContainer.parentElement 
+                        : range.startContainer as HTMLElement)?.closest('[data-inline-id]') as HTMLElement
+                    if (rangeInlineEl && blockElement?.contains(rangeInlineEl)) {
+                        targetInlineEl = rangeInlineEl
+                        targetRect = rangeInlineEl.getBoundingClientRect()
+                        const rangeInlineId = rangeInlineEl.dataset.inlineId
+                        if (rangeInlineId) {
+                            const rangeInline = this.ast.query.getInlineById(rangeInlineId)
+                            if (rangeInline) {
+                                inline = rangeInline
+                                const newRelativeX = Math.max(0, Math.min(targetRect.width, clickX - targetRect.left))
+                                position = Math.round((newRelativeX / Math.max(1, targetRect.width)) * rangeInline.text.symbolic.length)
+                            }
+                        }
+                    }
+                }
+
+                if (targetInlineEl.contains(range.startContainer) || targetInlineEl === range.startContainer) {
+                    const tempRange = document.createRange()
+                    tempRange.selectNodeContents(targetInlineEl)
+                    tempRange.setEnd(range.startContainer, range.startOffset)
+                    const rangePosition = tempRange.toString().length
+                    if (rangePosition >= 0 && rangePosition <= inline.text.symbolic.length) {
+                        position = rangePosition
+                    }
+                }
+            }
+        } else if ((document as any).caretPositionFromPoint) {
+            const caretPos = (document as any).caretPositionFromPoint(clickX, projectedClickY)
+            if (caretPos) {
+                const range = document.createRange()
+                range.setStart(caretPos.offsetNode, caretPos.offset)
+                range.collapse(true)
+                
+                if (closestInline.contains(range.startContainer) || closestInline === range.startContainer) {
+                    const tempRange = document.createRange()
+                    tempRange.selectNodeContents(closestInline)
+                    tempRange.setEnd(range.startContainer, range.startOffset)
+                    const rangePosition = tempRange.toString().length
+                    if (rangePosition >= 0 && rangePosition <= inline.text.symbolic.length) {
+                        position = rangePosition
+                    }
+                }
+            }
+        }
+
+        position = Math.max(0, Math.min(position, inline.text.symbolic.length))
+
+        return { inline, position }
     }
 }
 
