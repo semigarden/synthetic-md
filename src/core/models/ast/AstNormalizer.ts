@@ -176,7 +176,6 @@ class AstNormalizer {
         }
 
         this.text = parts.join('')
-        console.log('this.text', this.text)
     }
 }
 
