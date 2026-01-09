@@ -465,7 +465,196 @@ class AST {
         if (!sublist) return null
 
         const parentListItem = this.query.getParentBlock(sublist) as ListItem | null
-        if (!parentListItem || parentListItem.type !== 'listItem') return null
+        
+        if (!parentListItem || parentListItem.type !== 'listItem') {
+            const flat = this.query.flattenBlocks(this.blocks)
+            const listEntry = flat.find(b => b.block.id === sublist.id)
+            if (!listEntry) return null
+
+            const listIndex = this.blocks.findIndex(b => b.id === sublist.id)
+            const itemIndex = sublist.blocks.indexOf(listItem)
+
+            const itemsBefore = sublist.blocks.slice(0, itemIndex)
+            const itemsAfter = sublist.blocks.slice(itemIndex + 1)
+
+            const contentBlocks = listItem.blocks.filter(b => b.type !== 'list')
+            const nestedList = listItem.blocks.find(b => b.type === 'list') as List | undefined
+
+            const blocksToInsert: Block[] = []
+            const blocksToRemove: Block[] = []
+            const insertEffects: Array<{ at: 'current' | 'next'; target: Block; current: Block }> = []
+
+            if (contentBlocks.length > 0) {
+                contentBlocks.forEach(block => {
+                    const newBlock: Block = {
+                        ...block,
+                        id: uuid(),
+                    }
+                    newBlock.inlines = newBlock.inlines.map(inline => ({
+                        ...inline,
+                        blockId: newBlock.id,
+                    }))
+                    blocksToInsert.push(newBlock)
+                })
+            } else {
+                const emptyParagraph: Block = {
+                    id: uuid(),
+                    type: 'paragraph',
+                    text: '',
+                    position: { start: 0, end: 0 },
+                    inlines: [],
+                }
+                emptyParagraph.inlines = this.parser.inline.lexInline('', emptyParagraph.id, 'paragraph', 0)
+                emptyParagraph.inlines.forEach((i: Inline) => i.blockId = emptyParagraph.id)
+                blocksToInsert.push(emptyParagraph)
+            }
+
+            if (nestedList) {
+                const newNestedList: List = {
+                    ...nestedList,
+                    id: uuid(),
+                }
+                blocksToInsert.push(newNestedList)
+            }
+
+            if (itemsBefore.length > 0 && itemsAfter.length > 0) {
+                const beforeList: List = {
+                    id: uuid(),
+                    type: 'list',
+                    ordered: sublist.ordered,
+                    listStart: sublist.listStart,
+                    tight: sublist.tight,
+                    blocks: itemsBefore,
+                    inlines: [],
+                    text: '',
+                    position: { start: 0, end: 0 },
+                }
+                const afterList: List = {
+                    id: uuid(),
+                    type: 'list',
+                    ordered: sublist.ordered,
+                    listStart: sublist.listStart,
+                    tight: sublist.tight,
+                    blocks: itemsAfter,
+                    inlines: [],
+                    text: '',
+                    position: { start: 0, end: 0 },
+                }
+
+                this.blocks.splice(listIndex, 1, beforeList)
+                blocksToRemove.push(sublist)
+
+                const insertIndex = listIndex + 1
+                this.blocks.splice(insertIndex, 0, ...blocksToInsert)
+
+                this.blocks.splice(insertIndex + blocksToInsert.length, 0, afterList)
+
+                insertEffects.push({ at: 'current', target: sublist, current: beforeList })
+                blocksToInsert.forEach((block, idx) => {
+                    insertEffects.push({
+                        at: 'next',
+                        target: idx === 0 ? beforeList : blocksToInsert[idx - 1],
+                        current: block,
+                    })
+                })
+                insertEffects.push({
+                    at: 'next',
+                    target: blocksToInsert[blocksToInsert.length - 1],
+                    current: afterList,
+                })
+            } else if (itemsBefore.length > 0) {
+                const beforeList: List = {
+                    id: uuid(),
+                    type: 'list',
+                    ordered: sublist.ordered,
+                    listStart: sublist.listStart,
+                    tight: sublist.tight,
+                    blocks: itemsBefore,
+                    inlines: [],
+                    text: '',
+                    position: { start: 0, end: 0 },
+                }
+
+                this.blocks.splice(listIndex, 1, beforeList)
+                blocksToRemove.push(sublist)
+
+                const insertIndex = listIndex + 1
+                this.blocks.splice(insertIndex, 0, ...blocksToInsert)
+
+                insertEffects.push({ at: 'current', target: sublist, current: beforeList })
+                blocksToInsert.forEach((block, idx) => {
+                    insertEffects.push({
+                        at: 'next',
+                        target: idx === 0 ? beforeList : blocksToInsert[idx - 1],
+                        current: block,
+                    })
+                })
+            } else if (itemsAfter.length > 0) {
+                const afterList: List = {
+                    id: uuid(),
+                    type: 'list',
+                    ordered: sublist.ordered,
+                    listStart: sublist.listStart,
+                    tight: sublist.tight,
+                    blocks: itemsAfter,
+                    inlines: [],
+                    text: '',
+                    position: { start: 0, end: 0 },
+                }
+
+                this.blocks.splice(listIndex, 1, ...blocksToInsert, afterList)
+                blocksToRemove.push(sublist)
+
+                insertEffects.push({ at: 'current', target: sublist, current: blocksToInsert[0] })
+                blocksToInsert.slice(1).forEach((block, idx) => {
+                    insertEffects.push({
+                        at: 'next',
+                        target: blocksToInsert[idx],
+                        current: block,
+                    })
+                })
+                insertEffects.push({
+                    at: 'next',
+                    target: blocksToInsert[blocksToInsert.length - 1],
+                    current: afterList,
+                })
+            } else {
+                this.blocks.splice(listIndex, 1, ...blocksToInsert)
+                blocksToRemove.push(sublist)
+
+                insertEffects.push({ at: 'current', target: sublist, current: blocksToInsert[0] })
+                blocksToInsert.slice(1).forEach((block, idx) => {
+                    insertEffects.push({
+                        at: 'next',
+                        target: blocksToInsert[idx],
+                        current: block,
+                    })
+                })
+            }
+
+            const focusBlock = blocksToInsert[0]
+            const focusInline = focusBlock?.inlines?.[0]
+            if (!focusInline) return null
+
+            return {
+                renderEffect: {
+                    type: 'update',
+                    render: {
+                        remove: blocksToRemove,
+                        insert: insertEffects,
+                    },
+                },
+                caretEffect: {
+                    type: 'restore',
+                    caret: {
+                        blockId: focusBlock.id,
+                        inlineId: focusInline.id,
+                        position: 0,
+                        affinity: 'start',
+                    },
+                },
+            }
+        }
 
         const parentList = this.query.getListFromBlock(parentListItem)
         if (!parentList) return null
