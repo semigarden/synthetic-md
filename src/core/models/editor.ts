@@ -76,6 +76,25 @@ class Editor {
     private resolveMerge(context: EditContext): EditEffect {
         if (this.caret.getPositionInInline(context.inlineElement) !== 0) return { preventDefault: false }
 
+        const listItem = this.ast.query.getParentBlock(context.block)
+        if (listItem?.type === 'listItem') {
+            const list = this.ast.query.getListFromBlock(listItem)
+            if (list) {
+                const itemIndex = list.blocks.indexOf(listItem)
+                const isFirstItem = itemIndex === 0
+
+                const parentOfList = this.ast.query.getParentBlock(list)
+                const isNestedList = parentOfList?.type === 'listItem'
+                
+                if (isFirstItem && isNestedList) {
+                    return {
+                        preventDefault: true,
+                        ast: [{ type: 'outdentListItem', listItemId: listItem.id }],
+                    }
+                }
+            }
+        }
+
         const list = this.ast.query.getListFromBlock(context.block)
         const previousInline = list && list.blocks.length > 1 ? this.ast.query.getPreviousInlineInList(context.inline) ?? this.ast.query.getPreviousInline(context.inline.id) : this.ast.query.getPreviousInline(context.inline.id)
 
