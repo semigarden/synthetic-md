@@ -10,7 +10,7 @@ import EmphasisResolver from './inline/resolve/emphasisResolver'
 import DelimiterLexer from './inline/delimiterLexer'
 import StrikethroughResolver from './inline/resolve/strikethroughResolver'
 import LinkReferenceState from './linkReferenceState'
-import { Block, Inline, CodeBlock, TableCell, Paragraph, Delimiter } from '../../types'
+import { Block, Inline, CodeBlock, Delimiter } from '../../types'
 import { uuid, decodeHTMLEntity } from '../../utils/utils'
 
 class ParseInline {
