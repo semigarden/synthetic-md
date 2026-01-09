@@ -51,8 +51,9 @@ class ParseAst {
 
         const openParagraph = this.getOpenParagraph()
         const openListItem = this.openBlocks.findLast(b => b.type === 'listItem')
+        const openBlockQuote = this.hasOpenBlockQuote()
 
-        if (openParagraph && openListItem) {
+        if (openParagraph && (openListItem || openBlockQuote)) {
             openParagraph.text += '\n' + state.line
             openParagraph.position.end = offset + state.line.length
             return
@@ -288,6 +289,10 @@ class ParseAst {
     
         const list = this.openBlocks.findLast(b => b.type === 'list')
         if (list) (list.block as List).tight = false
+    }
+
+    private hasOpenBlockQuote(): boolean {
+        return !!this.openBlocks.findLast(b => b.type === 'blockQuote')
     }
 
     private closeAll(offset: number) {
