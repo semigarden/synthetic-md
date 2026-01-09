@@ -68,7 +68,11 @@ class AstQuery {
         for (const block of blocks) {
             if (block.inlines && block.inlines.length > 0) {
                 const inline = block.inlines[0]
-                return inline
+                if (block.type === 'listItem') {
+                    if (inline.type !== 'marker') return inline
+                } else {
+                    return inline
+                }
             }
     
             if ('blocks' in block && block.blocks.length > 0) {

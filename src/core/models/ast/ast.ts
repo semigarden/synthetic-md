@@ -41,9 +41,10 @@ class AST {
         const inline = this.query.getFirstInline(newBlocks)
         if (!inline) return null
 
+        const parent = this.query.getParentBlock(block)
+
         if (entry.parent && entry.parent.type === 'list' && block.type === 'listItem' && block.type !== detectedBlock.type) {
             const list = entry.parent as List
-
             const listEntry = flat.find(b => b.block.id === list.id)
             if (!listEntry) return null
         
@@ -150,6 +151,7 @@ class AST {
         
         const ignoreTypes = ['blankLine', 'codeBlock']
         if (blockTypeChanged && !ignoreTypes.includes(detectedBlock.type)) {
+            if (detectedBlock.type === 'listItem') caretPosition = 0
             return this.transformBlock(newText, block, detectedBlock, caretPosition)
         }
         
