@@ -80,12 +80,12 @@ class ParseAst {
             }
 
             if (open.type === 'listItem') {
-                if (rest.startsWith(' '.repeat(open.indent))) {
-                    rest = rest.slice(open.indent)
+                if (/^\s+([-*+]|\d+[.)])\s/.test(rest)) {
                     continue
                 }
 
-                if (/^\s+([-*+]|\d+[.)])\s/.test(rest)) {
+                if (rest.startsWith(' '.repeat(open.indent))) {
+                    rest = rest.slice(open.indent)
                     continue
                 }
 
@@ -96,7 +96,7 @@ class ParseAst {
             if (open.type === 'list') {
                 const list = open.block as List
             
-                const m = /^(\s{0,3})([-*+]|(\d+[.)]))\s+/.exec(rest)
+                const m = /^(\s*)([-*+]|(\d+[.)]))\s+/.exec(rest)
                 if (!m) {
                     this.openBlocks.splice(i)
                     break
@@ -224,7 +224,7 @@ class ParseAst {
     }
 
     private tryOpenList(line: string, offset: number): boolean {
-        const m = /^(\s{0,3})([-*+]|(\d+[.)]))\s+(.*)$/.exec(line)
+        const m = /^(\s*)([-*+]|(\d+[.)]))\s+(.*)$/.exec(line)
         if (!m) return false
 
         while (this.openBlocks.at(-1)?.type === 'paragraph') {

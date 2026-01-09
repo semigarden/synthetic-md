@@ -50,11 +50,17 @@ class AstNormalizer {
             if (block.type === 'listItem') {
                 const indent = '  '.repeat(listDepth)
 
-                const marker = block.inlines.find(i => i.type === 'marker')?.text.symbolic ?? '- '
-                text += indent + marker
-                globalPos += indent.length + marker.length
+                const markerInline = block.inlines.find(i => i.type === 'marker')
+                const markerText = markerInline?.text.symbolic.trimStart() ?? '- '
+                
+                if (markerInline) {
+                    markerInline.text.symbolic = indent + markerText
+                }
 
-                const content = updateBlock(block.blocks[0], listDepth + 1)
+                text += indent + markerText
+                globalPos += indent.length + markerText.length
+
+                const content = updateBlock(block.blocks[0], listDepth)
                 text += content
 
                 const nested = block.blocks.find(b => b.type === 'list')

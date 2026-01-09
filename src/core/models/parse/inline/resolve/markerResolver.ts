@@ -52,7 +52,7 @@ class MarkerResolver {
         }
 
         if (blockType === 'listItem') {
-            const unorderedListMatch = /^\s{0,3}([-*+])\s+/.exec(text);
+            const unorderedListMatch = /^\s*([-*+])\s+/.exec(text);
             if (unorderedListMatch) {
                 stream.advance(text.length)
 
@@ -68,7 +68,7 @@ class MarkerResolver {
                 }
             }
         
-            const orderedListMatch = /^\s{0,3}(\d{1,9})([.)])\s+/.exec(text);
+            const orderedListMatch = /^\s*(\d{1,9})([.)])\s+/.exec(text);
             if (orderedListMatch) {
                 stream.advance(text.length)
 
