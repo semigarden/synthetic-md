@@ -96,7 +96,8 @@ class AstNormalizer {
 
             if (block.type === 'table') {
                 const parts: string[] = []
-                const maxCells = Math.max(...block.blocks.map(r => (r as TableRow).blocks.length))
+                const cellCounts = block.blocks.map(r => (r as TableRow).blocks.length)
+                const maxCells = cellCounts.length > 0 ? Math.max(...cellCounts) : 1
             
                 block.blocks.forEach((row, rowIndex) => {
                     const rowText = updateBlock(row)

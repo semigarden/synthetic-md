@@ -98,7 +98,8 @@ class Render {
             }
 
             case 'table': {
-                const maxCells = Math.max(...block.blocks.map(r => ('blocks' in r ? r.blocks?.length : 0) ?? 0))
+                const cellCounts = block.blocks.map(r => ('blocks' in r ? r.blocks?.length : 0) ?? 0)
+                const maxCells = cellCounts.length > 0 ? Math.max(...cellCounts) : 1
                 element.dataset.maxCells = String(maxCells)
                 
                 for (const child of block.blocks) {
@@ -257,7 +258,7 @@ class Render {
         tables.forEach(table => {
             const rows = table.querySelectorAll(':scope > tr.tableRow')
 
-            let maxCells = 0
+            let maxCells = 1
             rows.forEach(row => {
                 const cellCount = row.querySelectorAll(':scope > td.tableCell').length
                 if (cellCount > maxCells) maxCells = cellCount

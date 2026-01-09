@@ -479,7 +479,7 @@ class AST {
 
     private isTableDivider(text: string): boolean {
         const trimmed = text.trim()
-        return /^\|?\s*[-:]+(\s*\|\s*[-:]+)+\s*\|?$/.test(trimmed)
+        return /^\|?\s*[-:]+(?:\s*\|\s*[-:]+)*\s*\|?$/.test(trimmed)
     }
 
     private isTableHeader(text: string): boolean {

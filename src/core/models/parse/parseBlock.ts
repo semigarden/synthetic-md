@@ -337,7 +337,7 @@ class ParseBlock {
     }
 
     private isTableDivider(line: string): boolean {
-        return /^\s*\|?\s*[-:]+(\s*\|\s*[-:]+)+\s*\|?\s*$/.test(line)
+        return /^\s*\|?\s*[-:]+(?:\s*\|\s*[-:]+)*\s*\|?\s*$/.test(line)
     }
     
     private splitRow(line: string): string[] {
