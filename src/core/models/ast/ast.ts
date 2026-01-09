@@ -536,7 +536,6 @@ class AST {
 
     public mergeTableCell(cellId: string): AstApplyEffect | null {
         const cell = this.query.getBlockById(cellId) as TableCell
-        console.log('cell', JSON.stringify(cell, null, 2))
         if (!cell || cell.type !== 'tableCell') return null
 
         const flat = this.query.flattenBlocks(this.blocks)
@@ -563,7 +562,53 @@ class AST {
             prevCell = prevRow.blocks[prevRow.blocks.length - 1] as TableCell
         }
 
-        if (!prevCell || !prevRow) return null
+        if (!prevCell || !prevRow) {
+            const isSingleCell = row.blocks.length === 1
+            const isSingleRow = table.blocks.length === 1
+
+            if (isSingleCell && isSingleRow) {
+                const oldParagraph = cell.blocks[0]
+
+                const paragraph: Block = {
+                    id: uuid(),
+                    type: 'paragraph',
+                    text: oldParagraph.text,
+                    position: { start: 0, end: oldParagraph.text.length },
+                    inlines: [],
+                }
+                paragraph.inlines = this.parser.inline.lexInline(paragraph.text, paragraph.id, 'paragraph', 0)
+                paragraph.inlines.forEach((i: Inline) => i.blockId = paragraph.id)
+
+                const tableIndex = this.blocks.findIndex(b => b.id === table.id)
+                this.blocks.splice(tableIndex, 1, paragraph)
+
+                const focusInline = paragraph.inlines[0]
+                if (!focusInline) return null
+
+                return {
+                    renderEffect: {
+                        type: 'update',
+                        render: {
+                            remove: [table],
+                            insert: [
+                                { at: 'current', target: table, current: paragraph },
+                            ],
+                        },
+                    },
+                    caretEffect: {
+                        type: 'restore',
+                        caret: {
+                            blockId: paragraph.id,
+                            inlineId: focusInline.id,
+                            position: 0,
+                            affinity: 'start',
+                        },
+                    },
+                }
+            }
+
+            return null
+        }
 
         const prevParagraph = prevCell.blocks[0]
         const currParagraph = cell.blocks[0]
