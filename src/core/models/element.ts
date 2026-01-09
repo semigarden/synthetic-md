@@ -99,6 +99,10 @@ class Element extends HTMLElement {
             if (event.key === 'Backspace' && event.shiftKey) {
                 intent = 'insertRowAbove'
             }
+
+            if (event.key === 'Enter' && event.shiftKey) {
+                intent = 'splitInCell'
+            }
             
             if (!intent) return
 

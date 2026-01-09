@@ -29,6 +29,7 @@ type AstEffect =
  | { type: 'addTableColumn'; cellId: string }
  | { type: 'addTableRow'; cellId: string }
  | { type: 'addTableRowAbove'; cellId: string }
+ | { type: 'splitTableCell'; cellId: string; blockId: string; inlineId: string; caretPosition: number }
 
 export type AstApplyEffect = {
     renderEffect: RenderEffect
@@ -74,6 +75,7 @@ export type Intent =
     | 'indent'
     | 'outdent'
     | 'insertRowAbove'
+    | 'splitInCell'
 
 interface BlockType<T extends string = string> {
     id: string

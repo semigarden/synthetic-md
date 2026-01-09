@@ -350,20 +350,22 @@ class ParseBlock {
 
     private buildTableBlock(context: {start: number; headerLine: string; dividerLine?: string; rows: string[]}): Table {
         const makeCell = (text: string): TableCell => {
-            const paragraph: Block = {
+            const parts = text.split(/<br\s*\/?>/i)
+            
+            const blocks: Block[] = parts.map(part => ({
                 id: uuid(),
                 type: 'paragraph',
-                text,
-                position: { start: 0, end: text.length },
+                text: part.trim(),
+                position: { start: 0, end: part.trim().length },
                 inlines: [],
-            }
+            }))
     
             return {
                 id: uuid(),
                 type: 'tableCell',
                 text,
                 position: { start: 0, end: text.length },
-                blocks: [paragraph],
+                blocks,
                 inlines: [],
             }
         }

@@ -151,9 +151,19 @@ class AstNormalizer {
             }
 
             if (block.type === 'tableCell') {
-                const paragraph = block.blocks[0]
-                const cellText = updateBlock(paragraph)
-            
+                const parts: string[] = []
+                
+                for (let i = 0; i < block.blocks.length; i++) {
+                    const childText = updateBlock(block.blocks[i])
+                    parts.push(childText)
+                    
+                    if (i < block.blocks.length - 1) {
+                        parts.push('<br>')
+                        globalPos += 4
+                    }
+                }
+                
+                const cellText = parts.join('')
                 block.text = cellText
                 block.position = { start, end: globalPos }
             

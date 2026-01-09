@@ -863,6 +863,72 @@ class AST {
             },
         }
     }
+
+    public splitTableCell(cellId: string, blockId: string, inlineId: string, caretPosition: number): AstApplyEffect | null {
+        const cell = this.query.getBlockById(cellId) as TableCell
+        if (!cell || cell.type !== 'tableCell') return null
+
+        const block = cell.blocks.find(b => b.id === blockId)
+        if (!block) return null
+
+        const blockIndex = cell.blocks.findIndex(b => b.id === blockId)
+
+        const inline = block.inlines.find(i => i.id === inlineId)
+        if (!inline) return null
+
+        const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
+
+        let textBeforeCaret = ''
+        for (let i = 0; i < inlineIndex; i++) {
+            textBeforeCaret += block.inlines[i].text.symbolic
+        }
+        textBeforeCaret += inline.text.symbolic.slice(0, caretPosition)
+
+        const textAfterCaret = block.inlines
+            .slice(inlineIndex)
+            .map((i, idx) => idx === 0 ? i.text.symbolic.slice(caretPosition) : i.text.symbolic)
+            .join('')
+
+        block.text = textBeforeCaret
+        block.inlines = this.parser.inline.lexInline(textBeforeCaret, block.id, block.type, block.position.start)
+        block.inlines.forEach((i: Inline) => i.blockId = block.id)
+
+        const newBlock: Block = {
+            id: uuid(),
+            type: 'paragraph',
+            text: textAfterCaret,
+            position: { start: 0, end: textAfterCaret.length },
+            inlines: [],
+        }
+        newBlock.inlines = this.parser.inline.lexInline(textAfterCaret, newBlock.id, 'paragraph', 0)
+        newBlock.inlines.forEach((i: Inline) => i.blockId = newBlock.id)
+
+        cell.blocks.splice(blockIndex + 1, 0, newBlock)
+
+        const focusInline = newBlock.inlines[0]
+        if (!focusInline) return null
+
+        return {
+            renderEffect: {
+                type: 'update',
+                render: {
+                    remove: [],
+                    insert: [
+                        { at: 'current', target: cell, current: cell },
+                    ],
+                },
+            },
+            caretEffect: {
+                type: 'restore',
+                caret: {
+                    blockId: newBlock.id,
+                    inlineId: focusInline.id,
+                    position: 0,
+                    affinity: 'start',
+                },
+            },
+        }
+    }
 }
 
 export default AST

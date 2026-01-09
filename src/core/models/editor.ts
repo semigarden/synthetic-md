@@ -26,6 +26,8 @@ class Editor {
             return this.resolveOutdent(context)
         } else if (intent === 'insertRowAbove') {
             return this.resolveInsertRowAbove(context)
+        } else if (intent === 'splitInCell') {
+            return this.resolveSplitInCell(context)
         }
 
         return { preventDefault: false }
@@ -173,10 +175,28 @@ class Editor {
         }
     }
 
+    private resolveSplitInCell(context: EditContext): EditEffect {
+        const tableCell = this.ast.query.getParentBlock(context.block)
+        if (tableCell?.type !== 'tableCell') return { preventDefault: false }
+
+        const caretPosition = this.caret.getPositionInInline(context.inlineElement)
+
+        return {
+            preventDefault: true,
+            ast: [{
+                type: 'splitTableCell',
+                cellId: tableCell.id,
+                blockId: context.block.id,
+                inlineId: context.inline.id,
+                caretPosition: caretPosition,
+            }],
+        }
+    }
+
     public apply(effect: EditEffect) {
         if (effect.ast) {
             effect.ast.forEach(effect => {
-                const effectTypes = ['input', 'splitBlock', 'splitListItem', 'mergeInline', 'indentListItem', 'outdentListItem', 'mergeTableCell', 'addTableColumn', 'addTableRow', 'addTableRowAbove']
+                const effectTypes = ['input', 'splitBlock', 'splitListItem', 'mergeInline', 'indentListItem', 'outdentListItem', 'mergeTableCell', 'addTableColumn', 'addTableRow', 'addTableRowAbove', 'splitTableCell']
                 if (effectTypes.includes(effect.type)) {
                     let result: AstApplyEffect | null = null
                     switch (effect.type) {
@@ -209,6 +229,9 @@ class Editor {
                             break
                         case 'addTableRowAbove':
                             result = this.ast.addTableRowAbove(effect.cellId)
+                            break
+                        case 'splitTableCell':
+                            result = this.ast.splitTableCell(effect.cellId, effect.blockId, effect.inlineId, effect.caretPosition)
                             break
                     }
                     if (!result) return
