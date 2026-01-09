@@ -1,4 +1,4 @@
-import { ParseBlockContext, DetectedBlock, Block, Table, TableRow, TableCell } from "../../types"
+import { ParseBlockContext, DetectedBlock, Block, Table, TableRow, TableCell, TableHeader } from "../../types"
 import { uuid } from "../../utils/utils"
 
 class ParseBlock {
@@ -441,9 +441,20 @@ class ParseBlock {
             }
         }
 
-        const makeCell = (text: string): TableCell => {
+        const makeCell = (text: string, isHeader: boolean = false): TableCell | TableHeader => {
             const parts = text.split(/<br\s*\/?>/i)
             const blocks: Block[] = parts.map(makeBlock)
+    
+            if (isHeader) {
+                return {
+                    id: uuid(),
+                    type: 'tableHeader',
+                    text,
+                    position: { start: 0, end: text.length },
+                    blocks,
+                    inlines: [],
+                }
+            }
     
             return {
                 id: uuid(),
@@ -455,8 +466,8 @@ class ParseBlock {
             }
         }
     
-        const makeRow = (line: string): TableRow => {
-            const cells = this.splitRow(line).map(makeCell)
+        const makeRow = (line: string, isHeader: boolean = false): TableRow => {
+            const cells = this.splitRow(line).map(cellText => makeCell(cellText, isHeader))
     
             return {
                 id: uuid(),
@@ -468,8 +479,8 @@ class ParseBlock {
             }
         }
     
-        const header = makeRow(context.headerLine)
-        const rows = context.rows.map(makeRow)
+        const header = makeRow(context.headerLine, true)
+        const rows = context.rows.map(line => makeRow(line, false))
     
         return {
             id: uuid(),

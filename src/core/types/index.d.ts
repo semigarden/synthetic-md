@@ -102,6 +102,7 @@ export type Block =
     | Table
     | TableRow
     | TableCell
+    | TableHeader
     | HTMLBlock
     | Footnote
     | TaskListItem
@@ -151,6 +152,10 @@ interface TableRow extends BlockType<'tableRow'> {
 }
 
 interface TableCell extends BlockType<'tableCell'> {
+    blocks: Block[]
+}
+
+interface TableHeader extends BlockType<'tableHeader'> {
     blocks: Block[]
 }
 

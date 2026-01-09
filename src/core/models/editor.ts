@@ -53,7 +53,7 @@ class Editor {
         
         const parentBlock = this.ast.query.getParentBlock(context.block)
 
-        if (parentBlock?.type === 'tableCell') {
+        if (parentBlock?.type === 'tableCell' || parentBlock?.type === 'tableHeader') {
             return {
                 preventDefault: true,
                 ast: [{
@@ -91,7 +91,7 @@ class Editor {
         if (this.caret.getPositionInInline(context.inlineElement) !== 0) return { preventDefault: false }
 
         const tableCell = this.ast.query.getParentBlock(context.block)
-        if (tableCell?.type === 'tableCell') {
+        if (tableCell?.type === 'tableCell' || tableCell?.type === 'tableHeader') {
             const isFirstInline = context.inlineIndex === 0
             const blockIndex = tableCell.blocks.findIndex(b => b.id === context.block.id)
             const isFirstBlockInCell = blockIndex === 0
@@ -157,7 +157,7 @@ class Editor {
 
     private resolveIndent(context: EditContext): EditEffect {
         const tableCell = this.ast.query.getParentBlock(context.block)
-        if (tableCell?.type === 'tableCell') {
+        if (tableCell?.type === 'tableCell' || tableCell?.type === 'tableHeader') {
             const caretPosition = this.caret.getPositionInInline(context.inlineElement)
             return {
                 preventDefault: true,
@@ -192,7 +192,7 @@ class Editor {
 
     private resolveInsertRowAbove(context: EditContext): EditEffect {
         const tableCell = this.ast.query.getParentBlock(context.block)
-        if (tableCell?.type !== 'tableCell') return { preventDefault: false }
+        if (tableCell?.type !== 'tableCell' && tableCell?.type !== 'tableHeader') return { preventDefault: false }
 
         return {
             preventDefault: true,
@@ -202,7 +202,7 @@ class Editor {
 
     private resolveSplitInCell(context: EditContext): EditEffect {
         const tableCell = this.ast.query.getParentBlock(context.block)
-        if (tableCell?.type !== 'tableCell') return { preventDefault: false }
+        if (tableCell?.type !== 'tableCell' && tableCell?.type !== 'tableHeader') return { preventDefault: false }
 
         const caretPosition = this.caret.getPositionInInline(context.inlineElement)
 

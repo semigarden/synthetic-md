@@ -2,7 +2,7 @@ import AstNormalizer from './AstNormalizer'
 import AstMutation from './AstMutation'
 import AstQuery from './AstQuery'
 import ParseAst from '../parse/parseAst'
-import { AstApplyEffect, DetectedBlock, Block, BlockQuote, CodeBlock, Inline, List, ListItem, Table, TableCell, TableRow } from '../../types'
+import { AstApplyEffect, DetectedBlock, Block, BlockQuote, CodeBlock, Inline, List, ListItem, Table, TableCell, TableHeader, TableRow } from '../../types'
 import { uuid } from '../../utils/utils'
 
 class AST {
@@ -41,8 +41,8 @@ class AST {
         const inline = this.query.getFirstInline(newBlocks)
         if (!inline) return null
 
-        if (entry.parent && entry.parent.type === 'tableCell') {
-            const cell = entry.parent as TableCell
+        if (entry.parent && (entry.parent.type === 'tableCell' || entry.parent.type === 'tableHeader')) {
+            const cell = entry.parent as TableCell | TableHeader
             cell.blocks.splice(entry.index, 1, ...newBlocks)
 
             return {
@@ -752,8 +752,8 @@ class AST {
     }
 
     public mergeTableCell(cellId: string): AstApplyEffect | null {
-        const cell = this.query.getBlockById(cellId) as TableCell
-        if (!cell || cell.type !== 'tableCell') return null
+        const cell = this.query.getBlockById(cellId) as TableCell | TableHeader
+        if (!cell || (cell.type !== 'tableCell' && cell.type !== 'tableHeader')) return null
 
         const flat = this.query.flattenBlocks(this.blocks)
         const rowEntry = flat.find(e => e.block.type === 'tableRow' && (e.block as TableRow).blocks.some(c => c.id === cellId))
@@ -768,15 +768,15 @@ class AST {
         const table = tableEntry.block as Table
         const rowIndex = table.blocks.findIndex(r => r.id === row.id)
 
-        let prevCell: TableCell | null = null
+        let prevCell: TableCell | TableHeader | null = null
         let prevRow: TableRow | null = null
 
         if (cellIndex > 0) {
-            prevCell = row.blocks[cellIndex - 1] as TableCell
+            prevCell = row.blocks[cellIndex - 1] as TableCell | TableHeader
             prevRow = row
         } else if (rowIndex > 0) {
             prevRow = table.blocks[rowIndex - 1] as TableRow
-            prevCell = prevRow.blocks[prevRow.blocks.length - 1] as TableCell
+            prevCell = prevRow.blocks[prevRow.blocks.length - 1] as TableCell | TableHeader
         }
 
         if (!prevCell || !prevRow) {
@@ -842,7 +842,8 @@ class AST {
         newInlines.forEach((i: Inline) => i.blockId = prevParagraph.id)
 
         prevCell.text = mergedText
-        prevCell.inlines = this.parser.inline.lexInline(mergedText, prevCell.id, 'tableCell', prevCell.position.start)
+        const prevCellType = prevCell.type === 'tableHeader' ? 'tableHeader' : 'tableCell'
+        prevCell.inlines = this.parser.inline.lexInline(mergedText, prevCell.id, prevCellType, prevCell.position.start)
         prevCell.inlines.forEach((i: Inline) => i.blockId = prevCell.id)
 
         row.blocks.splice(cellIndex, 1)
@@ -877,8 +878,8 @@ class AST {
     }
 
     public addTableColumn(cellId: string): AstApplyEffect | null {
-        const cell = this.query.getBlockById(cellId) as TableCell
-        if (!cell || cell.type !== 'tableCell') return null
+        const cell = this.query.getBlockById(cellId) as TableCell | TableHeader
+        if (!cell || (cell.type !== 'tableCell' && cell.type !== 'tableHeader')) return null
 
         const flat = this.query.flattenBlocks(this.blocks)
         const rowEntry = flat.find(e => e.block.type === 'tableRow' && (e.block as TableRow).blocks.some(c => c.id === cellId))
@@ -886,6 +887,9 @@ class AST {
 
         const row = rowEntry.block as TableRow
         const cellIndex = row.blocks.findIndex(c => c.id === cellId)
+
+        const tableEntry = flat.find(e => e.block.type === 'table' && (e.block as Table).blocks.some(r => r.id === row.id))
+        const isHeaderRow = tableEntry && (tableEntry.block as Table).blocks[0]?.id === row.id
 
         const newParagraph: Block = {
             id: uuid(),
@@ -897,7 +901,14 @@ class AST {
         newParagraph.inlines = this.parser.inline.lexInline('', newParagraph.id, 'paragraph', 0)
         newParagraph.inlines.forEach((i: Inline) => i.blockId = newParagraph.id)
 
-        const newCell: TableCell = {
+        const newCell: TableCell | TableHeader = isHeaderRow ? {
+            id: uuid(),
+            type: 'tableHeader',
+            text: '',
+            position: { start: 0, end: 0 },
+            blocks: [newParagraph],
+            inlines: [],
+        } : {
             id: uuid(),
             type: 'tableCell',
             text: '',
@@ -905,7 +916,8 @@ class AST {
             blocks: [newParagraph],
             inlines: [],
         }
-        newCell.inlines = this.parser.inline.lexInline('', newCell.id, 'tableCell', 0)
+        const cellType = isHeaderRow ? 'tableHeader' : 'tableCell'
+        newCell.inlines = this.parser.inline.lexInline('', newCell.id, cellType, 0)
         newCell.inlines.forEach((i: Inline) => i.blockId = newCell.id)
 
         row.blocks.splice(cellIndex + 1, 0, newCell)
@@ -936,8 +948,8 @@ class AST {
     }
 
     public addTableRow(cellId: string): AstApplyEffect | null {
-        const cell = this.query.getBlockById(cellId) as TableCell
-        if (!cell || cell.type !== 'tableCell') return null
+        const cell = this.query.getBlockById(cellId) as TableCell | TableHeader
+        if (!cell || (cell.type !== 'tableCell' && cell.type !== 'tableHeader')) return null
 
         const flat = this.query.flattenBlocks(this.blocks)
         const rowEntry = flat.find(e => e.block.type === 'tableRow' && (e.block as TableRow).blocks.some(c => c.id === cellId))
@@ -1009,8 +1021,8 @@ class AST {
     }
 
     public addTableRowAbove(cellId: string): AstApplyEffect | null {
-        const cell = this.query.getBlockById(cellId) as TableCell
-        if (!cell || cell.type !== 'tableCell') return null
+        const cell = this.query.getBlockById(cellId) as TableCell | TableHeader
+        if (!cell || (cell.type !== 'tableCell' && cell.type !== 'tableHeader')) return null
 
         const flat = this.query.flattenBlocks(this.blocks)
         const rowEntry = flat.find(e => e.block.type === 'tableRow' && (e.block as TableRow).blocks.some(c => c.id === cellId))
@@ -1082,8 +1094,8 @@ class AST {
     }
 
     public splitTableCell(cellId: string, blockId: string, inlineId: string, caretPosition: number): AstApplyEffect | null {
-        const cell = this.query.getBlockById(cellId) as TableCell
-        if (!cell || cell.type !== 'tableCell') return null
+        const cell = this.query.getBlockById(cellId) as TableCell | TableHeader
+        if (!cell || (cell.type !== 'tableCell' && cell.type !== 'tableHeader')) return null
 
         const block = cell.blocks.find(b => b.id === blockId)
         if (!block) return null
@@ -1148,8 +1160,8 @@ class AST {
     }
 
     public splitTableCellAtCaret(cellId: string, blockId: string, inlineId: string, caretPosition: number): AstApplyEffect | null {
-        const cell = this.query.getBlockById(cellId) as TableCell
-        if (!cell || cell.type !== 'tableCell') return null
+        const cell = this.query.getBlockById(cellId) as TableCell | TableHeader
+        if (!cell || (cell.type !== 'tableCell' && cell.type !== 'tableHeader')) return null
 
         const flat = this.query.flattenBlocks(this.blocks)
         const rowEntry = flat.find(e => e.block.type === 'tableRow' && (e.block as TableRow).blocks.some(c => c.id === cellId))
@@ -1182,7 +1194,8 @@ class AST {
         block.inlines.forEach((i: Inline) => i.blockId = block.id)
 
         cell.text = textBeforeCaret
-        cell.inlines = this.parser.inline.lexInline(textBeforeCaret, cell.id, 'tableCell', cell.position.start)
+        const cellType = cell.type === 'tableHeader' ? 'tableHeader' : 'tableCell'
+        cell.inlines = this.parser.inline.lexInline(textBeforeCaret, cell.id, cellType, cell.position.start)
         cell.inlines.forEach((i: Inline) => i.blockId = cell.id)
 
         const newParagraph: Block = {
@@ -1195,7 +1208,14 @@ class AST {
         newParagraph.inlines = this.parser.inline.lexInline(textAfterCaret, newParagraph.id, 'paragraph', 0)
         newParagraph.inlines.forEach((i: Inline) => i.blockId = newParagraph.id)
 
-        const newCell: TableCell = {
+        const newCell: TableCell | TableHeader = cell.type === 'tableHeader' ? {
+            id: uuid(),
+            type: 'tableHeader',
+            text: textAfterCaret,
+            position: { start: 0, end: textAfterCaret.length },
+            blocks: [newParagraph],
+            inlines: [],
+        } : {
             id: uuid(),
             type: 'tableCell',
             text: textAfterCaret,
@@ -1203,7 +1223,7 @@ class AST {
             blocks: [newParagraph],
             inlines: [],
         }
-        newCell.inlines = this.parser.inline.lexInline(textAfterCaret, newCell.id, 'tableCell', 0)
+        newCell.inlines = this.parser.inline.lexInline(textAfterCaret, newCell.id, cellType, 0)
         newCell.inlines.forEach((i: Inline) => i.blockId = newCell.id)
 
         row.blocks.splice(cellIndex + 1, 0, newCell)
@@ -1235,8 +1255,8 @@ class AST {
     }
 
     public mergeBlocksInCell(cellId: string, blockId: string): AstApplyEffect | null {
-        const cell = this.query.getBlockById(cellId) as TableCell
-        if (!cell || cell.type !== 'tableCell') return null
+        const cell = this.query.getBlockById(cellId) as TableCell | TableHeader
+        if (!cell || (cell.type !== 'tableCell' && cell.type !== 'tableHeader')) return null
 
         const blockIndex = cell.blocks.findIndex(b => b.id === blockId)
         if (blockIndex <= 0) return null
@@ -1279,8 +1299,8 @@ class AST {
     }
 
     public mergeInlineInCell(cellId: string, leftInlineId: string, rightInlineId: string): AstApplyEffect | null {
-        const cell = this.query.getBlockById(cellId) as TableCell
-        if (!cell || cell.type !== 'tableCell') return null
+        const cell = this.query.getBlockById(cellId) as TableCell | TableHeader
+        if (!cell || (cell.type !== 'tableCell' && cell.type !== 'tableHeader')) return null
 
         let targetBlock: Block | null = null
         for (const block of cell.blocks) {

@@ -64,6 +64,11 @@ class Render {
                     element = document.createElement('td')
                     element.classList.add('tableCell')
                     break
+                
+                case 'tableHeader':
+                    element = document.createElement('th')
+                    element.classList.add('tableCell')
+                    break
 
                 case 'thematicBreak':
                     element = document.createElement('hr')
@@ -126,6 +131,7 @@ class Render {
             }
 
             case 'tableCell':
+            case 'tableHeader':
                 for (const child of block.blocks) {
                     this.renderBlock(child, element)
                 }

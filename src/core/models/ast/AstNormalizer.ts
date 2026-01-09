@@ -150,7 +150,7 @@ class AstNormalizer {
                 return text
             }
 
-            if (block.type === 'tableCell') {
+            if (block.type === 'tableCell' || block.type === 'tableHeader') {
                 const parts: string[] = []
                 
                 for (let i = 0; i < block.blocks.length; i++) {

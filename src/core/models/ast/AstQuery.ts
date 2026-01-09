@@ -224,6 +224,7 @@ class AstQuery {
         switch (block.type) {
             case 'listItem':
             case 'tableCell':
+            case 'tableHeader':
                 return true
             default:
                 return false
