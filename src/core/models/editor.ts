@@ -53,28 +53,6 @@ class Editor {
         
         const parentBlock = this.ast.query.getParentBlock(context.block)
 
-        if (caretPosition === 0 && context.inlineIndex === 0 && parentBlock?.type === 'tableHeader') {
-            const tableRow = this.ast.query.getParentBlock(parentBlock)
-            if (tableRow?.type === 'tableRow') {
-                const table = this.ast.query.getParentBlock(tableRow)
-                if (table?.type === 'table') {
-                    const isFirstRow = table.blocks[0]?.id === tableRow.id
-                    if (isFirstRow) {
-                        const tableIndex = this.ast.blocks.findIndex(b => b.id === table.id)
-                        if (tableIndex >= 0) {
-                            return {
-                                preventDefault: true,
-                                ast: [{
-                                    type: 'insertParagraphAboveTable',
-                                    tableId: table.id,
-                                }],
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         if (parentBlock?.type === 'tableCell' || parentBlock?.type === 'tableHeader') {
             return {
                 preventDefault: true,
@@ -203,6 +181,26 @@ class Editor {
     }
 
     private resolveOutdent(context: EditContext): EditEffect {
+        const tableCell = this.ast.query.getParentBlock(context.block)
+        if (tableCell?.type === 'tableHeader') {
+            const tableRow = this.ast.query.getParentBlock(tableCell)
+            if (tableRow?.type === 'tableRow') {
+                const table = this.ast.query.getParentBlock(tableRow)
+                if (table?.type === 'table') {
+                    const tableIndex = this.ast.blocks.findIndex(b => b.id === table.id)
+                    if (tableIndex >= 0) {
+                        return {
+                            preventDefault: true,
+                            ast: [{
+                                type: 'insertParagraphAboveTable',
+                                tableId: table.id,
+                            }],
+                        }
+                    }
+                }
+            }
+        }
+
         const listItem = this.ast.query.getParentBlock(context.block)
         if (!listItem || listItem.type !== 'listItem') return { preventDefault: false }
 
