@@ -98,17 +98,12 @@ class Render {
             }
 
             case 'table':
-                case 'tableRow':
-                    for (const child of block.blocks) {
-                        this.renderBlock(child, element)
-                    }
-                    break
-            
-                case 'tableCell':
-                    for (const child of block.blocks) {
-                        this.renderBlock(child, element)
-                    }
-                    break
+            case 'tableRow':
+            case 'tableCell':
+                for (const child of block.blocks) {
+                    this.renderBlock(child, element)
+                }
+                break
         
             case 'codeBlock':
                 const code = element.querySelector('code') as HTMLElement || document.createElement('code')

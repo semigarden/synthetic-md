@@ -38,10 +38,21 @@ class ParseAst {
     }
 
     private parseLine(line: string, offset: number) {
-        // if (line.trim() === '') {
-        //     this.handleBlankLine()
-        //     return
-        // }
+        if (this.block.hasPendingTable) {
+            const produced = this.block.line(line, offset)
+            if (produced) {
+                for (const b of produced) this.blocks.push(b)
+            }
+            return
+        }
+
+        if (/\|/.test(line.trim()) && !this.isTableDivider(line)) {
+            const produced = this.block.line(line, offset)
+            if (produced) {
+                for (const b of produced) this.blocks.push(b)
+            }
+            if (this.block.hasPendingTable) return
+        }
 
         let state = this.continueContainers(line)
     
@@ -60,6 +71,10 @@ class ParseAst {
         }
 
         this.addParagraph(state.line, offset)
+    }
+
+    private isTableDivider(line: string): boolean {
+        return /^\s*\|?\s*[-:]+(\s*\|\s*[-:]+)+\s*\|?\s*$/.test(line)
     }
 
     private continueContainers(line: string): { line: string } {
@@ -152,14 +167,6 @@ class ParseAst {
             }
     
             case 'codeBlock': {
-                const produced = this.block.line(line, offset)
-                if (produced) {
-                    for (const b of produced) attach(b)
-                }
-                return true
-            }
-    
-            case 'table': {
                 const produced = this.block.line(line, offset)
                 if (produced) {
                     for (const b of produced) attach(b)
@@ -354,6 +361,11 @@ class ParseAst {
 
     private closeAll(offset: number) {
         this.openBlocks = []
+
+        const flushed = this.block.flush(offset)
+        if (flushed) {
+            for (const b of flushed) this.blocks.push(b)
+        }
     }
 
 

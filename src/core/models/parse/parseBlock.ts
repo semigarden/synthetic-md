@@ -16,7 +16,19 @@ class ParseBlock {
         if (this.context.table) {
             const table = this.context.table
             this.context.table = undefined
-            return [this.buildTableBlock(table)]
+
+            if (table.dividerLine) {
+                return [this.buildTableBlock(table)]
+            }
+
+            const paragraph: Block = {
+                id: uuid(),
+                type: 'paragraph',
+                text: table.headerLine,
+                position: { start: table.start, end: table.start + table.headerLine.length },
+                inlines: [],
+            }
+            return [paragraph]
         }
         return null
     }
@@ -58,9 +70,17 @@ class ParseBlock {
                     table.dividerLine = line
                     return null
                 }
-        
+
                 this.context.table = undefined
-                return this.line(table.headerLine, table.start)
+                const paragraph: Block = {
+                    id: uuid(),
+                    type: 'paragraph',
+                    text: table.headerLine,
+                    position: { start: table.start, end: table.start + table.headerLine.length },
+                    inlines: [],
+                }
+                const currentLineBlocks = this.line(line, start) ?? []
+                return [paragraph, ...currentLineBlocks]
             }
         
             if (/\|/.test(line)) {
@@ -72,6 +92,16 @@ class ParseBlock {
             this.context.table = undefined
         
             return [block, ...(this.line(line, offset) ?? [])]
+        }
+
+        const trimmed = line.trim()
+        if (/\|/.test(trimmed) && !this.isTableDivider(line)) {
+            this.context.table = {
+                start,
+                headerLine: line,
+                rows: []
+            }
+            return null
         }
 
         const detected = this.detectType(line)
@@ -159,15 +189,6 @@ class ParseBlock {
                     blocks.push(list)
                 }
                 break
-            }
-
-            case 'table': {
-                this.context.table = {
-                    start,
-                    headerLine: line,
-                    rows: []
-                }
-                return null
             }
 
             case 'codeBlock': {
@@ -282,12 +303,6 @@ class ParseBlock {
             return { type: 'codeBlock' }
         }
     
-        if (/\|/.test(trimmed) && !/^\|[-:\s|]+\|$/.test(trimmed)) {
-            if (!/^[-:\s|]+$/.test(trimmed.replace(/^\||\|$/g, ''))) {
-                return { type: 'table' }
-            }
-        }
-    
         if (/^\[\^[^\]]+\]:/.test(trimmed)) {
             return { type: 'footnote' }
         }
@@ -315,6 +330,10 @@ class ParseBlock {
             currentCodeBlock: null,
             table: undefined,
         }
+    }
+
+    public get hasPendingTable(): boolean {
+        return !!this.context.table
     }
 
     private isTableDivider(line: string): boolean {

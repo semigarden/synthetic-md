@@ -148,7 +148,7 @@ class AST {
             detectedBlock.type !== block.type ||
             (detectedBlock.type === 'heading' && block.type === 'heading' && detectedBlock.level !== block.level)
         
-        const ignoreTypes = ['blankLine', 'codeBlock']
+        const ignoreTypes = ['blankLine', 'codeBlock', 'table']
         if (blockTypeChanged && !ignoreTypes.includes(detectedBlock.type)) {
             if (detectedBlock.type === 'listItem') caretPosition = 0
             return this.transformBlock(newText, block, detectedBlock, caretPosition)
@@ -337,7 +337,7 @@ class AST {
             detectedBlock.type !== leftBlock.type ||
             (detectedBlock.type === 'heading' && leftBlock.type === 'heading' && detectedBlock.level !== leftBlock.level)
 
-        const ignoreTypes = ['blankLine', 'codeBlock']
+        const ignoreTypes = ['blankLine', 'codeBlock', 'table']
         if (blockTypeChanged && !ignoreTypes.includes(detectedBlock.type)) {
             return this.transformBlock(newText, leftBlock, detectedBlock, caretPosition)
         }
