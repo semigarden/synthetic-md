@@ -93,10 +93,28 @@ class Editor {
         const tableCell = this.ast.query.getParentBlock(context.block)
         if (tableCell?.type === 'tableCell') {
             const isFirstInline = context.inlineIndex === 0
+            const blockIndex = tableCell.blocks.findIndex(b => b.id === context.block.id)
+            const isFirstBlockInCell = blockIndex === 0
+
             if (isFirstInline) {
-                return {
-                    preventDefault: true,
-                    ast: [{ type: 'mergeTableCell', cellId: tableCell.id }],
+                if (isFirstBlockInCell) {
+                    return {
+                        preventDefault: true,
+                        ast: [{ type: 'mergeTableCell', cellId: tableCell.id }],
+                    }
+                } else {
+                    return {
+                        preventDefault: true,
+                        ast: [{ type: 'mergeBlocksInCell', cellId: tableCell.id, blockId: context.block.id }],
+                    }
+                }
+            } else {
+                const previousInline = this.ast.query.getPreviousInlineInBlock(context.inline, context.block)
+                if (previousInline) {
+                    return {
+                        preventDefault: true,
+                        ast: [{ type: 'mergeInlineInCell', cellId: tableCell.id, leftInlineId: previousInline.id, rightInlineId: context.inline.id }],
+                    }
                 }
             }
         }
@@ -196,7 +214,7 @@ class Editor {
     public apply(effect: EditEffect) {
         if (effect.ast) {
             effect.ast.forEach(effect => {
-                const effectTypes = ['input', 'splitBlock', 'splitListItem', 'mergeInline', 'indentListItem', 'outdentListItem', 'mergeTableCell', 'addTableColumn', 'addTableRow', 'addTableRowAbove', 'splitTableCell']
+                const effectTypes = ['input', 'splitBlock', 'splitListItem', 'mergeInline', 'indentListItem', 'outdentListItem', 'mergeTableCell', 'addTableColumn', 'addTableRow', 'addTableRowAbove', 'splitTableCell', 'mergeBlocksInCell', 'mergeInlineInCell']
                 if (effectTypes.includes(effect.type)) {
                     let result: AstApplyEffect | null = null
                     switch (effect.type) {
@@ -232,6 +250,12 @@ class Editor {
                             break
                         case 'splitTableCell':
                             result = this.ast.splitTableCell(effect.cellId, effect.blockId, effect.inlineId, effect.caretPosition)
+                            break
+                        case 'mergeBlocksInCell':
+                            result = this.ast.mergeBlocksInCell(effect.cellId, effect.blockId)
+                            break
+                        case 'mergeInlineInCell':
+                            result = this.ast.mergeInlineInCell(effect.cellId, effect.leftInlineId, effect.rightInlineId)
                             break
                     }
                     if (!result) return

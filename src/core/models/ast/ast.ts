@@ -929,6 +929,103 @@ class AST {
             },
         }
     }
+
+    public mergeBlocksInCell(cellId: string, blockId: string): AstApplyEffect | null {
+        const cell = this.query.getBlockById(cellId) as TableCell
+        if (!cell || cell.type !== 'tableCell') return null
+
+        const blockIndex = cell.blocks.findIndex(b => b.id === blockId)
+        if (blockIndex <= 0) return null
+
+        const currentBlock = cell.blocks[blockIndex]
+        const previousBlock = cell.blocks[blockIndex - 1]
+
+        const mergedText = previousBlock.text + currentBlock.text
+        const caretPosition = previousBlock.text.length
+
+        previousBlock.text = mergedText
+        previousBlock.inlines = this.parser.inline.lexInline(mergedText, previousBlock.id, previousBlock.type, previousBlock.position.start)
+        previousBlock.inlines.forEach((i: Inline) => i.blockId = previousBlock.id)
+
+        cell.blocks.splice(blockIndex, 1)
+
+        const { inline: caretInline, position } = this.query.getInlineAtPosition(previousBlock.inlines, caretPosition) ?? { inline: null, position: 0 }
+        if (!caretInline) return null
+
+        return {
+            renderEffect: {
+                type: 'update',
+                render: {
+                    remove: [],
+                    insert: [
+                        { at: 'current', target: cell, current: cell },
+                    ],
+                },
+            },
+            caretEffect: {
+                type: 'restore',
+                caret: {
+                    blockId: previousBlock.id,
+                    inlineId: caretInline.id,
+                    position: position,
+                    affinity: 'start',
+                },
+            },
+        }
+    }
+
+    public mergeInlineInCell(cellId: string, leftInlineId: string, rightInlineId: string): AstApplyEffect | null {
+        const cell = this.query.getBlockById(cellId) as TableCell
+        if (!cell || cell.type !== 'tableCell') return null
+
+        let targetBlock: Block | null = null
+        for (const block of cell.blocks) {
+            const hasLeft = block.inlines.some(i => i.id === leftInlineId)
+            const hasRight = block.inlines.some(i => i.id === rightInlineId)
+            if (hasLeft && hasRight) {
+                targetBlock = block
+                break
+            }
+        }
+        if (!targetBlock) return null
+
+        const leftInline = targetBlock.inlines.find(i => i.id === leftInlineId)
+        const rightInline = targetBlock.inlines.find(i => i.id === rightInlineId)
+        if (!leftInline || !rightInline) return null
+
+        const leftIndex = targetBlock.inlines.findIndex(i => i.id === leftInlineId)
+        const rightIndex = targetBlock.inlines.findIndex(i => i.id === rightInlineId)
+
+        const caretPosition = leftInline.text.symbolic.length
+        leftInline.text.symbolic += rightInline.text.symbolic
+        leftInline.text.semantic += rightInline.text.semantic
+        leftInline.position.end = leftInline.position.start + leftInline.text.symbolic.length
+
+        targetBlock.inlines.splice(rightIndex, 1)
+
+        targetBlock.text = targetBlock.inlines.map(i => i.text.symbolic).join('')
+
+        return {
+            renderEffect: {
+                type: 'update',
+                render: {
+                    remove: [],
+                    insert: [
+                        { at: 'current', target: cell, current: cell },
+                    ],
+                },
+            },
+            caretEffect: {
+                type: 'restore',
+                caret: {
+                    blockId: targetBlock.id,
+                    inlineId: leftInline.id,
+                    position: caretPosition,
+                    affinity: 'start',
+                },
+            },
+        }
+    }
 }
 
 export default AST

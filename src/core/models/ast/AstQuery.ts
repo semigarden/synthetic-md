@@ -94,6 +94,12 @@ class AstQuery {
         return flatIndex > 0 ? flat[flatIndex - 1].inline : null
     }
 
+    public getPreviousInlineInBlock(inline: Inline, block: Block): Inline | null {
+        const inlineIndex = block.inlines.findIndex(i => i.id === inline.id)
+        if (inlineIndex <= 0) return null
+        return block.inlines[inlineIndex - 1]
+    }
+
     public getInlineAtPosition(inlines: Inline[], caretPosition: number): { inline: Inline; position: number } | null {
         let acc = 0
     
