@@ -349,32 +349,101 @@ class ParseBlock {
     }
 
     private buildTableBlock(context: {start: number; headerLine: string; dividerLine?: string; rows: string[]}): Table {
-        const makeCell = (text: string): TableCell => {
-            const parts = text.split(/<br\s*\/?>/i)
+        const makeBlock = (text: string): Block => {
+            const trimmed = text.trim()
+            const detected = this.detectType(trimmed)
             
-            const blocks: Block[] = parts.map(part => {
-                const trimmed = part.trim()
-                const detected = this.detectType(trimmed)
-                
-                if (detected.type === 'heading' && 'level' in detected && detected.level !== undefined) {
-                    return {
+            if (detected.type === 'heading' && 'level' in detected && detected.level !== undefined) {
+                return {
+                    id: uuid(),
+                    type: 'heading' as const,
+                    text: trimmed,
+                    level: detected.level,
+                    position: { start: 0, end: trimmed.length },
+                    inlines: [],
+                }
+            }
+            
+            if (detected.type === 'listItem') {
+                const listItem = {
+                    id: uuid(),
+                    type: 'listItem' as const,
+                    text: trimmed,
+                    position: { start: 0, end: trimmed.length },
+                    blocks: [{
                         id: uuid(),
-                        type: 'heading' as const,
-                        text: trimmed,
-                        level: detected.level,
+                        type: 'paragraph' as const,
+                        text: trimmed.replace(/^\s*[-*+]\s+|\s*\d+[.)]\s+/, ''),
                         position: { start: 0, end: trimmed.length },
                         inlines: [],
-                    }
+                    }],
+                    inlines: [],
                 }
                 
                 return {
                     id: uuid(),
-                    type: 'paragraph' as const,
+                    type: 'list' as const,
+                    text: trimmed,
+                    ordered: 'ordered' in detected && detected.ordered === true,
+                    listStart: 'listStart' in detected ? detected.listStart : 1,
+                    tight: true,
+                    position: { start: 0, end: trimmed.length },
+                    blocks: [listItem],
+                    inlines: [],
+                }
+            }
+            
+            if (detected.type === 'codeBlock') {
+                return {
+                    id: uuid(),
+                    type: 'codeBlock' as const,
+                    text: trimmed,
+                    isFenced: trimmed.startsWith('```') || trimmed.startsWith('~~~'),
+                    language: '',
+                    position: { start: 0, end: trimmed.length },
+                    inlines: [],
+                }
+            }
+            
+            if (detected.type === 'thematicBreak') {
+                return {
+                    id: uuid(),
+                    type: 'thematicBreak' as const,
                     text: trimmed,
                     position: { start: 0, end: trimmed.length },
                     inlines: [],
                 }
-            })
+            }
+            
+            if (detected.type === 'blockQuote') {
+                return {
+                    id: uuid(),
+                    type: 'blockQuote' as const,
+                    text: trimmed,
+                    position: { start: 0, end: trimmed.length },
+                    blocks: [{
+                        id: uuid(),
+                        type: 'paragraph' as const,
+                        text: trimmed.replace(/^\s*>\s*/, ''),
+                        position: { start: 0, end: trimmed.length },
+                        inlines: [],
+                    }],
+                    inlines: [],
+                }
+            }
+            
+            return {
+                id: uuid(),
+                type: 'paragraph' as const,
+                text: trimmed,
+                position: { start: 0, end: trimmed.length },
+                inlines: [],
+            }
+        }
+
+        const makeCell = (text: string): TableCell => {
+            const parts = text.split(/<br\s*\/?>/i)
+            const blocks: Block[] = parts.map(makeBlock)
     
             return {
                 id: uuid(),
