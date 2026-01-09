@@ -41,8 +41,6 @@ class AST {
         const inline = this.query.getFirstInline(newBlocks)
         if (!inline) return null
 
-        const parent = this.query.getParentBlock(block)
-
         if (entry.parent && entry.parent.type === 'list' && block.type === 'listItem' && block.type !== detectedBlock.type) {
             const list = entry.parent as List
             const listEntry = flat.find(b => b.block.id === list.id)
@@ -242,10 +240,13 @@ class AST {
 
         listItem.blocks = [left]
 
+        const index = list.blocks.findIndex(b => b.id === listItem.id)
+        listItem.text = this.query.getListItemText(listItem, list)
+
         const newListItem: ListItem = {
             id: uuid(),
             type: 'listItem',
-            blocks: [right],
+            blocks: [],
             inlines: [],
             text: '',
             position: {
@@ -254,11 +255,31 @@ class AST {
             },
         }
 
-        const index = list.blocks.findIndex(b => b.id === listItem.id)
-        list.blocks.splice(index + 1, 0, newListItem)
+        const marker = this.query.getListItemMarker(list, index + 1)
 
-        listItem.text = this.query.getListItemText(listItem)
-        newListItem.text = this.query.getListItemText(newListItem)
+        newListItem.inlines.unshift({
+            id: uuid(),
+            type: 'marker',
+            text: {
+                symbolic: marker,
+                semantic: '',
+            },
+            position: { start: 0, end: marker.length },
+        } as Inline)
+
+        const bodyText = [right]
+            .map(b => b.inlines.map(i => i.text.symbolic).join(''))
+            .join('')
+
+        const bodyBlocks = this.parser.reparseTextFragment(
+            bodyText,
+            newListItem.position.start + marker.length
+        )
+
+        newListItem.text = marker
+        newListItem.blocks = bodyBlocks
+
+        list.blocks.splice(index + 1, 0, newListItem)
 
         return {
             renderEffect: {
@@ -274,8 +295,8 @@ class AST {
             caretEffect: {
                 type: 'restore',
                 caret: {
-                    blockId: right.id,
-                    inlineId: right.inlines[0].id,
+                    blockId: newListItem.blocks[0].id,
+                    inlineId: newListItem.blocks[0].inlines[0].id,
                     position: 0,
                     affinity: 'start',
                 },

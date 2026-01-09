@@ -160,11 +160,22 @@ class AstQuery {
         return flatIndex > 0 ? flat[flatIndex - 1].inline : null
     }
 
-    public getListItemText(item: ListItem): string {
-        const marker = '- '
-        return marker + item.blocks
+    public getListItemText(item: ListItem, list: List): string {
+        const index = list.blocks.findIndex(b => b.id === item.id)
+        const marker = this.getListItemMarker(list, index)
+
+        const text = item.blocks
             .map(b => b.inlines.map(i => i.text.symbolic).join(''))
             .join('')
+    
+        return marker + text
+    }
+
+    public getListItemMarker(list: List, index: number): string {
+        if (!list.ordered) return '- '
+      
+        const start = list.listStart ?? 1
+        return `${start + index}. `
     }
 
     public getInlineMergeOwner(inline: Inline): Block | null {

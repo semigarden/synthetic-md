@@ -38,10 +38,10 @@ class ParseAst {
     }
 
     private parseLine(line: string, offset: number) {
-        if (line.trim() === '') {
-            this.handleBlankLine()
-            return
-        }
+        // if (line.trim() === '') {
+        //     this.handleBlankLine()
+        //     return
+        // }
 
         let state = this.continueContainers(line)
     
@@ -89,14 +89,21 @@ class ParseAst {
             }            
 
             if (open.type === 'list') {
-                const canContinue =
-                    /^(\s{0,3})([-*+])\s+/.test(rest)
-    
-                if (!canContinue) {
+                const list = open.block as List
+            
+                const m = /^(\s{0,3})([-*+]|(\d+[.)]))\s+/.exec(rest)
+                if (!m) {
                     this.openBlocks.splice(i)
                     break
                 }
-    
+            
+                const isOrdered = !!m[3]
+            
+                if (list.ordered !== isOrdered) {
+                    this.openBlocks.splice(i)
+                    break
+                }
+            
                 continue
             }
         }
@@ -212,47 +219,63 @@ class ParseAst {
     }
 
     private tryOpenList(line: string, offset: number): boolean {
-        const m = /^(\s{0,3})([-*+])\s+(.*)$/.exec(line)
+        const m = /^(\s{0,3})([-*+]|(\d+[.)]))\s+(.*)$/.exec(line)
         if (!m) return false
-    
-        const listItemText = m[0]
+
         const indent = m[1].length
         const marker = m[2]
-        const content = m[3]
-    
-        let list = this.openBlocks.findLast(b => b.type === 'list')?.block
-    
-        if (!list) {
+        const ordered = !!m[3]
+        const listStart = ordered ? parseInt(m[3], 10) : undefined
+        const content = m[4]
+        const listItemText = m[0]
+
+        const openListBlock = this.openBlocks.findLast(
+            b =>
+                b.type === 'list' &&
+                (b.block as List).ordered === ordered &&
+                b.indent === indent
+        )
+        
+        let list = openListBlock?.block as List | undefined
+
+        if (!list || list.ordered !== ordered) {
             list = {
                 id: uuid(),
                 type: 'list',
                 text: '',
-                ordered: false,
+                ordered,
+                listStart,
                 blocks: [],
                 position: { start: offset, end: offset },
                 inlines: [],
                 tight: true,
-            } as List
+            }
+
             this.blocks.push(list)
-            this.openBlocks.push({ block: list, type: 'list', indent })
+            this.openBlocks.push({
+                block: list,
+                type: 'list',
+                indent,
+            })
         }
 
-        const item = {
+        const item: ListItem = {
             id: uuid(),
             type: 'listItem',
             text: listItemText,
             blocks: [],
             position: { start: offset, end: offset },
             inlines: [],
-        } as ListItem
-    
-        (list as List).blocks.push(item)
+        }
+
+        list.blocks.push(item)
+
         this.openBlocks.push({
             block: item,
             type: 'listItem',
             indent: indent + marker.length + 1,
         })
-    
+
         this.addParagraph(content, offset + indent + marker.length + 1)
         return true
     }

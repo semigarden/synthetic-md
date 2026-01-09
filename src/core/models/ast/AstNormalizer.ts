@@ -16,8 +16,9 @@ class AstNormalizer {
 
                 for (const inline of block.inlines) {
                     if (!inline.id) inline.id = uuid()
-                        const len = inline.text.symbolic.length
-                        inline.position = {
+
+                    const len = inline.text.symbolic.length
+                    inline.position = {
                         start: localPos,
                         end: localPos + len,
                     }
@@ -32,26 +33,63 @@ class AstNormalizer {
                 return text
             }
 
-            if (block.type === 'blockQuote') {
+            if (block.type === 'listItem') {
+                let localPos = 0
+        
+                const markerInline = block.inlines.find(i => i.type === 'marker')
+                if (markerInline) {
+                    const len = markerInline.text.symbolic.length
+                    markerInline.position = { start: 0, end: len }
+                    text += markerInline.text.symbolic
+                    localPos += len
+                    globalPos += len
+                }
+        
+                const content = updateBlock(block.blocks[0])
+                text += content
+        
+                block.text = text
+                block.position = { start, end: globalPos }
+        
+                return text
+            }
+
+            if (block.type === 'list') {
                 const parts: string[] = []
-            
+        
                 for (let i = 0; i < block.blocks.length; i++) {
-                    const child = block.blocks[i]
-            
-                    const childText = updateBlock(child)
-            
-                    parts.push('> ' + childText)
-            
+                    const itemText = updateBlock(block.blocks[i])
+                    parts.push(itemText)
+        
                     if (i < block.blocks.length - 1) {
                         parts.push('\n')
                         globalPos += 1
                     }
                 }
-            
+        
                 text = parts.join('')
                 block.text = text
                 block.position = { start, end: globalPos }
-            
+        
+                return text
+            }        
+
+            if (block.type === 'blockQuote') {
+                const parts: string[] = []
+        
+                for (let i = 0; i < block.blocks.length; i++) {
+                    const childText = updateBlock(block.blocks[i])
+                    parts.push('> ' + childText)
+        
+                    if (i < block.blocks.length - 1) {
+                        parts.push('\n')
+                        globalPos += 1
+                    }
+                }
+        
+                text = parts.join('')
+                block.text = text
+                block.position = { start, end: globalPos }
                 return text
             }
 
@@ -122,32 +160,6 @@ class AstNormalizer {
                 return cellText
             }
 
-            if (block.type === 'list') {
-                const parts: string[] = []
-
-                for (let i = 0; i < block.blocks.length; i++) {
-                    const item = block.blocks[i]
-                    const itemText = updateBlock(item)
-                    parts.push(itemText)
-
-                    if (i < block.blocks.length - 1) {
-                        parts.push('\n')
-                        globalPos += 1
-                    }
-                }
-
-                text = parts.join('')
-            }
-
-            if (block.type === 'listItem') {
-                const marker = '- '
-                text += marker
-                globalPos += marker.length
-
-                const content = updateBlock(block.blocks[0])
-                text += content
-            }
-
             block.text = text
             block.position = { start, end: globalPos }
 
@@ -164,6 +176,7 @@ class AstNormalizer {
         }
 
         this.text = parts.join('')
+        console.log('this.text', this.text)
     }
 }
 
