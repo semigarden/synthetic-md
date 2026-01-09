@@ -201,44 +201,6 @@ class ParseInline {
         if (closingPattern.test(content[content.length - 1])) content.pop()
         return content.join('\n')
     }
-
-    private parseTableRow(line: string): TableCell[] {
-        const cellTexts: string[] = []
-        let current = ''
-        let escaped = false
-        let inCode = false
-
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i]
-            if (escaped) { current += char; escaped = false; continue }
-            if (char === '\\') { current += char; escaped = true; continue }
-            if (char === '`') { current += char; inCode = !inCode; continue }
-            if (char === '|' && !inCode) { cellTexts.push(current); current = ''; continue }
-            current += char
-        }
-
-        if (current || cellTexts.length > 0) cellTexts.push(current)
-        if (cellTexts[0]?.trim() === '') cellTexts.shift()
-        if (cellTexts[cellTexts.length-1]?.trim() === '') cellTexts.pop()
-
-        return cellTexts.map(cellText => {
-            const paragraph: Paragraph = {
-                id: uuid(),
-                type: 'paragraph',
-                text: cellText,
-                position: { start: 0, end: cellText.length },
-                inlines: [],
-            }
-            return {
-                id: uuid(),
-                type: 'tableCell',
-                text: cellText,
-                position: { start: 0, end: cellText.length },
-                blocks: [paragraph],
-                inlines: [],
-            }
-        })
-    }
 }
 
 export default ParseInline
