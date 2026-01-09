@@ -34,6 +34,7 @@ type AstEffect =
  | { type: 'mergeBlocksInCell'; cellId: string; blockId: string }
  | { type: 'mergeInlineInCell'; cellId: string; leftInlineId: string; rightInlineId: string }
  | { type: 'insertParagraphAboveTable'; tableId: string }
+ | { type: 'insertParagraphBelowTable'; tableId: string }
 
 export type AstApplyEffect = {
     renderEffect: RenderEffect

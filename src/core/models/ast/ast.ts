@@ -1394,6 +1394,50 @@ class AST {
             },
         }
     }
+
+    public insertParagraphBelowTable(tableId: string): AstApplyEffect | null {
+        const table = this.query.getBlockById(tableId) as Table
+        if (!table || table.type !== 'table') return null
+
+        const tableIndex = this.blocks.findIndex(b => b.id === tableId)
+        if (tableIndex === -1) return null
+
+        const paragraph: Block = {
+            id: uuid(),
+            type: 'paragraph',
+            text: '',
+            position: { start: 0, end: 0 },
+            inlines: [],
+        }
+        paragraph.inlines = this.parser.inline.lexInline('', paragraph.id, 'paragraph', 0)
+        paragraph.inlines.forEach((i: Inline) => i.blockId = paragraph.id)
+
+        this.blocks.splice(tableIndex + 1, 0, paragraph)
+
+        const focusInline = paragraph.inlines[0]
+        if (!focusInline) return null
+
+        return {
+            renderEffect: {
+                type: 'update',
+                render: {
+                    remove: [],
+                    insert: [
+                        { at: 'next', target: table, current: paragraph },
+                    ],
+                },
+            },
+            caretEffect: {
+                type: 'restore',
+                caret: {
+                    blockId: paragraph.id,
+                    inlineId: focusInline.id,
+                    position: 0,
+                    affinity: 'start',
+                },
+            },
+        }
+    }
 }
 
 export default AST

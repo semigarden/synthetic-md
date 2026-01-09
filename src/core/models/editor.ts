@@ -201,6 +201,28 @@ class Editor {
             }
         }
 
+        if (tableCell?.type === 'tableCell' || tableCell?.type === 'tableHeader') {
+            const tableRow = this.ast.query.getParentBlock(tableCell)
+            if (tableRow?.type === 'tableRow') {
+                const table = this.ast.query.getParentBlock(tableRow)
+                if (table?.type === 'table') {
+                    const isLastRow = table.blocks[table.blocks.length - 1]?.id === tableRow.id
+                    if (isLastRow) {
+                        const tableIndex = this.ast.blocks.findIndex(b => b.id === table.id)
+                        if (tableIndex >= 0) {
+                            return {
+                                preventDefault: true,
+                                ast: [{
+                                    type: 'insertParagraphBelowTable',
+                                    tableId: table.id,
+                                }],
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         const listItem = this.ast.query.getParentBlock(context.block)
         if (!listItem || listItem.type !== 'listItem') return { preventDefault: false }
 
@@ -241,7 +263,7 @@ class Editor {
     public apply(effect: EditEffect) {
         if (effect.ast) {
             effect.ast.forEach(effect => {
-                const effectTypes = ['input', 'splitBlock', 'splitListItem', 'mergeInline', 'indentListItem', 'outdentListItem', 'mergeTableCell', 'addTableColumn', 'addTableRow', 'addTableRowAbove', 'splitTableCell', 'splitTableCellAtCaret', 'mergeBlocksInCell', 'mergeInlineInCell', 'insertParagraphAboveTable']
+                const effectTypes = ['input', 'splitBlock', 'splitListItem', 'mergeInline', 'indentListItem', 'outdentListItem', 'mergeTableCell', 'addTableColumn', 'addTableRow', 'addTableRowAbove', 'splitTableCell', 'splitTableCellAtCaret', 'mergeBlocksInCell', 'mergeInlineInCell', 'insertParagraphAboveTable', 'insertParagraphBelowTable']
                 if (effectTypes.includes(effect.type)) {
                     let result: AstApplyEffect | null = null
                     switch (effect.type) {
@@ -289,6 +311,9 @@ class Editor {
                             break
                         case 'insertParagraphAboveTable':
                             result = this.ast.insertParagraphAboveTable(effect.tableId)
+                            break
+                        case 'insertParagraphBelowTable':
+                            result = this.ast.insertParagraphBelowTable(effect.tableId)
                             break
                     }
                     if (!result) return
