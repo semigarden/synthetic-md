@@ -20,8 +20,6 @@
     position: relative;
     width: 100%;
     height: 100%;
-    display: flex;
-    flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
 
@@ -134,6 +132,7 @@
 }
 
 .listItem {
+    display: list-item;
     margin: 0;
 
     .markerAnchor {
