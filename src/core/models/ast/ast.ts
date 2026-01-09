@@ -766,6 +766,79 @@ class AST {
             },
         }
     }
+
+    public addTableRowAbove(cellId: string): AstApplyEffect | null {
+        const cell = this.query.getBlockById(cellId) as TableCell
+        if (!cell || cell.type !== 'tableCell') return null
+
+        const flat = this.query.flattenBlocks(this.blocks)
+        const rowEntry = flat.find(e => e.block.type === 'tableRow' && (e.block as TableRow).blocks.some(c => c.id === cellId))
+        if (!rowEntry) return null
+
+        const row = rowEntry.block as TableRow
+
+        const tableEntry = flat.find(e => e.block.type === 'table' && (e.block as Table).blocks.some(r => r.id === row.id))
+        if (!tableEntry) return null
+
+        const table = tableEntry.block as Table
+        const rowIndex = table.blocks.findIndex(r => r.id === row.id)
+
+        const newParagraph: Block = {
+            id: uuid(),
+            type: 'paragraph',
+            text: '',
+            position: { start: 0, end: 0 },
+            inlines: [],
+        }
+        newParagraph.inlines = this.parser.inline.lexInline('', newParagraph.id, 'paragraph', 0)
+        newParagraph.inlines.forEach((i: Inline) => i.blockId = newParagraph.id)
+
+        const newCell: TableCell = {
+            id: uuid(),
+            type: 'tableCell',
+            text: '',
+            position: { start: 0, end: 0 },
+            blocks: [newParagraph],
+            inlines: [],
+        }
+        newCell.inlines = this.parser.inline.lexInline('', newCell.id, 'tableCell', 0)
+        newCell.inlines.forEach((i: Inline) => i.blockId = newCell.id)
+
+        const newRow: TableRow = {
+            id: uuid(),
+            type: 'tableRow',
+            text: '',
+            position: { start: 0, end: 0 },
+            blocks: [newCell],
+            inlines: [],
+        }
+
+        table.blocks.splice(rowIndex, 0, newRow)
+
+        const focusInline = newParagraph.inlines[0]
+        if (!focusInline) return null
+
+        return {
+            renderEffect: {
+                type: 'update',
+                render: {
+                    remove: [],
+                    insert: [
+                        { at: 'previous' as const, target: row, current: newRow },
+                    ],
+                },
+            },
+            caretEffect: {
+                type: 'restore',
+                caret: {
+                    blockId: newParagraph.id,
+                    inlineId: focusInline.id,
+                    position: 0,
+                    affinity: 'start',
+                },
+            },
+        }
+    }
 }
 
 export default AST

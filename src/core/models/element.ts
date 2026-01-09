@@ -95,6 +95,10 @@ class Element extends HTMLElement {
             if (event.key === 'Tab' && event.shiftKey) {
                 intent = 'outdent'
             }
+
+            if (event.key === 'Backspace' && event.shiftKey) {
+                intent = 'insertRowAbove'
+            }
             
             if (!intent) return
 

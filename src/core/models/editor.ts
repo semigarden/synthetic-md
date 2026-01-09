@@ -24,6 +24,8 @@ class Editor {
             return this.resolveIndent(context)
         } else if (intent === 'outdent') {
             return this.resolveOutdent(context)
+        } else if (intent === 'insertRowAbove') {
+            return this.resolveInsertRowAbove(context)
         }
 
         return { preventDefault: false }
@@ -161,10 +163,20 @@ class Editor {
         }
     }
 
+    private resolveInsertRowAbove(context: EditContext): EditEffect {
+        const tableCell = this.ast.query.getParentBlock(context.block)
+        if (tableCell?.type !== 'tableCell') return { preventDefault: false }
+
+        return {
+            preventDefault: true,
+            ast: [{ type: 'addTableRowAbove', cellId: tableCell.id }],
+        }
+    }
+
     public apply(effect: EditEffect) {
         if (effect.ast) {
             effect.ast.forEach(effect => {
-                const effectTypes = ['input', 'splitBlock', 'splitListItem', 'mergeInline', 'indentListItem', 'outdentListItem', 'mergeTableCell', 'addTableColumn', 'addTableRow']
+                const effectTypes = ['input', 'splitBlock', 'splitListItem', 'mergeInline', 'indentListItem', 'outdentListItem', 'mergeTableCell', 'addTableColumn', 'addTableRow', 'addTableRowAbove']
                 if (effectTypes.includes(effect.type)) {
                     let result: AstApplyEffect | null = null
                     switch (effect.type) {
@@ -194,6 +206,9 @@ class Editor {
                             break
                         case 'addTableRow':
                             result = this.ast.addTableRow(effect.cellId)
+                            break
+                        case 'addTableRowAbove':
+                            result = this.ast.addTableRowAbove(effect.cellId)
                             break
                     }
                     if (!result) return

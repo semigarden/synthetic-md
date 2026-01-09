@@ -28,6 +28,7 @@ type AstEffect =
  | { type: 'mergeTableCell'; cellId: string }
  | { type: 'addTableColumn'; cellId: string }
  | { type: 'addTableRow'; cellId: string }
+ | { type: 'addTableRowAbove'; cellId: string }
 
 export type AstApplyEffect = {
     renderEffect: RenderEffect
@@ -72,6 +73,7 @@ export type Intent =
     | 'merge'
     | 'indent'
     | 'outdent'
+    | 'insertRowAbove'
 
 interface BlockType<T extends string = string> {
     id: string
