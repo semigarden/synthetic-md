@@ -160,7 +160,7 @@ class Render {
         inlineElement.dataset.inlineId = inline.id
         inlineElement.textContent = inline.text.semantic
         inlineElement.contentEditable = 'true'
-        inlineElement.classList.add('inline')
+        inlineElement.classList.add('inline', inline.type)
 
         if (inline.type === 'link') {
             (inlineElement as HTMLAnchorElement).href = inline.url || '';
@@ -177,14 +177,6 @@ class Render {
             (inlineElement as HTMLImageElement).title = inline.title || '';
             inlineElement.textContent = '';
         }
-
-        // if (inline.type === 'strikethrough') {
-        //     inlineElement.classList.add('strikethrough')
-        // }
-
-        // if (inline.type === 'emphasis') {
-        //     inlineElement.classList.add('emphasis')
-        // }
     
         return inlineElement
     }
@@ -197,6 +189,8 @@ class Render {
                 return 'em'
             case 'strong':
                 return 'strong'
+            case 'codeSpan':
+                return 'code'
             case 'link':
                 return 'a'
             case 'autolink':
