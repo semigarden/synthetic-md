@@ -133,6 +133,50 @@ class AstQuery {
             .map(b => b.inlines.map(i => i.text.symbolic).join(''))
             .join('')
     }
+
+    public getInlineMergeOwner(inline: Inline): Block | null {
+        let block = this.getBlockById(inline.blockId)
+        if (!block) return null
+
+        while (block) {
+            if (this.isInlineMergeBoundary(block)) {
+            return block
+            }
+
+            block = this.getParentBlock(block)
+        }
+
+        return null
+    }
+
+    public getInlinesUnder(blockId: string): Inline[] {
+        const block = this.getBlockById(blockId)
+        if (!block) return []
+    
+        const inlines: Inline[] = []
+    
+        const collect = (block: Block) => {
+            inlines.push(...block.inlines)
+            if ('blocks' in block && block.blocks) {
+                for (const child of block.blocks) {
+                    collect(child)
+                }
+            }
+        }
+    
+        collect(block)
+        return inlines
+    }    
+
+    private isInlineMergeBoundary(block: Block): boolean {
+        switch (block.type) {
+            case 'listItem':
+            case 'tableCell':
+                return true
+            default:
+                return false
+        }
+    }
 }
 
 export default AstQuery

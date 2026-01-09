@@ -72,13 +72,13 @@ class Editor {
     private resolveMerge(context: EditContext): EditEffect {
         if (this.caret.getPositionInInline(context.inlineElement) !== 0) return { preventDefault: false }
 
-        const list = this.ast.query.getListForMarkerMerge(context.block)
-        if (list) {
-            return {
-                preventDefault: true,
-                ast: [{ type: 'mergeMarker', blockId: list.id }],
-            }
-        }
+        // const list = this.ast.query.getListForMarkerMerge(context.block)
+        // if (list) {
+        //     return {
+        //         preventDefault: true,
+        //         ast: [{ type: 'mergeMarker', blockId: list.id }],
+        //     }
+        // }
 
         const previousInline = this.ast.query.getPreviousInline(context.inline.id)
         if (previousInline) {
@@ -122,7 +122,7 @@ class Editor {
 
                     const { renderEffect, caretEffect } = result
 
-                    this.ast.normalize()
+                    // this.ast.normalize()
                     this.render.apply(renderEffect)
                     this.caret.apply(caretEffect)
                     this.emitChange()
