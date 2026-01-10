@@ -305,6 +305,5 @@ export interface OpenBlock {
 export interface Event {
     text: string
     blocks: Block[]
-    position: number
-    affinity?: 'start' | 'end'
+    caret: Caret
 }

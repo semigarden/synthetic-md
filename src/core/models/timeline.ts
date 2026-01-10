@@ -1,5 +1,5 @@
 import Editor from './editor'
-import { Event, Block } from '../types'
+import { Event, Block, Caret } from '../types'
 
 class Timeline {
     private undoStack: Event[] = []
@@ -46,20 +46,29 @@ class Timeline {
 
         this.editor.ast.text = event.text
         this.editor.ast.blocks = clonedBlocks
-        // this.editor.caret = event.caret
         this.editor.render.render(clonedBlocks)
+        this.editor.caret.restoreCaret(event.caret.inlineId, event.caret.position)
     }
 
     private cloneEvent(event: Event): Event {
         return {
             text: event.text,
             blocks: this.cloneBlocks(event.blocks),
-            position: event.position,
+            caret: this.cloneCaret(event.caret),
         }
     }
 
     private cloneBlocks(blocks: Block[]): Block[] {
         return JSON.parse(JSON.stringify(blocks))
+    }
+
+    private cloneCaret(caret: Caret): Caret {
+        return {
+            blockId: caret.blockId,
+            inlineId: caret.inlineId,
+            position: caret.position,
+            affinity: caret.affinity,
+        }
     }
 }
 
