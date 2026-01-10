@@ -14,6 +14,8 @@ class Timeline {
         this.undoStack.push(event)
         this.redoStack = []
         this.currentEvent = event
+
+        console.log('push', JSON.stringify(event, null, 2), JSON.stringify(this.undoStack, null, 2))
     }
 
     public undo(): void {
@@ -33,9 +35,9 @@ class Timeline {
     }
 
     private restore(event: Event): void {
-        // this.editor.ast = clone(event.blocks)
+        // this.editor.ast.setText(event.text)
         // this.editor.caret = event.caret
-        // this.editor.render()
+        // this.editor.render.render(event.blocks)
     }
 }
 

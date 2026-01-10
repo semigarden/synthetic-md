@@ -264,6 +264,8 @@ class Editor {
     }
 
     public apply(effect: EditEffect) {
+        this.timeline.push({ text: this.ast.text, blocks: this.ast.blocks, caret: { blockId: this.caret.blockId ?? '', inlineId: this.caret.inlineId ?? '', position: this.caret.position ?? 0, affinity: this.caret.affinity } })
+        
         if (effect.ast) {
             effect.ast.forEach(effect => {
                 const effectTypes = ['input', 'splitBlock', 'splitListItem', 'mergeInline', 'indentListItem', 'outdentListItem', 'mergeTableCell', 'addTableColumn', 'addTableRow', 'addTableRowAbove', 'splitTableCell', 'splitTableCellAtCaret', 'mergeBlocksInCell', 'mergeInlineInCell', 'insertParagraphAboveTable', 'insertParagraphBelowTable']
