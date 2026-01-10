@@ -82,12 +82,43 @@ class Element extends HTMLElement {
         div.classList.add('element')
         div.contentEditable = 'true'
 
-        div.addEventListener('input', () => {
-            const context = this.selection?.resolveInlineContext()
-            if (!context) return
+        // div.addEventListener('input', () => {
+        //     console.log('input', div.textContent)
+        //     const context = this.selection?.resolveInlineContext()
+        //     if (!context) return
 
-            const effect = this.editor?.resolveInput(context)
-            if (effect) this.editor?.apply(effect)
+        //     const effect = this.editor?.resolveInput(context)
+        //     if (effect) this.editor?.apply(effect)
+        // })
+
+        div.addEventListener('beforeinput', (e) => {
+            const isInsert = e.inputType.startsWith('insert')
+            const isDelete = e.inputType.startsWith('delete')
+        
+            if (!isInsert && !isDelete) return
+        
+            const range = this.selection?.resolveRange()
+            if (!range) return
+
+            const isCollapsed = range.start.blockId === range.end.blockId &&
+                range.start.inlineId === range.end.inlineId &&
+                range.start.position === range.end.position
+
+            if (isInsert) {
+                e.preventDefault()
+                this.editor?.applyInsert(range, e.data ?? '')
+            } else if (isDelete) {
+                if (!isCollapsed) {
+                    e.preventDefault()
+                    this.editor?.applyInsert(range, '')
+                } else {
+                    const direction = e.inputType.includes('Backward') ? 'backward' : 'forward'
+                    const handled = this.editor?.applyDelete(range, direction)
+                    if (handled) {
+                        e.preventDefault()
+                    }
+                }
+            }
         })
 
         div.addEventListener('keydown', (event: KeyboardEvent) => {

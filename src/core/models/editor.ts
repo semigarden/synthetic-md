@@ -2,7 +2,7 @@ import AST from './ast/ast'
 import Caret from './caret'
 import Render from './render'
 import Timeline from './timeline'
-import { EditContext, EditEffect, AstApplyEffect, Intent } from '../types'
+import { EditContext, EditEffect, AstApplyEffect, Intent, SelectionRange } from '../types'
 
 class Editor {
     public emitChange: () => void
@@ -36,7 +36,81 @@ class Editor {
         return { preventDefault: false }
     }
 
+    public applyInsert(range: SelectionRange, data: string) {
+        const block = this.ast.query.getBlockById(range.start.blockId)
+        if (!block) return
+
+        const inline = this.ast.query.getInlineById(range.start.inlineId)
+        if (!inline) return
+
+        const localStart = range.start.position
+        const localEnd = range.end.inlineId === range.start.inlineId
+            ? range.end.position
+            : inline.text.symbolic.length
+
+        const currentText = inline.text.symbolic
+        const newText = currentText.slice(0, localStart) + data + currentText.slice(localEnd)
+
+        const newCaretPosition = localStart + data.length
+
+        const effect: EditEffect = {
+            preventDefault: false,
+            ast: [{
+                type: 'input',
+                blockId: block.id,
+                inlineId: inline.id,
+                text: newText,
+                caretPosition: newCaretPosition,
+            }],
+        }
+
+        this.apply(effect)
+    }
+
+    public applyDelete(range: SelectionRange, direction: 'backward' | 'forward') {
+        const block = this.ast.query.getBlockById(range.start.blockId)
+        if (!block) return
+
+        const inline = this.ast.query.getInlineById(range.start.inlineId)
+        if (!inline) return
+
+        const localPos = range.start.position
+        const currentText = inline.text.symbolic
+
+        let newText: string
+        let newCaretPosition: number
+
+        if (direction === 'backward') {
+            if (localPos === 0) {
+                return null
+            }
+            newText = currentText.slice(0, localPos - 1) + currentText.slice(localPos)
+            newCaretPosition = localPos - 1
+        } else {
+            if (localPos >= currentText.length) {
+                return null
+            }
+            newText = currentText.slice(0, localPos) + currentText.slice(localPos + 1)
+            newCaretPosition = localPos
+        }
+
+        const effect: EditEffect = {
+            preventDefault: false,
+            ast: [{
+                type: 'input',
+                blockId: block.id,
+                inlineId: inline.id,
+                text: newText,
+                caretPosition: newCaretPosition,
+            }],
+        }
+
+        this.apply(effect)
+        return true
+    }
+
     public resolveInput(context: EditContext): EditEffect {
+        console.log('resolveInput', context.inlineElement.textContent)
         const caretPosition = this.caret.getPositionInInline(context.inlineElement)
 
         return {

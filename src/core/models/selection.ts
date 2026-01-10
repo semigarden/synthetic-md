@@ -315,51 +315,122 @@ class Selection {
         // }
     }
 
-    private resolvePoint(element: Node, position: number, affinity: 'start' | 'end'): SelectionPoint | null {
-        let inlineElement: HTMLElement | null = null
+    // private resolvePoint(element: Node, position: number, affinity: 'start' | 'end'): SelectionPoint | null {
+    //     let inlineElement: HTMLElement | null = null
 
-        if (element instanceof Text) {
-            inlineElement = element.parentElement?.closest('[data-inline-id]') ?? null
-        } else if (element instanceof HTMLElement) {
-            inlineElement = element.closest('[data-inline-id]') ?? null
-        }
+    //     if (element instanceof Text) {
+    //         inlineElement = element.parentElement?.closest('[data-inline-id]') ?? null
+    //     } else if (element instanceof HTMLElement) {
+    //         inlineElement = element.closest('[data-inline-id]') ?? null
+    //     }
 
-        if (!inlineElement || !this.rootElement.contains(inlineElement)) return null
+    //     if (!inlineElement || !this.rootElement.contains(inlineElement)) return null
 
-        const inlineId = inlineElement.dataset.inlineId!
+    //     const inlineId = inlineElement.dataset.inlineId!
+    //     const inline = this.ast.query.getInlineById(inlineId)
+    //     if (!inline) return null
+
+    //     const block = this.ast.query.getBlockById(inline.blockId)
+    //     if (!block) return null
+
+    //     const range = document.createRange()
+    //     range.selectNodeContents(inlineElement)
+    //     range.setEnd(element, position)
+    
+    //     const inlinePosition = range.toString().length
+
+    //     position = block.position.start + inline.position.start + inlinePosition
+
+    //     return {
+    //         blockId: block.id,
+    //         inlineId: inline.id,
+    //         position,
+    //         affinity
+    //     }
+    // }
+
+    private resolvePoint(node: Node, offset: number): SelectionPoint | null {
+        let el: HTMLElement | null =
+            node instanceof HTMLElement ? node : node.parentElement
+    
+        if (!el) return null
+    
+        const inlineEl = el.closest('[data-inline-id]') as HTMLElement
+        if (!inlineEl) return null
+    
+        const inlineId = inlineEl.dataset.inlineId!
         const inline = this.ast.query.getInlineById(inlineId)
         if (!inline) return null
-
-        const block = this.ast.query.getBlockById(inline.blockId)
-        if (!block) return null
-
-        const range = document.createRange()
-        range.selectNodeContents(inlineElement)
-        range.setEnd(element, position)
     
-        const inlinePosition = range.toString().length
-
-        position = block.position.start + inline.position.start + inlinePosition
-
         return {
-            blockId: block.id,
-            inlineId: inline.id,
-            position,
-            affinity
+            blockId: inline.blockId,
+            inlineId,
+            position: offset
         }
     }
+
+    public resolveRange(): SelectionRange | null {
+        const sel = window.getSelection()
+        if (!sel || sel.rangeCount === 0) return null
+    
+        const domRange = sel.getRangeAt(0)
+    
+        const start = this.resolvePoint(
+            domRange.startContainer,
+            domRange.startOffset,
+        )
+    
+        const end = this.resolvePoint(
+            domRange.endContainer,
+            domRange.endOffset,
+        )
+    
+        if (!start || !end) return null
+    
+        const direction = sel.anchorNode === domRange.startContainer &&
+                          sel.anchorOffset === domRange.startOffset
+            ? 'forward'
+            : 'backward'
+    
+        // canonicalize start <= end
+        if (this.comparePoints(start, end) > 0) {
+            return { start: end, end: start, direction }
+        }
+    
+        return { start, end, direction }
+    }
+    
+    private comparePoints(a: SelectionPoint, b: SelectionPoint): number {
+        if (a.blockId !== b.blockId) {
+            const flatBlocks = this.ast.query.flattenBlocks(this.ast.blocks)
+            const aEntry = flatBlocks.find(entry => entry.block.id === a.blockId)
+            const bEntry = flatBlocks.find(entry => entry.block.id === b.blockId)
+            if (!aEntry || !bEntry) return 0
+            return aEntry.index - bEntry.index
+        }
+    
+        if (a.inlineId !== b.inlineId) {
+            const flatInlines = this.ast.query.flattenInlines(this.ast.blocks)
+            const aEntry = flatInlines.find(entry => entry.inline.id === a.inlineId)
+            const bEntry = flatInlines.find(entry => entry.inline.id === b.inlineId)
+            if (!aEntry || !bEntry) return 0
+            return aEntry.index - bEntry.index
+        }
+    
+        return a.position - b.position
+    }    
 
     private resolveRangeFromSelection(selection: globalThis.Selection, range: Range) {
         const anchor = this.resolvePoint(
             selection.anchorNode!,
             selection.anchorOffset,
-            'start'
+            // 'start'
         )
     
         const focus = this.resolvePoint(
             selection.focusNode!,
             selection.focusOffset,
-            'end'
+            // 'end'
         )
     
         if (!anchor || !focus) {
@@ -387,42 +458,6 @@ class Selection {
             direction
         }
     
-        if (ordered.start.position === ordered.end.position) {
-            this.caret.blockId = ordered.start.blockId
-            this.caret.inlineId = ordered.start.inlineId
-            this.caret.position = ordered.start.position
-            this.caret.affinity = direction === 'forward' ? 'end' : 'start'
-        } else {
-            this.caret.clear()
-        }
-    }    
-
-    private resolveRange(range: Range) {
-        const start = this.resolvePoint(range.startContainer, range.startOffset, 'start')
-        const end = this.resolvePoint(range.endContainer, range.endOffset, 'end')
-
-        if (!start || !end) {
-            this.caret.clear()
-            return
-        }
-
-        const isForward =
-            range.startContainer === range.commonAncestorContainer
-                ? range.startOffset <= range.endOffset
-                : start.position <= end.position
-
-        const direction = isForward ? 'forward' : 'backward'
-
-        const ordered =
-            start.position <= end.position
-                ? { start, end }
-                : { start: end, end: start }
-
-        this.range = {
-            ...ordered,
-            direction
-        }
-
         if (ordered.start.position === ordered.end.position) {
             this.caret.blockId = ordered.start.blockId
             this.caret.inlineId = ordered.start.inlineId
