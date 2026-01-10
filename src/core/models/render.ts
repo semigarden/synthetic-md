@@ -3,7 +3,7 @@ import { Block, Inline, RenderEffect } from "../types"
 class Render {
     constructor(private rootElement: HTMLElement) {}
 
-    public render(blocks: Block[], container: HTMLElement) {
+    public render(blocks: Block[], container: HTMLElement = this.rootElement) {
         container.replaceChildren()
         for (const block of blocks) {
             container.appendChild(this.renderBlock(block, container))

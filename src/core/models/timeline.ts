@@ -1,4 +1,5 @@
-import Editor from "./editor"
+import Editor from './editor'
+import { Event } from '../types'
 
 class Timeline {
     private undoStack: Event[] = []

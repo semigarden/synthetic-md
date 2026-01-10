@@ -1,18 +1,21 @@
-import AST from "./ast/ast"
-import Caret from "./caret"
-import Render from "./render"
-import { EditContext, EditEffect, AstApplyEffect, Intent } from "../types"
+import AST from './ast/ast'
+import Caret from './caret'
+import Render from './render'
+import Timeline from './timeline'
+import { EditContext, EditEffect, AstApplyEffect, Intent } from '../types'
 
 class Editor {
     private emitChange: () => void
+    public timeline: Timeline
 
     constructor(
-        private ast: AST,
-        private caret: Caret,
-        private render: Render,
+        public ast: AST,
+        public caret: Caret,
+        public render: Render,
         emitChange: () => void
     ) {
         this.emitChange = emitChange
+        this.timeline = new Timeline(this, { text: ast.text, blocks: ast.blocks, caret: { blockId: caret.blockId ?? '', inlineId: caret.inlineId ?? '', position: caret.position ?? 0, affinity: caret.affinity } })
     }
 
     public onIntent(intent: Intent, context: EditContext): EditEffect {
