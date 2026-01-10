@@ -54,7 +54,7 @@ class Timeline {
         return {
             text: event.text,
             blocks: this.cloneBlocks(event.blocks),
-            caret: { ...event.caret }
+            position: event.position,
         }
     }
 
