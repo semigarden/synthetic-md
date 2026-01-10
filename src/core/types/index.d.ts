@@ -324,3 +324,14 @@ export type SelectionType =
     | 'inline'
     | 'block'
     | 'multiBlock'
+
+export interface SelectionEffect {
+    blocks: {
+        block: Block
+        inlines: {
+            inline: Inline
+            from: number
+            to: number
+        }[]
+    }[]
+}

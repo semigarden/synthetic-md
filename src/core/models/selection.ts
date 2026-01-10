@@ -1,6 +1,6 @@
 import AST from './ast/ast'
 import Caret from './caret'
-import { EditContext, SelectionRange, SelectionPoint, SelectionType } from '../types'
+import { EditContext, SelectionRange, SelectionPoint, SelectionType, SelectionEffect } from '../types'
 
 class Selection {
     private rafId: number | null = null
@@ -540,6 +540,79 @@ class Selection {
         return 'multiBlock'
     }
     
+    private resolveSelection(range: SelectionRange): SelectionEffect {
+        const result = []
+        const blocks = this.ast.blocks
+        
+        for (const block of blocks) {
+            const blockStart = block.position.start
+            const blockEnd = block.position.end
+
+            if (blockEnd <= range.start.position) continue
+            if (blockStart >= range.end.position) break
+
+            const inlines = []
+
+            for (const inline of block.inlines) {
+                const inlineStart = blockStart + inline.position.start
+                const inlineEnd = blockStart + inline.position.end
+
+                const from = Math.max(inlineStart, range.start.position)
+                const to = Math.min(inlineEnd, range.end.position)
+
+                if (from < to) {
+                    inlines.push({ inline, from: from - inlineStart, to: to - inlineStart })
+                }
+            }
+
+            if (inlines.length > 0) {
+                result.push({block, inlines})
+            }
+        }
+
+        return { blocks: result }
+    }
+
+    public renderSelection(effect: SelectionEffect) {
+        this.clearSelection()
+    
+        for (const { inlines } of effect.blocks) {
+            for (const { inline, from, to } of inlines) {
+                const inlineElement = this.rootElement.querySelector(
+                    `[data-inline-id="${inline.id}"]`
+                ) as HTMLElement
+    
+                if (!inlineElement) continue
+    
+                this.wrapRange(inlineElement, from, to)
+            }
+        }
+    }
+
+    private wrapRange(inlineElement: HTMLElement, from: number, to: number) {
+        const text = inlineElement.textContent ?? ''
+        inlineElement.textContent = ''
+    
+        inlineElement.append(
+            document.createTextNode(text.slice(0, from)),
+            this.mark(text.slice(from, to)),
+            document.createTextNode(text.slice(to))
+        )
+    }
+    
+    private mark(text: string) {
+        const span = document.createElement('span')
+        span.classList.add('selection')
+        span.textContent = text
+        return span
+    }
+    
+    private clearSelection() {
+        const selection = window.getSelection()
+        if (selection) {
+            selection.removeAllRanges()
+        }
+    }
 }
 
 export default Selection
