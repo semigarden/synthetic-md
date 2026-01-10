@@ -4,6 +4,7 @@ class Render {
     constructor(private rootElement: HTMLElement) {}
 
     public render(blocks: Block[], container: HTMLElement = this.rootElement) {
+        console.log('render', blocks.length)
         container.replaceChildren()
         for (const block of blocks) {
             container.appendChild(this.renderBlock(block, container))

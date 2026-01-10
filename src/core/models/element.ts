@@ -103,6 +103,17 @@ class Element extends HTMLElement {
             if (event.key === 'Enter' && event.shiftKey) {
                 intent = 'splitInCell'
             }
+
+            const key = event.key.toLowerCase()
+            if (key === 'z' && event.ctrlKey && event.shiftKey) {
+                this.editor?.timeline.redo()
+                return
+            }
+
+            if (key === 'z' && event.ctrlKey) {
+                this.editor?.timeline.undo()
+                return
+            }
             
             if (!intent) return
 
