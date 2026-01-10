@@ -14,8 +14,6 @@ class Timeline {
         const clonedEvent = this.cloneEvent(event)
         this.undoStack.push(clonedEvent)
         this.redoStack = []
-
-        // console.log('push', JSON.stringify(event, null, 2), JSON.stringify(this.undoStack, null, 2))
     }
 
     public updateEvent(event: Event): void {
@@ -23,7 +21,6 @@ class Timeline {
     }
 
     public undo(): void {
-        console.log('undo')
         const event = this.undoStack.pop()
         if (!event) return
         this.redoStack.push(this.cloneEvent(this.currentEvent))
@@ -32,7 +29,6 @@ class Timeline {
     }
 
     public redo(): void {
-        console.log('redo')
         const event = this.redoStack.pop()
         if (!event) return
         this.undoStack.push(this.cloneEvent(this.currentEvent))
@@ -41,7 +37,6 @@ class Timeline {
     }
 
     private restore(event: Event): void {
-        console.log('restore', event.text)
         const clonedBlocks = this.cloneBlocks(event.blocks)
 
         this.editor.ast.text = event.text
