@@ -1,84 +1,112 @@
-import { Block, Inline, RenderEffect } from '../types'
+import { Block, Inline, RenderEffect, RenderPosition } from '../types'
 
 class Render {
-    constructor(private rootElement: HTMLElement) {}
+    private rootElement: HTMLElement
+    constructor(rootElement: HTMLElement) {
+        this.rootElement = rootElement
+    }
 
-    public renderBlocks(blocks: Block[], rootElement: HTMLElement = this.rootElement) {
-        rootElement.replaceChildren()
-        for (const block of blocks) {
-            rootElement.appendChild(this.renderBlock(block, rootElement))
+    private createBlock(block: Block): HTMLElement {
+        switch (block.type) {
+            case 'paragraph':
+                const paragraph = document.createElement('p')
+                paragraph.classList.add('paragraph')
+                return paragraph
+
+            case 'heading':
+                const heading = document.createElement(`h${block.level ?? 1}`)
+                heading.classList.add(`h${block.level ?? 1}`)
+                return heading
+
+            case 'codeBlock':
+                const codeBlock = document.createElement('pre')
+                codeBlock.classList.add('codeBlock')
+                return codeBlock
+
+            case 'blockQuote':
+                const blockquote = document.createElement('blockquote')
+                blockquote.classList.add('blockQuote')
+                return blockquote
+
+            case 'list':
+                const list = document.createElement(block.ordered ? 'ol' : 'ul')
+                list.classList.add('list')
+                return list
+
+            case 'listItem':
+                const listItem = document.createElement('li')
+                listItem.classList.add('listItem')
+                return listItem
+
+            case 'table':
+                const table = document.createElement('table')
+                table.classList.add('table')
+                return table
+            
+            case 'tableRow':
+                const tableRow = document.createElement('tr')
+                tableRow.classList.add('tableRow')
+                return tableRow
+            
+            case 'tableCell':
+                const tableCell = document.createElement('td')
+                tableCell.classList.add('tableCell')
+                return tableCell
+            
+            case 'tableHeader':
+                const tableHeader = document.createElement('th')
+                tableHeader.classList.add('tableCell')
+                return tableHeader
+
+            case 'thematicBreak':
+                const thematicBreak = document.createElement('hr')
+                thematicBreak.classList.add('thematicBreak')
+                return thematicBreak
+
+            default:
+                const element = document.createElement('div')
+                return element
         }
     }
 
-    public renderBlock(block: Block, rootElement: HTMLElement, renderAt: string = 'current', targetBlock: Block | null = null): HTMLElement {
-        let element: HTMLElement = rootElement.querySelector(`[data-block-id="${block.id}"]`) as HTMLElement
+    private getInlineTag(inline: Inline): string {
+        switch (inline.type) {
+            case 'text':
+                return 'span'
+            case 'emphasis':
+                return 'em'
+            case 'strong':
+                return 'strong'
+            case 'codeSpan':
+                return 'code'
+            case 'link':
+                return 'a'
+            case 'autolink':
+                return 'a'
+            case 'image':
+                return 'img'
+            case 'strikethrough':
+                return 's'
+            default:
+                return 'span'
+        }
+    }
+
+    public renderBlocks(blocks: Block[], rootElement: HTMLElement = this.rootElement) {
+        rootElement.replaceChildren()
+        blocks.forEach(block => {
+            this.renderBlock(block, rootElement, 'next', null)
+        })
+    }
+
+    public renderBlock(block: Block, parentElement: HTMLElement = this.rootElement, renderAt: RenderPosition = 'current', targetBlock: Block | null = null): HTMLElement {
+        let element: HTMLElement = parentElement.querySelector(`[data-block-id="${block.id}"]`) as HTMLElement
 
         const isNew = !element
         if (element) {
             element.replaceChildren()
         } else {
-            switch (block.type) {
-                case 'paragraph':
-                    element = document.createElement('p')
-                    element.classList.add('paragraph')
-                    break
-
-                case 'heading':
-                    element = document.createElement(`h${block.level ?? 1}`)
-                    element.classList.add(`h${block.level ?? 1}`)
-                    break
-
-                case 'codeBlock':
-                    element = document.createElement('pre')
-                    const code = document.createElement('code')
-                    element.appendChild(code)
-                    this.renderInlines(block.inlines, code)
-                    break
-
-                case 'blockQuote':
-                    element = document.createElement('blockquote')
-                    element.classList.add('blockQuote')
-                    break
-
-                case 'list':
-                    element = document.createElement(block.ordered ? 'ol' : 'ul')
-                    element.classList.add('list')
-                    break
-
-                case 'listItem':
-                    element = document.createElement('li')
-                    element.classList.add('listItem')
-                    break
-
-                case 'table':
-                    element = document.createElement('table')
-                    element.classList.add('table')
-                    break
-                
-                case 'tableRow':
-                    element = document.createElement('tr')
-                    element.classList.add('tableRow')
-                    break
-                
-                case 'tableCell':
-                    element = document.createElement('td')
-                    element.classList.add('tableCell')
-                    break
-                
-                case 'tableHeader':
-                    element = document.createElement('th')
-                    element.classList.add('tableCell')
-                    break
-
-                case 'thematicBreak':
-                    element = document.createElement('hr')
-                    element.classList.add('thematicBreak')
-                    break
-
-                default:
-                    element = document.createElement('div')
-            }
-            
+            element = this.createBlock(block)
             element.dataset.blockId = block.id
             element.id = block.id
             element.classList.add('block')
@@ -115,7 +143,7 @@ class Render {
             }
 
             case 'tableRow': {
-                const tableElement = rootElement.closest('table') || rootElement.querySelector('table')
+                const tableElement = element.closest('table')
                 const maxCells = parseInt(tableElement?.dataset.maxCells ?? '1', 10)
                 const rowCellCount = block.blocks?.length ?? 0
                 
@@ -154,7 +182,7 @@ class Render {
 
         if (isNew) {
             if (targetBlock) {
-                const targetBlockElement = rootElement.querySelector(
+                const targetBlockElement = parentElement.querySelector(
                 `[data-block-id="${targetBlock.id}"]`
                 )
                 if (targetBlockElement) {
@@ -172,10 +200,10 @@ class Render {
                             break
                     }
                 } else {
-                    rootElement.appendChild(element)
+                    parentElement.appendChild(element)
                 }
             } else {
-                rootElement.appendChild(element)
+                parentElement.appendChild(element)
             }
         }
 
@@ -196,7 +224,6 @@ class Render {
         inlineElement.id = inline.id
         inlineElement.dataset.inlineId = inline.id
         inlineElement.textContent = inline.text.semantic
-        // inlineElement.contentEditable = 'true'
         inlineElement.contentEditable = 'false'
         inlineElement.classList.add('inline', inline.type)
 
@@ -218,29 +245,6 @@ class Render {
     
         return inlineElement
     }
-    
-    private getInlineTag(inline: Inline): string {
-        switch (inline.type) {
-            case 'text':
-                return 'span'
-            case 'emphasis':
-                return 'em'
-            case 'strong':
-                return 'strong'
-            case 'codeSpan':
-                return 'code'
-            case 'link':
-                return 'a'
-            case 'autolink':
-                return 'a'
-            case 'image':
-                return 'img'
-            case 'strikethrough':
-                return 's'
-            default:
-                return 'span'
-        }
-    }
 
     public apply(effect: RenderEffect) {
         switch (effect.type) {
@@ -254,13 +258,13 @@ class Render {
                     if (removeBlockElement) removeBlockElement.remove()
                 })
 
-                this.recalculateTableColspans()
+                this.normalizeTables()
 
                 break
         }
     }
 
-    private recalculateTableColspans() {
+    private normalizeTables() {
         const tables = this.rootElement.querySelectorAll('table.table')
         
         tables.forEach(table => {

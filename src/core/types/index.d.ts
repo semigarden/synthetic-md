@@ -64,8 +64,10 @@ export type EditEffect = {
     ast?: AstEffect[]
 }
 
+type RenderPosition = 'current' | 'previous' | 'next'
+
 type RenderInsert = {
-    at: 'current' | 'previous' | 'next'
+    at: RenderPosition
     target: Block
     current: Block
 }
