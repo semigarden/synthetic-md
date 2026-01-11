@@ -49,7 +49,7 @@ class Element extends HTMLElement {
         this.interaction = new Interaction(this.rootElement!, this.selection, this.editor, this.input, this.intent)
         this.interaction.attach()
 
-        this.renderAST()
+        this.renderDOM()
     }
 
     disconnectedCallback() {
@@ -63,7 +63,7 @@ class Element extends HTMLElement {
 
         if (!this.hasAcceptedExternalValue && value !== '') {
             this.ast.setText(value)
-            this.renderAST()
+            this.renderDOM()
             this.hasAcceptedExternalValue = true
         }
     }
@@ -72,11 +72,11 @@ class Element extends HTMLElement {
         return this.ast.text
     }
 
-    private renderAST() {
+    private renderDOM() {
         if (!this.rootElement) return
         if (!this.render) return
 
-        this.render.render(this.ast.blocks, this.rootElement)
+        this.render.renderBlocks(this.ast.blocks, this.rootElement)
     }
 
     private addStyles() {

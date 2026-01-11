@@ -41,7 +41,7 @@ class Timeline {
 
         this.editor.ast.text = event.text
         this.editor.ast.blocks = clonedBlocks
-        this.editor.render.render(clonedBlocks)
+        this.editor.render.renderBlocks(clonedBlocks)
         this.editor.caret.restoreCaret(event.caret.inlineId, event.caret.position)
         this.editor.emitChange()
     }
