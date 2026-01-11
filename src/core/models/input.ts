@@ -1,24 +1,14 @@
 import Ast from './ast/ast'
 import Caret from './caret'
-import Render from './render'
 import Selection from './selection'
-import Timeline from './timeline'
-import { SelectionRange, EditEffect, InputEvent, AstApplyEffect } from '../types'
+import { SelectionRange, EditEffect, InputEvent } from '../types'
 
 class Input {
-    public emitChange: () => void
-    // public timeline: Timeline
-
     constructor(
         public ast: Ast,
         public caret: Caret,
         public selection: Selection,
-        public render: Render,
-        emitChange: () => void
-    ) {
-        this.emitChange = emitChange
-        // this.timeline = new Timeline(this, { text: ast.text, blocks: ast.blocks, caret: { blockId: caret.blockId ?? '', inlineId: caret.inlineId ?? '', position: caret.position ?? 0, affinity: caret.affinity ?? 'start' } })
-    }
+    ) {}
 
     public resolveEffect(event: InputEvent): EditEffect | null {
         console.log('handle', event.text, event.type)
@@ -114,33 +104,6 @@ class Input {
                 text: newText,
                 caretPosition: newCaretPosition,
             }],
-        }
-    }
-
-    public apply(effect: EditEffect) {
-        // this.timeline.push({ text: this.ast.text, blocks: this.ast.blocks, caret: { blockId: this.caret.blockId ?? '', inlineId: this.caret.inlineId ?? '', position: this.caret.position ?? 0, affinity: this.caret.affinity ?? 'start' } })
-        
-        if (effect.ast) {
-            effect.ast.forEach(effect => {
-                const effectTypes = ['input']
-                if (effectTypes.includes(effect.type)) {
-                    let result: AstApplyEffect | null = null
-                    switch (effect.type) {
-                        case 'input':
-                            result = this.ast.input(effect.blockId, effect.inlineId, effect.text, effect.caretPosition)
-                            break
-                    }
-                    if (!result) return
-
-                    const { renderEffect, caretEffect } = result
-
-                    this.ast.normalize()
-                    this.render.apply(renderEffect)
-                    this.caret.apply(caretEffect)
-                    this.emitChange()
-                }
-            })
-            // this.timeline.updateEvent({ text: this.ast.text, blocks: this.ast.blocks, caret: { blockId: this.caret.blockId ?? '', inlineId: this.caret.inlineId ?? '', position: this.caret.position ?? 0, affinity: this.caret.affinity ?? 'start' } })
         }
     }
 }

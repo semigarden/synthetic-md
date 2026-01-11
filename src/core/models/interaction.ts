@@ -8,9 +8,9 @@ class Interaction {
     constructor(
         private rootElement: HTMLElement,
         private selection: Selection,
+        private editor: Editor,
         private input: Input,
         private intent: Intent,
-        private editor: Editor,
     ) {}
 
     attach() {
@@ -31,7 +31,7 @@ class Interaction {
             event.preventDefault()
         }
 
-        this.input.apply(effect)
+        this.editor.apply(effect)
     }
 
     private onKeyDown = (event: KeyboardEvent) => {
@@ -39,13 +39,13 @@ class Interaction {
         if (!intent) return
 
         if (intent === 'undo') {
-            this.editor.timeline.undo()
+            this.editor.undo()
             event.preventDefault()
             return
         }
         
         if (intent === 'redo') {
-            this.editor.timeline.redo()
+            this.editor.redo()
             event.preventDefault()
             return
         }
@@ -53,7 +53,7 @@ class Interaction {
         const context = this.selection.resolveInlineContext()
         if (!context) return
 
-        const effect = this.editor.onIntent(intent, context)
+        const effect = this.intent.resolveEffect(intent, context)
         if (!effect) return
 
         if (effect.preventDefault) {

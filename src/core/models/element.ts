@@ -43,10 +43,10 @@ class Element extends HTMLElement {
         this.selection = new Selection(this.ast, this.caret, this.rootElement!)
         this.selection.attach()
 
-        this.input = new Input(this.ast, this.caret, this.selection, this.render, this.emitChange.bind(this))
+        this.input = new Input(this.ast, this.caret, this.selection)
         this.intent = new Intent(this.ast, this.caret, this.selection, this.render)
 
-        this.interaction = new Interaction(this.rootElement!, this.selection, this.input, this.intent, this.editor)
+        this.interaction = new Interaction(this.rootElement!, this.selection, this.editor, this.input, this.intent)
         this.interaction.attach()
 
         this.renderAST()
