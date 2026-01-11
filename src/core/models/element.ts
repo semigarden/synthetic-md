@@ -91,13 +91,13 @@ class Element extends HTMLElement {
         div.classList.add('element')
         div.contentEditable = 'true'
 
-        div.addEventListener('beforeinput', (e) => {
-            const effect = this.input?.resolveEffect({ text: e.data ?? '', type: e.inputType })
+        div.addEventListener('beforeinput', (event: InputEvent) => {
+            const effect = this.input?.resolveEffect({ text: event.data ?? '', type: event.inputType })
             if (effect) {
                 this.input?.apply(effect)
 
                 if (effect.preventDefault) {
-                    e.preventDefault()
+                    event.preventDefault()
                 }
             }
         })
