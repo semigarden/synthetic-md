@@ -2,10 +2,10 @@ import Ast from './ast/ast'
 import Caret from './caret'
 import Render from './render'
 import Timeline from './timeline'
-import { EditEffect, AstEffect, AstApplyEffect } from '../types'
+import { EditEffect, Executors, AstApplyEffect, AstEffectMap } from '../types'
 
 class Editor {
-    private executors: Record<AstEffect['type'], (effect: any) => AstApplyEffect | null> = {
+    private executors: Executors = {
         input: (effect) => this.ast.input(effect.blockId, effect.inlineId, effect.text, effect.caretPosition),
         splitBlock: (effect) => this.ast.split(effect.blockId, effect.inlineId, effect.caretPosition),
         splitListItem: (effect) => this.ast.splitListItem(effect.listItemId, effect.blockId, effect.inlineId, effect.caretPosition),
@@ -36,6 +36,11 @@ class Editor {
         this.timeline = new Timeline(this, this.snapshot())
     }
 
+    private execute<K extends keyof AstEffectMap>(effect: AstEffectMap[K]): AstApplyEffect | null {
+        const execute = this.executors[effect.type]
+        return execute(effect)
+    }
+
     private snapshot() {
         return {
             text: this.ast.text,
@@ -63,10 +68,7 @@ class Editor {
         if (!effect.ast) return
 
         for (const astEffect of effect.ast) {
-            const execute = this.executors[astEffect.type]
-            if (!execute) continue
-
-            const result = execute(astEffect)
+            const result = this.execute(astEffect)
             if (!result) continue
 
             const { renderEffect, caretEffect } = result
@@ -76,7 +78,7 @@ class Editor {
             this.caret.apply(caretEffect)
             this.emitChange()
         }
-        
+
         this.timeline.updateEvent(this.snapshot())
     }
 }

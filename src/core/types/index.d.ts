@@ -36,6 +36,14 @@ type AstEffect =
     | { type: 'insertParagraphAboveTable'; tableId: string }
     | { type: 'insertParagraphBelowTable'; tableId: string }
 
+export type AstEffectMap = {
+    [K in AstEffect['type']]: Extract<AstEffect, { type: K }>
+}
+
+export type Executors = {
+    [K in keyof AstEffectMap]: (effect: AstEffectMap[K]) => AstApplyEffect | null
+}
+
 export type AstApplyEffect = {
     renderEffect: RenderEffect
     caretEffect: CaretEffect
