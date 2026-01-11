@@ -1,7 +1,7 @@
 import { ParseBlockContext, DetectedBlock, Block, Table, TableRow, TableCell, TableHeader } from "../../types"
 import { uuid } from "../../utils/utils"
 
-class ParseBlock {
+class BlockParser {
     private context: ParseBlockContext
 
     constructor() {
@@ -496,4 +496,4 @@ class ParseBlock {
     }
 }
 
-export default ParseBlock
+export default BlockParser

@@ -1,11 +1,11 @@
-import AST from "./ast"
-import AstQuery from "./AstQuery"
-import ParseAst from "../parse/parseAst"
-import { Block, Inline, ListItem } from "../../types"
+import Ast from "./ast"
+import AstQuery from "./astQuery"
+import AstParser from "../parse/astParser"
+import { Block, Inline } from "../../types"
 import { uuid } from "../../utils/utils"
 
 class AstMutation {
-    constructor(private ast: AST, private parser: ParseAst) {}
+    constructor(private ast: Ast, private parser: AstParser) {}
 
     private get query() {
         return new AstQuery(this.ast.blocks)

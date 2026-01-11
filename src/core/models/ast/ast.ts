@@ -1,15 +1,15 @@
-import AstNormalizer from './AstNormalizer'
-import AstMutation from './AstMutation'
-import AstQuery from './AstQuery'
-import ParseAst from '../parse/parseAst'
-import { AstApplyEffect, DetectedBlock, Block, BlockQuote, CodeBlock, Inline, List, ListItem, Table, TableCell, TableHeader, TableRow, Heading } from '../../types'
+import AstNormalizer from './astNormalizer'
+import AstMutation from './astMutation'
+import AstQuery from './astQuery'
+import AstParser from '../parse/astParser'
+import { AstApplyEffect, DetectedBlock, Block, Inline, List, ListItem, Table, TableRow, TableHeader, TableCell } from '../../types'
 import { uuid } from '../../utils/utils'
 
-class AST {
+class Ast {
     public text = ''
     public blocks: Block[] = []
 
-    private parser = new ParseAst()
+    private parser = new AstParser()
     private normalizer = new AstNormalizer()
     private mutation = new AstMutation(this, this.parser)
 
@@ -1447,4 +1447,4 @@ class AST {
     }
 }
 
-export default AST
+export default Ast

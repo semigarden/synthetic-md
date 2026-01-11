@@ -13,7 +13,7 @@ import LinkReferenceState from './linkReferenceState'
 import { Block, Inline, CodeBlock, Delimiter } from '../../types'
 import { uuid, decodeHTMLEntity } from '../../utils/utils'
 
-class ParseInline {
+class InlineParser {
     private markerResolver = new MarkerResolver()
     private linkResolver = new LinkResolver()
     private autoLinkResolver = new AutoLinkResolver()
@@ -203,4 +203,4 @@ class ParseInline {
     }
 }
 
-export default ParseInline
+export default InlineParser

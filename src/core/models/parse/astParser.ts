@@ -1,19 +1,19 @@
-import ParseBlock from './parseBlock'
-import ParseInline from './parseInline'
+import BlockParser from './blockParser'
+import InlineParser from './inlineParser'
 import LinkReferenceState from './linkReferenceState'
 import { OpenBlock, Block, List, ListItem } from '../../types'
 import { uuid } from '../../utils/utils'
 
-class ParseAst {
+class AstParser {
     public linkReferences = new LinkReferenceState()
     public openBlocks: OpenBlock[] = []
     public blocks: Block[] = []
 
-    public block = new ParseBlock()
-    public inline: ParseInline
+    public block = new BlockParser()
+    public inline: InlineParser
 
     constructor() {
-        this.inline = new ParseInline(this.linkReferences)
+        this.inline = new InlineParser(this.linkReferences)
     }
 
     public parse(text: string): Block[] {
@@ -413,4 +413,4 @@ class ParseAst {
     }
 }
 
-export default ParseAst
+export default AstParser
