@@ -1,6 +1,6 @@
 import Ast from './ast/ast'
 import Caret from './caret'
-import Render from './render'
+import Render from './render/render'
 import Timeline from './timeline'
 import { EditEffect, Executors, AstApplyEffect, AstEffectMap } from '../types'
 
