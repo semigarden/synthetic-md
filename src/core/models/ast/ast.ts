@@ -1,7 +1,7 @@
 import AstNormalizer from './astNormalizer'
 import AstMutation from './astMutation'
 import AstQuery from './astQuery'
-import AstParser from '../parse/astParser'
+import AstParser from '../parse/ast/astParser'
 import { AstApplyEffect, DetectedBlock, Block, Inline, List, ListItem, Table, TableRow, TableHeader, TableCell } from '../../types'
 import { uuid } from '../../utils/utils'
 
