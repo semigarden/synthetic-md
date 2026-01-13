@@ -1,4 +1,4 @@
-import { LinkReference } from '../../types'
+import { LinkReference } from '../../../types'
 
 class LinkReferenceState {
     private references = new Map<string, LinkReference>()

@@ -1,4 +1,4 @@
-import type LinkReferenceState from '../linkReferenceState'
+import type LinkReferenceState from './linkReferenceState'
 
 function parseLinkReferenceDefinitions(text: string, linkReferences: LinkReferenceState) {
     const refRegex =

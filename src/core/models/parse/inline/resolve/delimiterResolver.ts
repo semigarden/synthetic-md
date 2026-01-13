@@ -1,9 +1,9 @@
-import InlineStream from './inlineStream'
-import { Inline, Delimiter } from '../../../types'
-import { uuid } from '../../../utils/utils'
+import InlineStream from '../inlineStream'
+import { Inline, Delimiter } from '../../../../types'
+import { uuid } from '../../../../utils/utils'
 
-class DelimiterLexer {
-    public tryLex(
+class DelimiterResolver {
+    public tryParse(
         stream: InlineStream,
         blockId: string,
         positionOffset: number,
@@ -51,4 +51,4 @@ class DelimiterLexer {
     }
 }
 
-export default DelimiterLexer
+export default DelimiterResolver

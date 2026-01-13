@@ -1,17 +1,17 @@
-import InlineStream from './inline/inlineStream'
-import MarkerResolver from './inline/resolve/markerResolver'
-import LinkResolver from './inline/resolve/linkResolver'
-import AutoLinkResolver from './inline/resolve/autoLinkResolver'
-import ImageResolver from './inline/resolve/imageResolver'
-import CodeSpanResolver from './inline/resolve/codeSpanResolver'
-import EntityResolver from './inline/resolve/entityResolver'
-import BackslashEscapeResolver from './inline/resolve/backslashEscapeResolver'
-import EmphasisResolver from './inline/resolve/emphasisResolver'
-import DelimiterLexer from './inline/delimiterLexer'
-import StrikethroughResolver from './inline/resolve/strikethroughResolver'
-import LinkReferenceState from './linkReferenceState'
-import { Block, Inline, CodeBlock, Delimiter } from '../../types'
-import { uuid, decodeHTMLEntity } from '../../utils/utils'
+import InlineStream from './inlineStream'
+import MarkerResolver from './resolve/markerResolver'
+import LinkResolver from './resolve/linkResolver'
+import AutoLinkResolver from './resolve/autoLinkResolver'
+import ImageResolver from './resolve/imageResolver'
+import CodeSpanResolver from './resolve/codeSpanResolver'
+import EntityResolver from './resolve/entityResolver'
+import BackslashEscapeResolver from './resolve/backslashEscapeResolver'
+import EmphasisResolver from './resolve/emphasisResolver'
+import DelimiterResolver from './resolve/delimiterResolver'
+import StrikethroughResolver from './resolve/strikethroughResolver'
+import LinkReferenceState from '../ast/linkReferenceState'
+import { Block, Inline, CodeBlock, Delimiter } from '../../../types'
+import { uuid, decodeHTMLEntity } from '../../../utils/utils'
 
 class InlineParser {
     private markerResolver = new MarkerResolver()
@@ -23,7 +23,7 @@ class InlineParser {
     private backslashEscapeResolver = new BackslashEscapeResolver()
     private emphasisResolver = new EmphasisResolver()
     private strikethroughResolver = new StrikethroughResolver()
-    private delimiterLexer = new DelimiterLexer()
+    private delimiterResolver = new DelimiterResolver()
 
     constructor(private linkReferences: LinkReferenceState) {}
 
@@ -47,7 +47,7 @@ class InlineParser {
 
         let parseText = text
         let textOffset = 0
-        const inlines = this.lexInline(parseText, block.id, block.type, textOffset)
+        const inlines = this.parseInline(parseText, block.id, block.type, textOffset)
 
         return inlines.map(i => ({ ...i, id: uuid(), blockId: block.id }))
     }
@@ -63,7 +63,7 @@ class InlineParser {
         }
     }
 
-    public lexInline(text: string, blockId: string, blockType: string, position: number = 0): Inline[] {
+    public parseInline(text: string, blockId: string, blockType: string, position: number = 0): Inline[] {
         const stream = new InlineStream(text)
         const result: Inline[] = []
         const delimiterStack: Delimiter[] = []
@@ -176,7 +176,7 @@ class InlineParser {
             // Delimiters (*, _, ~)
             if (ch === '*' || ch === '_' || ch === '~') {
                 flushText()
-                if (this.delimiterLexer.tryLex(stream, blockId, position, result, delimiterStack)) {
+                if (this.delimiterResolver.tryParse(stream, blockId, position, result, delimiterStack)) {
                     textStart = stream.position()
                     continue
                 }

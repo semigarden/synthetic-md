@@ -190,7 +190,7 @@ class Ast {
             }
         }
         
-        const newInlines = this.parser.inline.lexInline(newText, block.id, block.type, block.position.start)
+        const newInlines = this.parser.inline.parseInline(newText, block.id, block.type, block.position.start)
         const { inline: newInline, position } = this.query.getInlineAtPosition(newInlines, absoluteCaretPosition) ?? { inline: null, position: 0 }
         if (!newInline) return null
 
@@ -512,7 +512,7 @@ class Ast {
                     position: { start: 0, end: 0 },
                     inlines: [],
                 }
-                emptyParagraph.inlines = this.parser.inline.lexInline('', emptyParagraph.id, 'paragraph', 0)
+                emptyParagraph.inlines = this.parser.inline.parseInline('', emptyParagraph.id, 'paragraph', 0)
                 emptyParagraph.inlines.forEach((i: Inline) => i.blockId = emptyParagraph.id)
                 blocksToInsert.push(emptyParagraph)
             }
@@ -801,7 +801,7 @@ class Ast {
                     position: { start: 0, end: oldParagraph.text.length },
                     inlines: [],
                 }
-                paragraph.inlines = this.parser.inline.lexInline(paragraph.text, paragraph.id, 'paragraph', 0)
+                paragraph.inlines = this.parser.inline.parseInline(paragraph.text, paragraph.id, 'paragraph', 0)
                 paragraph.inlines.forEach((i: Inline) => i.blockId = paragraph.id)
 
                 const tableIndex = this.blocks.findIndex(b => b.id === table.id)
@@ -839,7 +839,7 @@ class Ast {
         const currParagraph = cell.blocks[0]
         
         const mergedText = prevParagraph.text + currParagraph.text
-        const newInlines = this.parser.inline.lexInline(mergedText, prevParagraph.id, prevParagraph.type, prevParagraph.position.start)
+        const newInlines = this.parser.inline.parseInline(mergedText, prevParagraph.id, prevParagraph.type, prevParagraph.position.start)
         
         const caretPosition = prevParagraph.text.length
         const { inline: caretInline, position } = this.query.getInlineAtPosition(newInlines, caretPosition) ?? { inline: null, position: 0 }
@@ -851,7 +851,7 @@ class Ast {
 
         prevCell.text = mergedText
         const prevCellType = prevCell.type === 'tableHeader' ? 'tableHeader' : 'tableCell'
-        prevCell.inlines = this.parser.inline.lexInline(mergedText, prevCell.id, prevCellType, prevCell.position.start)
+        prevCell.inlines = this.parser.inline.parseInline(mergedText, prevCell.id, prevCellType, prevCell.position.start)
         prevCell.inlines.forEach((i: Inline) => i.blockId = prevCell.id)
 
         row.blocks.splice(cellIndex, 1)
@@ -906,7 +906,7 @@ class Ast {
             position: { start: 0, end: 0 },
             inlines: [],
         }
-        newParagraph.inlines = this.parser.inline.lexInline('', newParagraph.id, 'paragraph', 0)
+        newParagraph.inlines = this.parser.inline.parseInline('', newParagraph.id, 'paragraph', 0)
         newParagraph.inlines.forEach((i: Inline) => i.blockId = newParagraph.id)
 
         const newCell: TableCell | TableHeader = isHeaderRow ? {
@@ -925,7 +925,7 @@ class Ast {
             inlines: [],
         }
         const cellType = isHeaderRow ? 'tableHeader' : 'tableCell'
-        newCell.inlines = this.parser.inline.lexInline('', newCell.id, cellType, 0)
+        newCell.inlines = this.parser.inline.parseInline('', newCell.id, cellType, 0)
         newCell.inlines.forEach((i: Inline) => i.blockId = newCell.id)
 
         row.blocks.splice(cellIndex + 1, 0, newCell)
@@ -978,7 +978,7 @@ class Ast {
             position: { start: 0, end: 0 },
             inlines: [],
         }
-        newParagraph.inlines = this.parser.inline.lexInline('', newParagraph.id, 'paragraph', 0)
+        newParagraph.inlines = this.parser.inline.parseInline('', newParagraph.id, 'paragraph', 0)
         newParagraph.inlines.forEach((i: Inline) => i.blockId = newParagraph.id)
 
         const newCell: TableCell = {
@@ -989,7 +989,7 @@ class Ast {
             blocks: [newParagraph],
             inlines: [],
         }
-        newCell.inlines = this.parser.inline.lexInline('', newCell.id, 'tableCell', 0)
+        newCell.inlines = this.parser.inline.parseInline('', newCell.id, 'tableCell', 0)
         newCell.inlines.forEach((i: Inline) => i.blockId = newCell.id)
 
         const newRow: TableRow = {
@@ -1051,7 +1051,7 @@ class Ast {
             position: { start: 0, end: 0 },
             inlines: [],
         }
-        newParagraph.inlines = this.parser.inline.lexInline('', newParagraph.id, 'paragraph', 0)
+        newParagraph.inlines = this.parser.inline.parseInline('', newParagraph.id, 'paragraph', 0)
         newParagraph.inlines.forEach((i: Inline) => i.blockId = newParagraph.id)
 
         const newCell: TableCell = {
@@ -1062,7 +1062,7 @@ class Ast {
             blocks: [newParagraph],
             inlines: [],
         }
-        newCell.inlines = this.parser.inline.lexInline('', newCell.id, 'tableCell', 0)
+        newCell.inlines = this.parser.inline.parseInline('', newCell.id, 'tableCell', 0)
         newCell.inlines.forEach((i: Inline) => i.blockId = newCell.id)
 
         const newRow: TableRow = {
@@ -1127,7 +1127,7 @@ class Ast {
             .join('')
 
         block.text = textBeforeCaret
-        block.inlines = this.parser.inline.lexInline(textBeforeCaret, block.id, block.type, block.position.start)
+        block.inlines = this.parser.inline.parseInline(textBeforeCaret, block.id, block.type, block.position.start)
         block.inlines.forEach((i: Inline) => i.blockId = block.id)
 
         const newBlock: Block = {
@@ -1137,7 +1137,7 @@ class Ast {
             position: { start: 0, end: textAfterCaret.length },
             inlines: [],
         }
-        newBlock.inlines = this.parser.inline.lexInline(textAfterCaret, newBlock.id, 'paragraph', 0)
+        newBlock.inlines = this.parser.inline.parseInline(textAfterCaret, newBlock.id, 'paragraph', 0)
         newBlock.inlines.forEach((i: Inline) => i.blockId = newBlock.id)
 
         cell.blocks.splice(blockIndex + 1, 0, newBlock)
@@ -1198,12 +1198,12 @@ class Ast {
             .join('')
 
         block.text = textBeforeCaret
-        block.inlines = this.parser.inline.lexInline(textBeforeCaret, block.id, block.type, block.position.start)
+        block.inlines = this.parser.inline.parseInline(textBeforeCaret, block.id, block.type, block.position.start)
         block.inlines.forEach((i: Inline) => i.blockId = block.id)
 
         cell.text = textBeforeCaret
         const cellType = cell.type === 'tableHeader' ? 'tableHeader' : 'tableCell'
-        cell.inlines = this.parser.inline.lexInline(textBeforeCaret, cell.id, cellType, cell.position.start)
+        cell.inlines = this.parser.inline.parseInline(textBeforeCaret, cell.id, cellType, cell.position.start)
         cell.inlines.forEach((i: Inline) => i.blockId = cell.id)
 
         const newParagraph: Block = {
@@ -1213,7 +1213,7 @@ class Ast {
             position: { start: 0, end: textAfterCaret.length },
             inlines: [],
         }
-        newParagraph.inlines = this.parser.inline.lexInline(textAfterCaret, newParagraph.id, 'paragraph', 0)
+        newParagraph.inlines = this.parser.inline.parseInline(textAfterCaret, newParagraph.id, 'paragraph', 0)
         newParagraph.inlines.forEach((i: Inline) => i.blockId = newParagraph.id)
 
         const newCell: TableCell | TableHeader = cell.type === 'tableHeader' ? {
@@ -1231,7 +1231,7 @@ class Ast {
             blocks: [newParagraph],
             inlines: [],
         }
-        newCell.inlines = this.parser.inline.lexInline(textAfterCaret, newCell.id, cellType, 0)
+        newCell.inlines = this.parser.inline.parseInline(textAfterCaret, newCell.id, cellType, 0)
         newCell.inlines.forEach((i: Inline) => i.blockId = newCell.id)
 
         row.blocks.splice(cellIndex + 1, 0, newCell)
@@ -1276,7 +1276,7 @@ class Ast {
         const caretPosition = previousBlock.text.length
 
         previousBlock.text = mergedText
-        previousBlock.inlines = this.parser.inline.lexInline(mergedText, previousBlock.id, previousBlock.type, previousBlock.position.start)
+        previousBlock.inlines = this.parser.inline.parseInline(mergedText, previousBlock.id, previousBlock.type, previousBlock.position.start)
         previousBlock.inlines.forEach((i: Inline) => i.blockId = previousBlock.id)
 
         cell.blocks.splice(blockIndex, 1)
@@ -1373,7 +1373,7 @@ class Ast {
             position: { start: 0, end: 0 },
             inlines: [],
         }
-        paragraph.inlines = this.parser.inline.lexInline('', paragraph.id, 'paragraph', 0)
+        paragraph.inlines = this.parser.inline.parseInline('', paragraph.id, 'paragraph', 0)
         paragraph.inlines.forEach((i: Inline) => i.blockId = paragraph.id)
 
         this.blocks.splice(tableIndex, 0, paragraph)
@@ -1417,7 +1417,7 @@ class Ast {
             position: { start: 0, end: 0 },
             inlines: [],
         }
-        paragraph.inlines = this.parser.inline.lexInline('', paragraph.id, 'paragraph', 0)
+        paragraph.inlines = this.parser.inline.parseInline('', paragraph.id, 'paragraph', 0)
         paragraph.inlines.forEach((i: Inline) => i.blockId = paragraph.id)
 
         this.blocks.splice(tableIndex + 1, 0, paragraph)
