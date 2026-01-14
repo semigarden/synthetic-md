@@ -9,7 +9,7 @@ export type AstContext = {
   ast: Ast
   parser: AstParser
   mutation: AstMutation
-  query: AstQuery
+  get query(): AstQuery
   transform: AstTransform
   effect: Effect
 }
