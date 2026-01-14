@@ -308,36 +308,28 @@ class Select {
     public getSelectedText(): string {
         if (!this.range) return ''
         
-        const flatInlines = this.ast.query.flattenInlines(this.ast.blocks)
-        const parts: string[] = []
-        let inRange = false
+        const startBlock = this.ast.query.getBlockById(this.range.start.blockId)
+        const endBlock = this.ast.query.getBlockById(this.range.end.blockId)
+        if (!startBlock || !endBlock) return ''
         
-        for (const entry of flatInlines) {
-            if (entry.inline.type === 'marker') continue
-            
-            const isStart = entry.inline.id === this.range.start.inlineId
-            const isEnd = entry.inline.id === this.range.end.inlineId
-            
-            if (isStart) {
-                inRange = true
-                const startPos = this.range.start.position
-                const endPos = isEnd ? this.range.end.position : entry.inline.text.symbolic.length
-                parts.push(entry.inline.text.symbolic.slice(startPos, endPos))
-                if (isEnd) break
-                continue
-            }
-            
-            if (inRange) {
-                if (isEnd) {
-                    parts.push(entry.inline.text.symbolic.slice(0, this.range.end.position))
-                    break
-                } else {
-                    parts.push(entry.inline.text.symbolic)
+        const getOffsetInBlock = (block: typeof startBlock, inlineId: string, position: number): number => {
+            let offset = 0
+            for (const inline of block.inlines) {
+                if (inline.id === inlineId) {
+                    return offset + position
                 }
+                offset += inline.text.symbolic.length
             }
+            return offset
         }
         
-        return parts.join('')
+        const startOffset = getOffsetInBlock(startBlock, this.range.start.inlineId, this.range.start.position)
+        const endOffset = getOffsetInBlock(endBlock, this.range.end.inlineId, this.range.end.position)
+        
+        const startTextPos = startBlock.position.start + startOffset
+        const endTextPos = endBlock.position.start + endOffset
+
+        return this.ast.text.slice(startTextPos, endTextPos)
     }
 
     public paste(text: string): EditEffect | null {
