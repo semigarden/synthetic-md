@@ -52,7 +52,7 @@ class Select {
                 this.caret.clear()
                 this.multiInlineMode = false
 
-                this.focus.unfocusBlocks(this.focusState.focusedBlockIds)
+                this.focus.unfocusBlocks(this.focusState.focusedBlockIds, [], [])
                 this.focus.unfocusInlines(this.focusState.focusedInlineIds)
                 this.focusState.focusedBlockIds = []
                 this.focusState.focusedInlineIds = []
@@ -76,7 +76,11 @@ class Select {
                 if (currentInlineId !== this.focusState.focusedInlineId) {
                     if (currentInlineId) {
                         const inline = this.ast.query.getInlineById(currentInlineId)
-                        if (inline) this.focus.resolveBlockMarkerTransition(this.focusState, inline.blockId)
+                        if (inline) {
+                            if (inline.blockId !== this.focusState.focusedBlockId) {
+                                this.focus.resolveBlockMarkerTransition(this.focusState, inline.blockId)
+                            }
+                        }
                     }
 
                     this.focus.resolveInlineTransition(
@@ -93,7 +97,7 @@ class Select {
             if (!this.range) {
                 this.caret.clear()
                 this.multiInlineMode = false
-                this.focus.unfocusBlocks(this.focusState.focusedBlockIds)
+                this.focus.unfocusBlocks(this.focusState.focusedBlockIds, [], [])
                 this.focus.unfocusInlines(this.focusState.focusedInlineIds)
                 this.focusState.focusedBlockIds = []
                 this.focusState.focusedInlineIds = []
@@ -101,10 +105,10 @@ class Select {
                 const wasMultiInlineMode = this.multiInlineMode
                 this.multiInlineMode = this.hasMultiInlineSelection(this.range)
                 
+                const inlineIds = this.getInlineIdsInRange(this.range)
+                const blockIds = this.getBlockIdsInRange(this.range)
+                
                 if (this.multiInlineMode) {
-                    const inlineIds = this.getInlineIdsInRange(this.range)
-                    const blockIds = this.getBlockIdsInRange(this.range)
-                    
                     if (!wasMultiInlineMode) {
                         if (this.focusState.focusedInlineId) {
                             this.focus.unfocusCurrentInline(this.focusState)
@@ -126,28 +130,48 @@ class Select {
                     const removedInlineIds = this.focusState.focusedInlineIds.filter(id => !inlineIds.includes(id))
                     
                     this.focus.unfocusInlines(removedInlineIds)
-                    
                     this.focus.focusInlines(newInlineIds)
-                    
                     this.focusState.focusedInlineIds = inlineIds
                     
                     const newBlockIds = blockIds.filter(id => !this.focusState.focusedBlockIds.includes(id))
                     const removedBlockIds = this.focusState.focusedBlockIds.filter(id => !blockIds.includes(id))
                     
-                    this.focus.unfocusBlocks(removedBlockIds)
-                    
+                    this.focus.unfocusBlocks(removedBlockIds, inlineIds, blockIds)
                     this.focus.focusBlocks(newBlockIds)
-                    
                     this.focusState.focusedBlockIds = blockIds
                 } else {
-                    this.focus.unfocusBlocks(this.focusState.focusedBlockIds)
+                    if (!wasMultiInlineMode) {
+                        if (this.focusState.focusedInlineId) {
+                            this.focus.unfocusCurrentInline(this.focusState)
+                            this.focusState.focusedInlineId = null
+                        }
+                        if (this.focusState.focusedBlockId) {
+                            const prevBlock = this.ast.query.getBlockById(this.focusState.focusedBlockId)
+                            if (prevBlock) {
+                                const marker = prevBlock.inlines.find(i => i.type === 'marker')
+                                if (marker) {
+                                    this.focus.unfocusInline(marker.id)
+                                }
+                            }
+                            this.focusState.focusedBlockId = null
+                        }
+                    }
+                    
+                    this.focus.unfocusBlocks(this.focusState.focusedBlockIds, inlineIds, blockIds)
                     this.focus.unfocusInlines(this.focusState.focusedInlineIds)
                     this.focusState.focusedBlockIds = []
                     this.focusState.focusedInlineIds = []
+                    
+                    this.focus.focusInlines(inlineIds)
+                    this.focusState.focusedInlineIds = inlineIds
+                    
+                    const allBlockIds = this.getBlockIdsInRange(this.range)
+                    this.focus.focusBlocks(allBlockIds)
+                    this.focusState.focusedBlockIds = allBlockIds
                 }
             } else {
                 if (this.multiInlineMode) {
-                    this.focus.unfocusBlocks(this.focusState.focusedBlockIds)
+                    this.focus.unfocusBlocks(this.focusState.focusedBlockIds, [], [])
                     this.focus.unfocusInlines(this.focusState.focusedInlineIds)
                     this.focusState.focusedBlockIds = []
                     this.focusState.focusedInlineIds = []
@@ -259,7 +283,7 @@ class Select {
     private onRootFocusOut = (e: FocusEvent) => {
         if (!this.rootElement.contains(e.relatedTarget as Node)) {
             this.focus.unfocusCurrentInline(this.focusState)
-            this.focus.unfocusBlocks(this.focusState.focusedBlockIds)
+            this.focus.unfocusBlocks(this.focusState.focusedBlockIds, [], [])
             this.focus.unfocusInlines(this.focusState.focusedInlineIds)
             this.caret.clear()
             this.focus.clear(this.focusState)
