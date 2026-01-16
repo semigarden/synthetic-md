@@ -55,6 +55,7 @@
 }
 
 .inline {
+    position: relative;
     white-space: pre-wrap;
     word-break: break-word;
     word-wrap: break-word;
@@ -67,21 +68,37 @@
     outline: none;
     border: 1px solid blue;
 
-    &.symbolic {
-        // color: var(--color-muted);
-        display: none;
-
-        &.focused {
-            display: inline;
-        }
+    .symbolic {
+        position: relative;
     }
 
-    &.semantic {
-        display: inline;
+    .semantic {
+        pointer-events: none;
+        user-select: none;
+        opacity: 1;
+    }
 
-        &.focused {
-            display: none;
-        }
+    &:not(.focused) .symbolic {
+        position: absolute;
+        inset: 0;
+        color: transparent;
+        caret-color: transparent;
+    }
+
+    &:not(.focused) .semantic {
+        position: relative;
+    }
+
+    &.focused .symbolic {
+        position: relative;
+        color: inherit;
+        caret-color: auto;
+    }
+
+    &.focused .semantic {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
     }
 }
 

@@ -27,28 +27,31 @@ function renderInlines(inlines: Inline[], parent: HTMLElement) {
     parent.replaceChildren()
 
     for (const inline of inlines) {
-        const { symbolic, semantic } = renderInline(inline)
-        parent.appendChild(symbolic)
-        parent.appendChild(semantic)
+        const inlineElement = renderInline(inline)
+        parent.appendChild(inlineElement)
     }
 }
 
-function renderInline(inline: Inline): { symbolic: Node; semantic: Node } {
+function renderInline(inline: Inline): HTMLElement {
     const tag = getInlineTag(inline)
     const inlineElement = document.createElement(tag)
-    const inlineSymbolicElement = document.createElement(tag)
-
-    inlineSymbolicElement.id = inline.id
-    inlineSymbolicElement.dataset.inlineId = inline.id
-    inlineSymbolicElement.textContent = inline.text.symbolic
-    inlineSymbolicElement.contentEditable = 'false'
-    inlineSymbolicElement.classList.add('inline', inline.type, 'symbolic')
 
     inlineElement.id = inline.id
     inlineElement.dataset.inlineId = inline.id
-    inlineElement.textContent = inline.text.semantic
     inlineElement.contentEditable = 'false'
-    inlineElement.classList.add('inline', inline.type, 'semantic')
+    inlineElement.classList.add('inline', inline.type)
+
+    const symbolicText = document.createElement('span')
+    symbolicText.textContent = inline.text.symbolic
+    symbolicText.classList.add('symbolic')
+
+    const semanticText = document.createElement('span')
+    semanticText.textContent = inline.text.semantic
+    semanticText.classList.add('semantic')
+    semanticText.setAttribute('aria-hidden', 'true')
+
+    inlineElement.appendChild(symbolicText)
+    inlineElement.appendChild(semanticText)
 
     if (inline.type === 'link') {
         ;(inlineElement as HTMLAnchorElement).href = inline.url || ''
@@ -66,7 +69,7 @@ function renderInline(inline: Inline): { symbolic: Node; semantic: Node } {
         inlineElement.textContent = '';
     }
 
-    return { symbolic: inlineSymbolicElement, semantic: inlineElement }
+    return inlineElement
 }
 
 export { renderInlines }

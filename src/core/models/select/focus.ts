@@ -164,20 +164,12 @@ class Focus {
         const block = this.ast.query.getBlockById(inline.blockId)
         if (!block) return
 
-        const inlineEls = this.rootElement.querySelectorAll(
+        const inlineElement = this.rootElement.querySelector(
             `[data-inline-id="${inlineId}"]`
-        ) as NodeListOf<HTMLElement> | null
-        if (!inlineEls) return
+        ) as HTMLElement | null
+        if (!inlineElement) return
 
-        let symbolicInlineEl: HTMLElement | null = null
-        let semanticInlineEl: HTMLElement | null = null
-
-        for (const inlineEl of inlineEls) {
-            if (inlineEl.classList.contains('symbolic')) symbolicInlineEl = inlineEl
-            if (inlineEl.classList.contains('semantic')) semanticInlineEl = inlineEl
-        }
-
-        if (!symbolicInlineEl || !semanticInlineEl) return
+        inlineElement.classList.add('focused')
 
         // let localOffset = 0
         // if (semanticInlineEl.contains(range.startContainer)) {
@@ -194,8 +186,6 @@ class Focus {
         // )
 
         setSuppress(true)
-        symbolicInlineEl.classList.add('focused')
-        semanticInlineEl.classList.add('focused')
 
         // const textNode = symbolicInlineEl.firstChild
         // if (textNode instanceof Text) {
@@ -250,20 +240,12 @@ class Focus {
         const inline = this.ast.query.getInlineById(inlineId)
         if (!inline) return
 
-        const inlineEls = this.rootElement.querySelectorAll(
+        const inlineElement = this.rootElement.querySelector(
             `[data-inline-id="${inlineId}"]`
-        ) as NodeListOf<HTMLElement> | null
-        if (!inlineEls) return
+        ) as HTMLElement | null
+        if (!inlineElement) return
 
-        let symbolicInlineEl: HTMLElement | null = null
-        let semanticInlineEl: HTMLElement | null = null
-
-        for (const inlineEl of inlineEls) {
-            if (inlineEl.classList.contains('symbolic')) symbolicInlineEl = inlineEl
-            if (inlineEl.classList.contains('semantic')) semanticInlineEl = inlineEl
-        }
-
-        if (!symbolicInlineEl || !semanticInlineEl) return
+        inlineElement.classList.remove('focused')
 
         if (inline.type === 'image') {
             const imageElement = document.createElement('img')
@@ -273,12 +255,9 @@ class Focus {
             ;(imageElement as HTMLImageElement).src = (inline as any).url || ''
             ;(imageElement as HTMLImageElement).alt = (inline as any).alt || ''
             ;(imageElement as HTMLImageElement).title = (inline as any).title || ''
-            for (const inlineEl of inlineEls) {
-                inlineEl.replaceWith(imageElement)
-            }
+            inlineElement.replaceWith(imageElement)
         } else {
-            symbolicInlineEl.classList.remove('focused')
-            semanticInlineEl.classList.remove('focused')
+            inlineElement.classList.remove('focused')
         }
 
         // const block = this.ast.query.getBlockById(inline.blockId)
