@@ -1121,7 +1121,7 @@ class Edit {
         endBlockId: string,
         endInlineId: string,
         endPosition: number
-      ): AstApplyEffect | null {
+    ): AstApplyEffect | null {
         const { ast, query, parser, effect } = this.context
       
         const startBlock = query.getBlockById(startBlockId)
