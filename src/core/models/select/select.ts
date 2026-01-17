@@ -2,7 +2,7 @@ import Ast from '../ast/ast'
 import Caret from '../caret'
 import Focus from './focus'
 import { getSelectedElements, resolveRange, resolveInlineContext } from './map'
-import type { EditContext, SelectionRange, EditEffect } from '../../types'
+import type { EditContext, SelectionRange, EditEffect, Block, Inline } from '../../types'
 
 class Select {
     private rafId: number | null = null
@@ -275,7 +275,7 @@ class Select {
             const currentText = context.inline.text.symbolic
             const newText = currentText.slice(0, caretPosition) + text + currentText.slice(caretPosition)
             const newCaretPosition = caretPosition + text.length
-            
+
             return {
                 preventDefault: true,
                 ast: [{
@@ -311,7 +311,7 @@ class Select {
             const currentText = startInline.text.symbolic
             const newText = currentText.slice(0, this.range.start.position) + text + currentText.slice(this.range.end.position)
             const newCaretPosition = this.range.start.position + text.length
-            
+
             return {
                 preventDefault: true,
                 ast: [{
@@ -339,7 +339,7 @@ class Select {
         
         const newText = textBefore + text + textAfter
         const newCaretPosition = this.range.start.position + text.length
-        
+
         return {
             preventDefault: true,
             ast: [{
@@ -354,8 +354,8 @@ class Select {
 
     private pasteMultiBlock(
         text: string,
-        block: import('../../types').Block,
-        inline: import('../../types').Inline,
+        block: Block,
+        inline: Inline,
         startPosition: number,
         endRange?: { inlineId: string; position: number }
     ): EditEffect | null {
