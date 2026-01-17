@@ -28,10 +28,9 @@ class Edit {
         const blockTypeChanged =
             detectedBlock.type !== block.type ||
             (detectedBlock.type === 'heading' && block.type === 'heading' && detectedBlock.level !== block.level)
-            console.log('input', block.type, detectedBlock.type)
+
         const ignoreTypes = ['blankLine', 'codeBlock', 'table']
         if (blockTypeChanged && !ignoreTypes.includes(detectedBlock.type)) {
-            console.log('input', JSON.stringify(detectedBlock, null, 2))
             if (detectedBlock.type === 'listItem') caretPosition = 0
             return transform.transformBlock(newText, block, detectedBlock, caretPosition)
         }
@@ -53,11 +52,6 @@ class Edit {
         block.position = { start: block.position.start, end: block.position.start + block.text.length }
         block.inlines = newInlines
         newInlines.forEach((i: Inline) => (i.blockId = block.id))
-
-        console.log('input', JSON.stringify(block.text, null, 2))
-        // console.log('input', JSON.stringify(block, null, 2))
-        // console.log('input', JSON.stringify(newInline, null, 2))
-        // console.log('input', JSON.stringify(position, null, 2))
 
         return effect.compose(
             effect.update([{ at: 'current', target: block, current: block }]),

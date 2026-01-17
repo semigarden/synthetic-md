@@ -13,6 +13,9 @@ class AstTransform {
     ): AstApplyEffect | null {
         const { ast, query, parser, effect } = this.ctx
 
+        const ZWSP = '\u200B'
+        text = text.replace(ZWSP, '')
+
         const flat = query.flattenBlocks(ast.blocks)
         const entry = flat.find(b => b.block.id === block.id)
         if (!entry) return null
