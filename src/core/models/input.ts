@@ -137,7 +137,8 @@ class Input {
         const inline = this.ast.query.getInlineById(range.start.inlineId)
         if (!inline) return null
 
-        // const position = range.start.position - block.position.start - inline.position.start
+        const inlineIndex = block.inlines.findIndex(i => i.id === inline.id)
+
         const position = range.start.position
         const currentText = inline.text.symbolic
 
@@ -145,14 +146,14 @@ class Input {
         let newCaretPosition: number
 
         if (direction === 'backward') {
-            if (position === 0) {
-                return null
+            if (block.position.start === 0 && inlineIndex === 0 && position === 0) {
+                return { preventDefault: true }
             }
             newText = currentText.slice(0, position - 1) + currentText.slice(position)
             newCaretPosition = position - 1
         } else {
             if (position >= currentText.length) {
-                return null
+                return { preventDefault: true }
             }
             newText = currentText.slice(0, position) + currentText.slice(position + 1)
             newCaretPosition = position
