@@ -1129,8 +1129,7 @@ class Edit {
         const endBlock = query.getBlockById(endBlockId)
         const endInline = query.getInlineById(endInlineId)
         if (!startBlock || !startInline || !endBlock || !endInline) return null
-      
-        // --- flatten and normalize order ---
+
         const flat = query.flattenBlocks(ast.blocks)
       
         const startFlatIndex = flat.findIndex(e => e.block.id === startBlockId)
@@ -1142,110 +1141,70 @@ class Edit {
       
         const startEntry = flat[a]
         const endEntry   = flat[b]
-      
-        // --- build textBefore/textAfter (from *visual* selection) ---
+
         const startInlineIndex = startBlock.inlines.findIndex(i => i.id === startInlineId)
         const endInlineIndex   = endBlock.inlines.findIndex(i => i.id === endInlineId)
         if (startInlineIndex === -1 || endInlineIndex === -1) return null
-      
+
         const textBefore =
-          startBlock.inlines
-            .slice(0, startInlineIndex)
-            .map(i => i.text.symbolic)
-            .join('') +
-          startInline.text.symbolic.slice(0, startPosition)
-      
+            startBlock.inlines
+                .slice(0, startInlineIndex)
+                .map(i => i.text.symbolic)
+                .join('') +
+            startInline.text.symbolic.slice(0, startPosition)
+        
         const textAfter =
-          endInline.text.symbolic.slice(endPosition) +
-          endBlock.inlines
-            .slice(endInlineIndex + 1)
-            .map(i => i.text.symbolic)
-            .join('')
+            endInline.text.symbolic.slice(endPosition) +
+            endBlock.inlines
+                .slice(endInlineIndex + 1)
+                .map(i => i.text.symbolic)
+                .join('')
 
         const text = textBefore + textAfter
 
-        console.log('text', JSON.stringify(text, null, 2))
-        console.log('textBefore', JSON.stringify(textBefore, null, 2))
-        console.log('textAfter', JSON.stringify(textAfter, null, 2))
-      
-        return null
-      
-        // --- parse fragments; IMPORTANT: empty => [] (avoid left+right empty paragraphs) ---
-        const reparseNonEmpty = (text: string, offset: number): Block[] => {
-          if (text.length === 0) return []
-          return parser.reparseTextFragment(text, offset)
-        }
-      
-        let currentOffset = startBlock.position.start
-        const leftBlocks = reparseNonEmpty(textBefore, currentOffset)
-        if (leftBlocks.length > 0) currentOffset = leftBlocks[leftBlocks.length - 1].position.end
-        const rightBlocks = reparseNonEmpty(textAfter, currentOffset)
-      
-        const allBlocks: Block[] = [...leftBlocks, ...rightBlocks]
-      
-        // centralized invariant: if both sides empty -> exactly ONE empty paragraph
-        if (allBlocks.length === 0) {
-          const emptyBlock: Block = {
-            id: uuid(),
-            type: 'paragraph',
-            text: '',
-            position: { start: startBlock.position.start, end: startBlock.position.start },
-            inlines: [],
-          }
-          emptyBlock.inlines = parser.inline.parseInline('', emptyBlock.id, 'paragraph', 0)
-          emptyBlock.inlines.forEach((i: Inline) => (i.blockId = emptyBlock.id))
-          allBlocks.push(emptyBlock)
-        }
-      
-        // --- helpers ---
+        const newBlocks = parser.reparseTextFragment(text, startBlock.position.start)
+        if (newBlocks.length === 0) return null
+    
         const getContainer = (entry: any): Block[] => {
-          if (entry.parent && 'blocks' in entry.parent) return entry.parent.blocks
-          return ast.blocks
+        if (entry.parent && 'blocks' in entry.parent) return entry.parent.blocks
+            return ast.blocks
         }
-      
+    
         const blocksToRemove: Block[] = []
-      
-        // 1) delete everything in (a, b] across parents, in reverse order
+    
         for (let fi = b; fi > a; fi--) {
-          const entry = flat[fi]
-          const container = getContainer(entry)
-          blocksToRemove.push(entry.block)
-          container.splice(entry.index, 1)
+            const entry = flat[fi]
+            const container = getContainer(entry)
+            blocksToRemove.push(entry.block)
+            container.splice(entry.index, 1)
         }
-      
-        // 2) replace start block with allBlocks
+    
         const startContainer = getContainer(startEntry)
-        // blocksToRemove.push(startEntry.block)
-        startContainer.splice(startEntry.index, 1, ...allBlocks)
-      
-        // --- caret to end of last produced block ---
-        const lastBlock = allBlocks[allBlocks.length - 1]
+        startContainer.splice(startEntry.index, 1, ...newBlocks)
+    
+        const lastBlock = newBlocks[newBlocks.length - 1]
         const lastInline = query.getFirstInline([lastBlock])
         if (!lastInline) return null
-      
-        // --- FULL updateEffects: update current + insert next blocks in correct order ---
-        // If effect.update() supports `at: 'next'`, this prevents "new blocks appended to end".
-        const updateEffects = allBlocks.map((b, idx) => {
-          if (idx === 0) {
-            return {
-              at: 'current' as const,
-              target: startBlock, // existing block in DOM
-              current: b,
+    
+        const updateEffects = newBlocks.map((b, idx) => {
+            if (idx === 0) {
+                return {
+                at: 'current' as const,
+                target: startBlock,
+                current: b,
+                }
             }
-          }
-      
-          // If your effect system can anchor to newly-inserted blocks, use allBlocks[idx-1].
-          // If it cannot, use `startBlock` for idx===1 and then previous inserted block for the rest.
-          return {
-            at: 'next' as const,
-            target: idx === 1 ? startBlock : allBlocks[idx - 1],
-            current: b,
-          }
+        
+            return {
+                at: 'next' as const,
+                target: idx === 1 ? startBlock : newBlocks[idx - 1],
+                current: b,
+            }
         })
-      
+
         return effect.compose(
-          effect.update(updateEffects, blocksToRemove),
-          effect.caret(lastBlock.id, lastInline.id, lastBlock.text.length, 'start')
+            effect.update(updateEffects, blocksToRemove),
+            effect.caret(lastBlock.id, lastInline.id, lastBlock.text.length, 'start')
         )
     }     
 }

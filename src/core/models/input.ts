@@ -137,7 +137,8 @@ class Input {
         const inline = this.ast.query.getInlineById(range.start.inlineId)
         if (!inline) return null
 
-        const position = range.start.position - block.position.start - inline.position.start
+        // const position = range.start.position - block.position.start - inline.position.start
+        const position = range.start.position
         const currentText = inline.text.symbolic
 
         let newText: string
