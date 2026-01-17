@@ -99,6 +99,8 @@
         position: absolute;
         inset: 0;
         opacity: 0;
+        user-select: none;
+        pointer-events: none;
     }
 }
 

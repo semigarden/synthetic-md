@@ -9,67 +9,16 @@ type FocusState = {
     focusedBlockIds: string[]
 }
 
-type MultiInlineModeChecker = () => boolean
-
 class Focus {
     constructor(
         private ast: Ast,
         private rootElement: HTMLElement,
-        private isMultiInlineMode?: MultiInlineModeChecker
     ) {}
 
-    public resolveInlineTransition(
-        state: FocusState,
-        newInlineId: string | null,
-        selection: globalThis.Selection,
-        range: Range,
-        setSuppress: (v: boolean) => void
-    ) {
-        if (this.isMultiInlineMode && this.isMultiInlineMode()) {
-            return
-        }
-
-        if (state.focusedInlineId) this.unfocusInline(state.focusedInlineId)
-        if (newInlineId) this.focusInline(newInlineId, selection, range, setSuppress)
-
-        state.focusedInlineId = newInlineId
-    }
-
-    public unfocusCurrentInline(state: FocusState) {
-        if (state.focusedInlineId) this.unfocusInline(state.focusedInlineId)
-    }
-
     public focusInlines(inlineIds: string[]) {
-        // const parentBlockIds = new Set<string>()
-        
-        // for (const inlineId of inlineIds) {
-        //     const inline = this.ast.query.getInlineById(inlineId)
-        //     if (!inline) continue
-
-        //     const inlineEl = this.rootElement.querySelector(
-        //         `[data-inline-id="${inlineId}"]`
-        //     ) as HTMLElement | null
-        //     if (!inlineEl) continue
-
-        //     if (inline.type !== 'image' && inlineEl.textContent === inline.text.symbolic) {
-        //         let block = this.ast.query.getBlockById(inline.blockId)
-        //         while (block) {
-        //             parentBlockIds.add(block.id)
-        //             block = this.ast.query.getParentBlock(block)
-        //         }
-        //         continue
-        //     }
-
-        //     inlineEl.textContent = inline.text.symbolic
-            
-        //     let block = this.ast.query.getBlockById(inline.blockId)
-        //     while (block) {
-        //         parentBlockIds.add(block.id)
-        //         block = this.ast.query.getParentBlock(block)
-        //     }
-        // }
-        
-        // this.focusBlocks(Array.from(parentBlockIds))
+        for (const inlineId of inlineIds) {
+            this.focusInline(inlineId)
+        }
     }
 
     public unfocusInlines(inlineIds: string[]) {
@@ -79,71 +28,41 @@ class Focus {
     }
 
     public focusBlocks(blockIds: string[]) {
-        // const allBlockIds = new Set<string>()
-        
-        // for (const blockId of blockIds) {
-        //     let block = this.ast.query.getBlockById(blockId)
-        //     while (block) {
-        //         allBlockIds.add(block.id)
-        //         block = this.ast.query.getParentBlock(block)
-        //     }
-        // }
-        
-        // for (const blockId of allBlockIds) {
-        //     const block = this.ast.query.getBlockById(blockId)
-        //     if (!block) continue
-
-        //     const marker = block.inlines.find(i => i.type === 'marker')
-        //     if (marker && marker.text.symbolic.length > 0) {
-        //         const markerEl = this.rootElement.querySelector(
-        //             `[data-inline-id="${marker.id}"]`
-        //         ) as HTMLElement | null
-        //         if (markerEl) {
-        //             if (markerEl.textContent !== marker.text.symbolic) {
-        //                 markerEl.textContent = marker.text.symbolic
-        //             }
-        //         }
-        //     }
-        // }
+        for (const blockId of blockIds) {
+            this.focusBlock(blockId)
+        }
     }
 
-    public unfocusBlocks(blockIds: string[], stillFocusedInlineIds: string[] = [], stillFocusedBlockIds: string[] = []) {
-        // const stillFocusedBlockSet = new Set(stillFocusedBlockIds)
-        // const stillFocusedInlineSet = new Set(stillFocusedInlineIds)
-        
-        // for (const blockId of blockIds) {
-        //     const block = this.ast.query.getBlockById(blockId)
-        //     if (!block) continue
+    public focusBlock(blockId: string) {
+        const blockElement = this.rootElement.querySelector(
+            `[data-block-id="${blockId}"]`
+        ) as HTMLElement | null
+        if (!blockElement) return
+        blockElement.classList.add('focused')
 
-        //     const hasFocusedChildren = this.hasFocusedChildren(block, stillFocusedInlineSet, stillFocusedBlockSet)
-        //     if (hasFocusedChildren) continue
-
-        //     const marker = block.inlines.find(i => i.type === 'marker')
-        //     if (marker && marker.text.symbolic.length > 0) {
-        //         const markerEl = this.rootElement.querySelector(
-        //             `[data-inline-id="${marker.id}"]`
-        //         ) as HTMLElement | null
-        //         if (markerEl) {
-        //             markerEl.textContent = marker.text.semantic
-        //         }
-        //     }
-        // }
+        const markerElement = blockElement.querySelector('.marker') as HTMLElement | null
+        if (markerElement) {
+            markerElement.classList.add('focused')
+        }
     }
-    
-    private hasFocusedChildren(block: import('../../types').Block, focusedInlineIds: Set<string>, focusedBlockIds: Set<string>): boolean {
-        if ('blocks' in block && block.blocks) {
-            for (const childBlock of block.blocks) {
-                if (focusedBlockIds.has(childBlock.id)) return true
-                if (this.hasFocusedChildren(childBlock, focusedInlineIds, focusedBlockIds)) return true
-            }
+
+    public unfocusBlocks(blockIds: string[]) {
+        for (const blockId of blockIds) {
+            this.unfocusBlock(blockId)
         }
-        
-        for (const inline of block.inlines) {
-            if (inline.type === 'marker') continue
-            if (focusedInlineIds.has(inline.id)) return true
+    }
+
+    public unfocusBlock(blockId: string) {
+        const blockElement = this.rootElement.querySelector(
+            `[data-block-id="${blockId}"]`
+        ) as HTMLElement | null
+        if (!blockElement) return
+        blockElement.classList.remove('focused')
+
+        const markerElement = blockElement.querySelector('.marker') as HTMLElement | null
+        if (markerElement) {
+            markerElement.classList.remove('focused')
         }
-        
-        return false
     }
 
     public clear(state: FocusState) {
@@ -151,88 +70,16 @@ class Focus {
         state.focusedBlockId = null
     }
 
-    private focusInline(
-        inlineId: string,
-        selection: globalThis.Selection,
-        range: Range,
-        setSuppress: (v: boolean) => void
+    public focusInline(
+        inlineId: string
     ) {
         console.log('focusInline', inlineId)
-        const inline = this.ast.query.getInlineById(inlineId)
-        if (!inline) return
-
-        const block = this.ast.query.getBlockById(inline.blockId)
-        if (!block) return
-
         const inlineElement = this.rootElement.querySelector(
             `[data-inline-id="${inlineId}"]`
         ) as HTMLElement | null
         if (!inlineElement) return
 
         inlineElement.classList.add('focused')
-
-        // let localOffset = 0
-        // if (semanticInlineEl.contains(range.startContainer)) {
-        //     const preRange = document.createRange()
-        //     preRange.selectNodeContents(semanticInlineEl)
-        //     preRange.setEnd(range.startContainer, range.startOffset)
-        //     localOffset = preRange.toString().length
-        // }
-
-        // const symbolicOffset = mapSemanticOffsetToSymbolic(
-        //     inline.text.semantic.length,
-        //     inline.text.symbolic.length,
-        //     localOffset
-        // )
-
-        setSuppress(true)
-
-        // const textNode = symbolicInlineEl.firstChild
-        // if (textNode instanceof Text) {
-        //     const clampedOffset = Math.max(0, Math.min(symbolicOffset, textNode.length))
-        //     const newRange = document.createRange()
-        //     newRange.setStart(textNode, clampedOffset)
-        //     newRange.collapse(true)
-        //     selection.removeAllRanges()
-        //     selection.addRange(newRange)
-        // }
-
-        requestAnimationFrame(() => setSuppress(false))
-    }
-
-    public resolveBlockMarkerTransition(state: FocusState, newBlockId: string) {
-        // if (newBlockId === state.focusedBlockId) {
-        //     const block = this.ast.query.getBlockById(newBlockId)
-        //     if (block) {
-        //         const marker = block.inlines.find(i => i.type === 'marker')
-        //         if (marker && marker.text.symbolic.length > 0) {
-        //             const markerEl = this.rootElement.querySelector(
-        //                 `[data-inline-id="${marker.id}"]`
-        //             ) as HTMLElement | null
-        //             if (markerEl && markerEl.textContent === marker.text.symbolic) {
-        //                 return
-        //             }
-        //         }
-        //     }
-        //     const parentBlockIds: string[] = []
-        //     let currentBlock = this.ast.query.getBlockById(newBlockId)
-        //     while (currentBlock) {
-        //         parentBlockIds.push(currentBlock.id)
-        //         currentBlock = this.ast.query.getParentBlock(currentBlock)
-        //     }
-        //     this.focusBlocks(parentBlockIds)
-        //     return
-        // }
-
-        // const parentBlockIds: string[] = []
-        // let block = this.ast.query.getBlockById(newBlockId)
-        // while (block) {
-        //     parentBlockIds.push(block.id)
-        //     block = this.ast.query.getParentBlock(block)
-        // }
-        
-        // this.focusBlocks(parentBlockIds)
-        // state.focusedBlockId = newBlockId
     }
 
     public unfocusInline(inlineId: string) {
@@ -248,16 +95,16 @@ class Focus {
         inlineElement.classList.remove('focused')
 
         if (inline.type === 'image') {
-            const imageElement = document.createElement('img')
-            imageElement.id = inline.id
-            imageElement.dataset.inlineId = inline.id
-            imageElement.classList.add('inline', 'image')
-            ;(imageElement as HTMLImageElement).src = (inline as any).url || ''
-            ;(imageElement as HTMLImageElement).alt = (inline as any).alt || ''
-            ;(imageElement as HTMLImageElement).title = (inline as any).title || ''
-            inlineElement.replaceWith(imageElement)
+            // const imageElement = document.createElement('img')
+            // imageElement.id = inline.id
+            // imageElement.dataset.inlineId = inline.id
+            // imageElement.classList.add('inline', 'image')
+            // ;(imageElement as HTMLImageElement).src = (inline as any).url || ''
+            // ;(imageElement as HTMLImageElement).alt = (inline as any).alt || ''
+            // ;(imageElement as HTMLImageElement).title = (inline as any).title || ''
+            // inlineElement.replaceWith(imageElement)
         } else {
-            inlineElement.classList.remove('focused')
+            // inlineElement.classList.remove('focused')
         }
 
         // const block = this.ast.query.getBlockById(inline.blockId)
