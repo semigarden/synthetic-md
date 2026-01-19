@@ -54,12 +54,12 @@ function renderInline(inline: Inline): HTMLElement {
 
     if (inline.type === 'link') {
         ;(inlineElement as HTMLAnchorElement).href = inline.url.replace(/[\u200B\u200C\u200D\uFEFF]/g, '') || ''
-        ;(inlineElement as HTMLAnchorElement).title = inline.title || ''
+        ;(inlineElement as HTMLAnchorElement).title = inline.title ? `${inline.title}\nCtrl + Click to follow link` : 'Ctrl + Click to follow link'
     }
 
     if (inline.type === 'autolink') {
         ;(inlineElement as HTMLAnchorElement).href = inline.url || ''
-        ;(inlineElement as HTMLAnchorElement).title = 'Ctrl + Click to open in a new tab'
+        ;(inlineElement as HTMLAnchorElement).title = 'Ctrl + Click to follow link'
     }
 
     if (inline.type === 'image') {
