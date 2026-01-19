@@ -220,7 +220,7 @@
         background-color: var(--color-border);
     }
 
-    &.focus::after {
+    &.focused::after {
         display: none;
     }
 }

@@ -131,18 +131,17 @@ class Input {
     }
 
     private resolveDelete(direction: 'backward' | 'forward', range: SelectionRange): EditEffect | null {
-        const ZWSP = '\u200B'
-        const isZwspOnly = (s: string) => s === ZWSP
-
         const block = this.ast.query.getBlockById(range.start.blockId)
         if (!block) return null
 
         const inline = this.ast.query.getInlineById(range.start.inlineId)
         if (!inline) return null
 
-        inline.text.symbolic = inline.text.symbolic.replace(ZWSP, '')
+        inline.text.symbolic = inline.text.symbolic
+            .replace(/[\u200B\u200C\u200D\uFEFF]/g, '')
+            .replace(/\r$/, '')
 
-        if (isZwspOnly(inline.text.symbolic) || inline.text.symbolic === '') {
+        if (inline.text.symbolic === '') {
             const list = this.ast.query.getListFromBlock(block)
             const previousInline = list && list.blocks.length > 1 ? this.ast.query.getPreviousInlineInList(inline) ?? this.ast.query.getPreviousInline(inline.id) : this.ast.query.getPreviousInline(inline.id)
 

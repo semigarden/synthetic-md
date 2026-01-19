@@ -132,9 +132,6 @@ class BlockRender {
                 break
             }
 
-            case 'thematicBreak':
-                break
-
             default:
                 this.deps.renderInlines(block.inlines, element)
         }

@@ -1,8 +1,9 @@
 import type { DetectedBlock } from '../../../types'
 
 function detectBlockType(line: string): DetectedBlock {
-    const ZWSP = '\u200B'
-    line = line.replace(ZWSP, '')
+    line = line
+        .replace(/[\u200B\u200C\u200D\uFEFF]/g, '')
+        .replace(/\r$/, '')
 
     const trimmed = line.trim()
 
@@ -13,7 +14,10 @@ function detectBlockType(line: string): DetectedBlock {
 
     if (/^>/.test(line)) return { type: 'blockQuote' }
 
-    if (/^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/.test(line)) return { type: 'thematicBreak' }
+    if (/^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/.test(line)) {
+        console.log('detectBlockType', line)
+        return { type: 'thematicBreak' }
+    }
 
     if (/^\s{0,3}(```+|~~~+)/.test(line)) return { type: 'codeBlock' }
 
