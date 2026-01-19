@@ -333,6 +333,62 @@ class Edit {
         )
     }
 
+    public indentTaskListItem(taskListItemId: string): AstApplyEffect | null {
+        const { query, effect } = this.context
+
+        const taskListItem = query.getBlockById(taskListItemId) as TaskListItem | null
+        if (!taskListItem) return null
+
+        const list = query.getListFromBlock(taskListItem)
+        if (!list) return null
+
+        const index = list.blocks.findIndex(b => b.id === taskListItem.id)
+        if (index <= 0) return null
+
+        const prev = list.blocks[index - 1] as TaskListItem
+    
+        let sublist = prev.blocks.find(b => b.type === 'list') as List | undefined
+        let createdSublist = false
+        if (!sublist) {
+            sublist = {
+                id: uuid(),
+                type: 'list',
+                ordered: false,
+                listStart: 1,
+                tight: list.tight,
+                blocks: [],
+                inlines: [],
+                text: '',
+                position: { start: 0, end: 0 },
+            }
+            prev.blocks.push(sublist)
+            createdSublist = true
+        }
+
+        list.blocks.splice(index, 1)
+        sublist.blocks.push(taskListItem)
+
+        const firstChild = taskListItem.blocks?.[0]
+        const firstInline = firstChild && 'inlines' in firstChild ? firstChild.inlines?.[0] : null
+        if (!firstInline) {
+            return null
+        }
+
+        const updatedTargets = [
+            { at: 'current' as const, target: list, current: list },
+            { at: 'current' as const, target: prev, current: prev },
+        ]
+
+        if (createdSublist) {
+            updatedTargets.push({ at: 'current', target: sublist, current: sublist })
+        }
+
+        return effect.compose(
+            effect.update(updatedTargets, []),
+            effect.caret(taskListItem.id, firstInline.id, 0, 'start')
+        )
+    }
+
     public outdentListItem(listItemId: string): AstApplyEffect | null {
         const { ast, query, parser, effect } = this.context
 
@@ -538,6 +594,214 @@ class Edit {
         return effect.compose(
             effect.update([{ at: 'current', target: parentListItem, current: parentListItem }, { at: 'next', target: parentListItem, current: listItem }]),
             effect.caret(listItem.id, listItem.blocks[0].inlines[0].id, 0, 'start')
+        )
+    }
+
+    public outdentTaskListItem(taskListItemId: string): AstApplyEffect | null {
+        const { ast, query, parser, effect } = this.context
+
+        const taskListItem = query.getBlockById(taskListItemId) as TaskListItem
+        if (!taskListItem) return null
+
+        const sublist = query.getListFromBlock(taskListItem)
+        if (!sublist) return null
+
+        const parentTaskListItem = query.getParentBlock(sublist) as TaskListItem | null
+        
+        if (!parentTaskListItem || parentTaskListItem.type !== 'taskListItem') {
+            const flat = query.flattenBlocks(ast.blocks)
+            const listEntry = flat.find(b => b.block.id === sublist.id)
+            if (!listEntry) return null
+
+            const listIndex = ast.blocks.findIndex(b => b.id === sublist.id)
+            const itemIndex = sublist.blocks.indexOf(taskListItem)
+
+            const itemsBefore = sublist.blocks.slice(0, itemIndex)
+            const itemsAfter = sublist.blocks.slice(itemIndex + 1)
+
+            const contentBlocks = taskListItem.blocks.filter(b => b.type !== 'list')
+            const nestedList = taskListItem.blocks.find(b => b.type === 'list') as List | undefined
+
+            const blocksToInsert: Block[] = []
+            const blocksToRemove: Block[] = []
+            const insertEffects: Array<{ at: 'current' | 'next'; target: Block; current: Block }> = []
+
+            if (contentBlocks.length > 0) {
+                contentBlocks.forEach(block => {
+                    const newBlock: Block = {
+                        ...block,
+                        id: uuid(),
+                    }
+                    newBlock.inlines = newBlock.inlines.map(inline => ({
+                        ...inline,
+                        blockId: newBlock.id,
+                    }))
+                    blocksToInsert.push(newBlock)
+                })
+            } else {
+                const emptyParagraph: Block = {
+                    id: uuid(),
+                    type: 'paragraph',
+                    text: '',
+                    position: { start: 0, end: 0 },
+                    inlines: [],
+                }
+                emptyParagraph.inlines = parser.inline.parseInline('', emptyParagraph.id, 'paragraph', 0)
+                emptyParagraph.inlines.forEach((i: Inline) => i.blockId = emptyParagraph.id)
+                blocksToInsert.push(emptyParagraph)
+            }
+
+            if (nestedList) {
+                const newNestedList: List = {
+                    ...nestedList,
+                    id: uuid(),
+                }
+                blocksToInsert.push(newNestedList)
+            }
+
+            if (itemsBefore.length > 0 && itemsAfter.length > 0) {
+                const beforeList: List = {
+                    id: uuid(),
+                    type: 'list',
+                    ordered: false,
+                    listStart: sublist.listStart,
+                    tight: sublist.tight,
+                    blocks: itemsBefore,
+                    inlines: [],
+                    text: '',
+                    position: { start: 0, end: 0 },
+                }
+                const afterList: List = {
+                    id: uuid(),
+                    type: 'list',
+                    ordered: false,
+                    listStart: sublist.listStart,
+                    tight: sublist.tight,
+                    blocks: itemsAfter,
+                    inlines: [],
+                    text: '',
+                    position: { start: 0, end: 0 },
+                }
+
+                ast.blocks.splice(listIndex, 1, beforeList)
+                blocksToRemove.push(sublist)
+
+                const insertIndex = listIndex + 1
+                ast.blocks.splice(insertIndex, 0, ...blocksToInsert)
+
+                ast.blocks.splice(insertIndex + blocksToInsert.length, 0, afterList)
+
+                insertEffects.push({ at: 'current', target: sublist, current: beforeList })
+                blocksToInsert.forEach((block, idx) => {
+                    insertEffects.push({
+                        at: 'next',
+                        target: idx === 0 ? beforeList : blocksToInsert[idx - 1],
+                        current: block,
+                    })
+                })
+                insertEffects.push({
+                    at: 'next',
+                    target: blocksToInsert[blocksToInsert.length - 1],
+                    current: afterList,
+                })
+            } else if (itemsBefore.length > 0) {
+                const beforeList: List = {
+                    id: uuid(),
+                    type: 'list',
+                    ordered: false,
+                    listStart: sublist.listStart,
+                    tight: sublist.tight,
+                    blocks: itemsBefore,
+                    inlines: [],
+                    text: '',
+                    position: { start: 0, end: 0 },
+                }
+
+                ast.blocks.splice(listIndex, 1, beforeList)
+                blocksToRemove.push(sublist)
+
+                const insertIndex = listIndex + 1
+                ast.blocks.splice(insertIndex, 0, ...blocksToInsert)
+
+                insertEffects.push({ at: 'current', target: sublist, current: beforeList })
+                blocksToInsert.forEach((block, idx) => {
+                    insertEffects.push({
+                        at: 'next',
+                        target: idx === 0 ? beforeList : blocksToInsert[idx - 1],
+                        current: block,
+                    })
+                })
+            } else if (itemsAfter.length > 0) {
+                const afterList: List = {
+                    id: uuid(),
+                    type: 'list',
+                    ordered: sublist.ordered,
+                    listStart: sublist.listStart,
+                    tight: sublist.tight,
+                    blocks: itemsAfter,
+                    inlines: [],
+                    text: '',
+                    position: { start: 0, end: 0 },
+                }
+
+                ast.blocks.splice(listIndex, 1, ...blocksToInsert, afterList)
+                blocksToRemove.push(sublist)
+
+                insertEffects.push({ at: 'current', target: sublist, current: blocksToInsert[0] })
+                blocksToInsert.slice(1).forEach((block, idx) => {
+                    insertEffects.push({
+                        at: 'next',
+                        target: blocksToInsert[idx],
+                        current: block,
+                    })
+                })
+                insertEffects.push({
+                    at: 'next',
+                    target: blocksToInsert[blocksToInsert.length - 1],
+                    current: afterList,
+                })
+            } else {
+                ast.blocks.splice(listIndex, 1, ...blocksToInsert)
+                blocksToRemove.push(sublist)
+
+                insertEffects.push({ at: 'current', target: sublist, current: blocksToInsert[0] })
+                blocksToInsert.slice(1).forEach((block, idx) => {
+                    insertEffects.push({
+                        at: 'next',
+                        target: blocksToInsert[idx],
+                        current: block,
+                    })
+                })
+            }
+
+            const focusBlock = blocksToInsert[0]
+            const focusInline = focusBlock?.inlines?.[0]
+            if (!focusInline) return null
+
+            return effect.compose(
+                effect.update(insertEffects),
+                effect.caret(focusBlock.id, focusInline.id, 0, 'start')
+            )
+        }
+
+        const parentList = query.getListFromBlock(parentTaskListItem)
+        if (!parentList) return null
+
+        const sublistIndex = sublist.blocks.indexOf(taskListItem)
+        const parentIndex = parentList.blocks.indexOf(parentTaskListItem)
+
+        sublist.blocks.splice(sublistIndex, 1)
+
+        if (sublist.blocks.length === 0) {
+            const sublistIdx = parentTaskListItem.blocks.indexOf(sublist)
+            parentTaskListItem.blocks.splice(sublistIdx, 1)
+        }
+
+        parentList.blocks.splice(parentIndex + 1, 0, taskListItem)
+
+        return effect.compose(
+            effect.update([{ at: 'current', target: parentTaskListItem, current: parentTaskListItem }, { at: 'next', target: parentTaskListItem, current: taskListItem }]),
+            effect.caret(taskListItem.id, taskListItem.blocks[0].inlines[0].id, 0, 'start')
         )
     }
 

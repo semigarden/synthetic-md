@@ -172,6 +172,13 @@ class Intent {
         const listItem = this.ast.query.getParentBlock(context.block)
         if (!listItem || (listItem.type !== 'listItem' && listItem.type !== 'taskListItem')) return { preventDefault: false }
 
+        if (listItem.type === 'taskListItem') {
+            return {
+                preventDefault: true,
+                ast: [{ type: 'indentTaskListItem', taskListItemId: listItem.id }],
+            }
+        }
+
         return {
             preventDefault: true,
             ast: [{ type: 'indentListItem', listItemId: listItem.id }],

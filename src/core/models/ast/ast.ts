@@ -71,7 +71,9 @@ class Ast {
     public splitTaskListItem(...args: Parameters<Edit['splitTaskListItem']>) { return this.edit.splitTaskListItem(...args) }
     public mergeInline(...args: Parameters<Edit['mergeInline']>) { return this.edit.mergeInline(...args) }
     public indentListItem(...args: Parameters<Edit['indentListItem']>) { return this.edit.indentListItem(...args) }
+    public indentTaskListItem(...args: Parameters<Edit['indentTaskListItem']>) { return this.edit.indentTaskListItem(...args) }
     public outdentListItem(...args: Parameters<Edit['outdentListItem']>) { return this.edit.outdentListItem(...args) }
+    public outdentTaskListItem(...args: Parameters<Edit['outdentTaskListItem']>) { return this.edit.outdentTaskListItem(...args) }
     public mergeTableCell(...args: Parameters<Edit['mergeTableCell']>) { return this.edit.mergeTableCell(...args) }
     public addTableColumn(...args: Parameters<Edit['addTableColumn']>) { return this.edit.addTableColumn(...args) }
     public addTableRow(...args: Parameters<Edit['addTableRow']>) { return this.edit.addTableRow(...args) }

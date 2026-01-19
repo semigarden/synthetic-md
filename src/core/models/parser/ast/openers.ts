@@ -133,7 +133,7 @@ function tryOpenList(
             continue
         }
     
-        if (top.type === 'listItem' && top.indent > indent) {
+        if (top.type === 'listItem' || top.type === 'taskListItem' && top.indent > indent) {
             if (indent > 0) break
             openBlocks.pop()
             continue
@@ -161,10 +161,10 @@ function tryOpenList(
             tight: true,
         }
 
-        const parentListItem = openBlocks.findLast(b => b.type === 'listItem')?.block
+        const parentListItem = openBlocks.findLast(b => b.type === 'listItem' || b.type === 'taskListItem')?.block
 
         if (parentListItem && indent > (openListBlock?.indent ?? 0)) {
-            (parentListItem as ListItem).blocks.push(list)
+            (parentListItem as ListItem | TaskListItem).blocks.push(list)
         } else {
             rootBlocks.push(list)
         }

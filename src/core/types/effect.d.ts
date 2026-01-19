@@ -8,7 +8,9 @@ type AstEffect =
     | { type: 'splitTaskListItem'; taskListItemId: string; blockId: string; inlineId: string; caretPosition: number }
     | { type: 'mergeInline'; leftInlineId: string; rightInlineId: string }
     | { type: 'indentListItem'; listItemId: string }
+    | { type: 'indentTaskListItem'; taskListItemId: string }
     | { type: 'outdentListItem'; listItemId: string }
+    | { type: 'outdentTaskListItem'; taskListItemId: string }
     | { type: 'mergeTableCell'; cellId: string }
     | { type: 'addTableColumn'; cellId: string }
     | { type: 'addTableRow'; cellId: string }
