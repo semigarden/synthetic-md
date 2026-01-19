@@ -33,6 +33,19 @@ class Focus {
         }
     }
 
+    private placeCaret(el: HTMLElement, at: 'start' | 'end' = 'end') {
+        const sel = el.ownerDocument.getSelection();
+        console.log('placeCaret', sel)
+        if (!sel) return;
+      
+        const range = el.ownerDocument.createRange();
+        range.selectNodeContents(el);
+        range.collapse(at === 'start');
+      
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
+
     public focusBlock(blockId: string) {
         const blockElement = this.rootElement.querySelector(
             `[data-block-id="${blockId}"]`
@@ -40,10 +53,19 @@ class Focus {
         if (!blockElement) return
         blockElement.classList.add('focused')
 
-        const markerElement = blockElement.querySelector('.marker') as HTMLElement | null
-        if (markerElement) {
-            markerElement.classList.add('focused')
-        }
+        // this.rootElement.focus()
+
+        // // const markerElement = blockElement.querySelector('.marker') as HTMLElement | null
+        // // if (markerElement) {
+        // //     markerElement.classList.add('focused')
+
+        // //     if (blockElement.classList.contains('thematicBreak')) {
+        // //         const markerSymbolicElement = markerElement.querySelector('.symbolic') as HTMLElement | null
+        // //         if (markerSymbolicElement) {
+        // //             this.placeCaret(markerSymbolicElement, 'end')
+        // //         }
+        // //     }
+        // // }
     }
 
     public unfocusBlocks(blockIds: string[]) {

@@ -9,7 +9,6 @@ function findClosestInlineAndPosition(
     clickY: number,
     getInlineById: (id: string) => Inline | null
 ): InlineHit | null {
-    console.log('findClosestInlineAndPosition', block.id)
     const blockElement = rootElement.querySelector(
         `[data-block-id="${block.id}"]`
     ) as HTMLElement | null
