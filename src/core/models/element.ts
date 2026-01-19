@@ -61,7 +61,7 @@ class Element extends HTMLElement {
     set value(value: string) {
         if (value === this.ast.text) return
 
-        if (!this.hasAcceptedExternalValue && value !== '') {
+        if (!this.hasAcceptedExternalValue && value !== '' || value !== '' && value !== this.ast.text) {
             this.ast.setText(value)
             this.renderDOM()
             this.hasAcceptedExternalValue = true
