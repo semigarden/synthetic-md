@@ -60,6 +60,19 @@ class Intent {
             }
         }
 
+        if (parentBlock?.type === 'taskListItem') {
+            return {
+                preventDefault: true,
+                ast: [{
+                    type: 'splitTaskListItem',
+                    taskListItemId: parentBlock.id,
+                    blockId: context.block.id,
+                    inlineId: context.inline.id,
+                    caretPosition: caretPosition,
+                }],
+            }
+        }
+
         return {
             preventDefault: true,
             ast: [{
@@ -125,6 +138,7 @@ class Intent {
         const list = this.ast.query.getListFromBlock(context.block)
         const previousInline = list && list.blocks.length > 1 ? this.ast.query.getPreviousInlineInList(context.inline) ?? this.ast.query.getPreviousInline(context.inline.id) : this.ast.query.getPreviousInline(context.inline.id)
 
+        console.log('previousInline', JSON.stringify(previousInline, null, 2))
         if (previousInline) {
             return {
                 preventDefault: true,

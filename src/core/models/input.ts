@@ -22,6 +22,12 @@ class Input {
             range.start.inlineId === range.end.inlineId &&
             range.start.position === range.end.position
 
+        console.log('range', JSON.stringify(range, null, 2))
+        console.log('isCollapsed', isCollapsed)
+        console.log('isInsert', isInsert)
+        console.log('isDelete', isDelete)
+        console.log('event.text', event.text)
+
         if (isInsert) {
             return this.resolveInsert(event.text, range)
         } else if (isDelete) {

@@ -68,6 +68,7 @@ class Ast {
     public input(...args: Parameters<Edit['input']>) { return this.edit.input(...args) }
     public split(...args: Parameters<Edit['split']>) { return this.edit.split(...args) }
     public splitListItem(...args: Parameters<Edit['splitListItem']>) { return this.edit.splitListItem(...args) }
+    public splitTaskListItem(...args: Parameters<Edit['splitTaskListItem']>) { return this.edit.splitTaskListItem(...args) }
     public mergeInline(...args: Parameters<Edit['mergeInline']>) { return this.edit.mergeInline(...args) }
     public indentListItem(...args: Parameters<Edit['indentListItem']>) { return this.edit.indentListItem(...args) }
     public outdentListItem(...args: Parameters<Edit['outdentListItem']>) { return this.edit.outdentListItem(...args) }

@@ -1,4 +1,4 @@
-import { FlatBlockEntry, FlatInlineEntry, Block, Inline, List, ListItem } from '../../types'
+import { FlatBlockEntry, FlatInlineEntry, Block, Inline, List, ListItem, TaskListItem } from '../../types'
 
 class AstQuery {
     constructor(private blocks: Block[]) {}
@@ -201,11 +201,26 @@ class AstQuery {
         return marker + text
     }
 
+    public getTaskListItemText(item: TaskListItem): string {
+        const marker = this.getTaskListItemMarker(item)
+
+        const text = item.blocks
+            .map(b => b.inlines.map(i => i.text.symbolic).join(''))
+            .join('')
+    
+        return marker + text
+    }
+
     public getListItemMarker(list: List, index: number): string {
         if (!list.ordered) return '- '
       
         const start = list.listStart ?? 1
         return `${start + index}. `
+    }
+
+    public getTaskListItemMarker(taskListItem: TaskListItem): string {
+        const checked = taskListItem.checked
+        return `- [${checked ? 'x' : ' '}] `
     }
 
     public getInlineMergeOwner(inline: Inline): Block | null {

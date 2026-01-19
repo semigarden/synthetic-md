@@ -5,6 +5,7 @@ type AstEffect =
     | { type: 'input'; blockId: string; inlineId: string; text: string; caretPosition: number }
     | { type: 'splitBlock'; blockId: string; inlineId: string; caretPosition: number }
     | { type: 'splitListItem'; listItemId: string; blockId: string; inlineId: string; caretPosition: number }
+    | { type: 'splitTaskListItem'; taskListItemId: string; blockId: string; inlineId: string; caretPosition: number }
     | { type: 'mergeInline'; leftInlineId: string; rightInlineId: string }
     | { type: 'indentListItem'; listItemId: string }
     | { type: 'outdentListItem'; listItemId: string }
@@ -18,7 +19,9 @@ type AstEffect =
     | { type: 'mergeInlineInCell'; cellId: string; leftInlineId: string; rightInlineId: string }
     | { type: 'insertParagraphAboveTable'; tableId: string }
     | { type: 'insertParagraphBelowTable'; tableId: string }
-    | { type: 'toggleTask'; blockId: string }
+    | { type: 'pasteMultiBlock'; blockId: string; inlineId: string; text: string; startPosition: number; endPosition?: number }
+    | { type: 'deleteMultiBlock'; startBlockId: string; startInlineId: string; startPosition: number; endBlockId: string; endInlineId: string; endPosition: number }
+    | { type: 'toggleTask'; blockId: string; inlineId: string; caretPosition: number }
 
 export type AstEffectMap = {
     [K in AstEffect['type']]: Extract<AstEffect, { type: K }>

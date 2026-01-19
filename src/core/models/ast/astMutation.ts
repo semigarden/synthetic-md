@@ -202,6 +202,7 @@ class AstMutation {
     public isBlockEmpty(block: Block): boolean {
         switch (block.type) {
             case 'listItem':
+            case 'taskListItem':
                 return block.blocks.length === 0
     
             case 'list':

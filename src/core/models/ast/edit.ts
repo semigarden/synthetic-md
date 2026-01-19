@@ -219,6 +219,79 @@ class Edit {
         )
     }
 
+    public splitTaskListItem(taskListItemId: string, blockId: string, inlineId: string, caretPosition: number): AstApplyEffect | null {
+        const { query, parser, mutation, effect } = this.context
+
+        const taskListItem = query.getBlockById(taskListItemId) as TaskListItem
+        if (!taskListItem) return null
+
+        const list = query.getParentBlock(taskListItem) as List
+        if (!list) return null
+
+        const block = taskListItem.blocks.find(b => b.id === blockId)
+        if (!block) return null
+
+        const result = mutation.splitBlockPure(block, inlineId, caretPosition)
+        if (!result) return null
+
+        const { left, right } = result
+
+        const newLeft = parser.reparseTextFragment(left.text, left.position.start)
+        const newRight = parser.reparseTextFragment(right.text, right.position.start)
+
+        taskListItem.blocks = newLeft
+
+        const index = list.blocks.findIndex(b => b.id === taskListItem.id)
+        taskListItem.text = query.getTaskListItemText(taskListItem)
+
+        const newListItem: TaskListItem = {
+            id: uuid(),
+            type: 'taskListItem',
+            checked: false,
+            blocks: [],
+            inlines: [],
+            text: '',
+            position: {
+                start: taskListItem.position.end,
+                end: taskListItem.position.end,
+            },
+        }
+
+        const marker = query.getTaskListItemMarker(newListItem)
+
+        newListItem.inlines.unshift({
+            id: uuid(),
+            type: 'marker',
+            text: {
+                symbolic: marker,
+                semantic: '',
+            },
+            position: { start: 0, end: marker.length },
+        } as Inline)
+
+        const bodyText = newRight
+            .map(b => b.inlines.map(i => i.text.symbolic).join(''))
+            .join('')
+
+        const bodyBlocks = parser.reparseTextFragment(
+            bodyText,
+            newListItem.position.start + marker.length
+        )
+
+        newListItem.text = marker
+        newListItem.blocks = bodyBlocks
+
+        list.blocks.splice(index + 1, 0, newListItem)
+
+        return effect.compose(
+            effect.update([
+                { at: 'current', target: taskListItem, current: taskListItem },
+                { at: 'next', target: taskListItem, current: newListItem },
+            ]),
+            effect.caret(newListItem.blocks[0].id, newListItem.blocks[0].inlines[0].id, 0, 'start')
+        )
+    }
+
     public indentListItem(listItemId: string): AstApplyEffect | null {
         const { query, effect } = this.context
 
