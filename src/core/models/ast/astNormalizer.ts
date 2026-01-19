@@ -47,20 +47,50 @@ class AstNormalizer {
                 return text
             }
 
+            if (block.type === 'taskListItem') {
+                const indent = '  '.repeat(listDepth)
+
+                const markerInline = block.inlines.find(i => i.type === 'marker')
+                const markerCore = `${block.checked ? '- [x] ' : '- [ ] '}`
+                const markerText = indent + markerCore
+
+                if (markerInline) {
+                    markerInline.text.symbolic = markerText
+                }
+
+                text += markerText
+                globalPos += markerText.length
+
+                const content = block.blocks[0] ? updateBlock(block.blocks[0], listDepth) : ''
+                text += content
+
+                const nested = block.blocks.find(b => b.type === 'list')
+                if (nested) {
+                    text += '\n'
+                    globalPos += 1
+                    text += updateBlock(nested, listDepth + 1)
+                }
+
+                block.text = text
+                block.position = { start, end: globalPos }
+                return text
+            }
+
             if (block.type === 'listItem') {
                 const indent = '  '.repeat(listDepth)
 
                 const markerInline = block.inlines.find(i => i.type === 'marker')
-                const markerText = markerInline?.text.symbolic.trimStart() ?? '- '
-                
+                const markerText = (markerInline?.text.symbolic ?? '- ').trimStart()
+                const fullMarker = indent + markerText
+
                 if (markerInline) {
-                    markerInline.text.symbolic = indent + markerText
+                    markerInline.text.symbolic = fullMarker
                 }
 
-                text += indent + markerText
-                globalPos += indent.length + markerText.length
+                text += fullMarker
+                globalPos += fullMarker.length
 
-                const content = updateBlock(block.blocks[0], listDepth)
+                const content = block.blocks[0] ? updateBlock(block.blocks[0], listDepth) : ''
                 text += content
 
                 const nested = block.blocks.find(b => b.type === 'list')
@@ -98,27 +128,27 @@ class AstNormalizer {
                 const parts: string[] = []
                 const cellCounts = block.blocks.map(r => (r as TableRow).blocks.length)
                 const maxCells = cellCounts.length > 0 ? Math.max(...cellCounts) : 1
-            
+
                 block.blocks.forEach((row, rowIndex) => {
                     const rowText = updateBlock(row)
                     parts.push(rowText)
-            
+
                     if (rowIndex === 0) {
                         parts.push('\n')
                         globalPos += 1
-            
+
                         const divider = Array(maxCells).fill('---').join(' | ')
                         const dividerLine = `| ${divider} |`
                         parts.push(dividerLine)
                         globalPos += dividerLine.length
                     }
-            
+
                     if (rowIndex < block.blocks.length - 1) {
                         parts.push('\n')
                         globalPos += 1
                     }
                 })
-            
+
                 text = parts.join('')
                 block.text = text
                 block.position = { start, end: globalPos }
@@ -127,23 +157,23 @@ class AstNormalizer {
 
             if (block.type === 'tableRow') {
                 const parts: string[] = []
-            
+
                 parts.push('| ')
                 globalPos += 2
-            
+
                 block.blocks.forEach((cell, i) => {
                     const cellText = updateBlock(cell)
                     parts.push(cellText)
-            
+
                     if (i < block.blocks.length - 1) {
                         parts.push(' | ')
                         globalPos += 3
                     }
                 })
-            
+
                 parts.push(' |')
                 globalPos += 2
-            
+
                 text = parts.join('')
                 block.text = text
                 block.position = { start, end: globalPos }
@@ -152,7 +182,7 @@ class AstNormalizer {
 
             if (block.type === 'tableCell' || block.type === 'tableHeader') {
                 const parts: string[] = []
-                
+
                 for (let i = 0; i < block.blocks.length; i++) {
                     const childText = updateBlock(block.blocks[i])
                     parts.push(childText)
@@ -162,7 +192,7 @@ class AstNormalizer {
                         globalPos += 4
                     }
                 }
-                
+
                 const cellText = parts.join('')
                 block.text = cellText
                 block.position = { start, end: globalPos }
@@ -170,8 +200,8 @@ class AstNormalizer {
                 return cellText
             }
 
-            block.text = text
-            block.position = { start, end: globalPos }
+            ;(block as Block).text = text
+            ;(block as Block).position = { start, end: globalPos }
 
             return text
         }

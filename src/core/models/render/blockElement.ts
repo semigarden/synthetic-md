@@ -38,6 +38,12 @@ function createBlockElement(block: Block): HTMLElement {
             return element
         }
 
+        case 'taskListItem': {
+            const element = document.createElement('li')
+            element.classList.add('taskListItem')
+            return element
+        }
+
         case 'table': {
             const element = document.createElement('table')
             element.classList.add('table')

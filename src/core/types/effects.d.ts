@@ -18,6 +18,7 @@ type AstEffect =
     | { type: 'mergeInlineInCell'; cellId: string; leftInlineId: string; rightInlineId: string }
     | { type: 'insertParagraphAboveTable'; tableId: string }
     | { type: 'insertParagraphBelowTable'; tableId: string }
+    | { type: 'toggleTask'; blockId: string }
 
 export type AstEffectMap = {
     [K in AstEffect['type']]: Extract<AstEffect, { type: K }>

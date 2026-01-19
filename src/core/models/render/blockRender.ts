@@ -58,6 +58,8 @@ class BlockRender {
 
         if (element) {
             element.replaceChildren()
+            element.className = ''
+            element.classList.add('block', block.type)
         } else {
             element = this.deps.createBlockElement(block)
             element.dataset.blockId = block.id
@@ -73,7 +75,21 @@ class BlockRender {
         switch (block.type) {
             case 'blockQuote':
             case 'list':
-            case 'listItem': {
+            case 'listItem':
+            case 'taskListItem': {
+                if (block.type === 'taskListItem') {
+                    const cb = document.createElement('input')
+                    cb.type = 'checkbox'
+                    cb.classList.add('taskCheckbox')
+                    cb.checked = !!(block as any).checked
+                    cb.tabIndex = -1
+            
+                    cb.addEventListener('mousedown', e => e.preventDefault())
+                    cb.addEventListener('click', e => e.preventDefault())
+            
+                    element.appendChild(cb)
+                }
+
                 for (const child of block.blocks) {
                     if (child.type !== 'list') {
                         this.renderBlock(child, element)

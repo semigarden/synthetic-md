@@ -56,7 +56,6 @@ export interface List extends BlockType<'list'> {
 }
 
 export interface ListItem extends BlockType<'listItem'> {
-    checked?: boolean
     blocks: Block[]
 }
 

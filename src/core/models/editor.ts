@@ -24,6 +24,7 @@ class Editor {
         insertParagraphBelowTable: (effect) => this.ast.insertParagraphBelowTable(effect.tableId),
         pasteMultiBlock: (effect) => this.ast.pasteMultiBlock(effect.blockId, effect.inlineId, effect.text, effect.startPosition, effect.endPosition),
         deleteMultiBlock: (effect) => this.ast.deleteMultiBlock(effect.startBlockId, effect.startInlineId, effect.startPosition, effect.endBlockId, effect.endInlineId, effect.endPosition),
+        toggleTask: (effect) => this.ast.toggleTask(effect.blockId, effect.inlineId, effect.caretPosition),
     }
     public emitChange: () => void
     public timeline: Timeline

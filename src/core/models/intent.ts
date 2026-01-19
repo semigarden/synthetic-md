@@ -25,6 +25,8 @@ class Intent {
             return this.resolveInsertRowAbove(context)
         } else if (intent === 'splitInCell') {
             return this.resolveSplitInCell(context)
+        } else if (intent === 'toggleTask') {
+            return this.resolveToggleTask(context)
         }
 
         return { preventDefault: false }
@@ -239,6 +241,13 @@ class Intent {
                 inlineId: context.inline.id,
                 caretPosition: caretPosition,
             }],
+        }
+    }
+
+    private resolveToggleTask(context: EditContext): EditEffect {
+        return {
+            preventDefault: true,
+            ast: [{ type: 'toggleTask', blockId: context.block.id, inlineId: context.inline.id, caretPosition: this.caret.getPositionInInline(context.inlineElement) }],
         }
     }
 }

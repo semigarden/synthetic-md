@@ -18,8 +18,9 @@ function detectBlockType(line: string): DetectedBlock {
 
     if (/^\s{0,3}(```+|~~~+)/.test(line)) return { type: 'codeBlock' }
 
-    const taskListMatch = /^\s*([-*+])\s+\[([ xX])\]\s+/.exec(line)
+    const taskListMatch = /^\s*([-*+])\s+\[([ xX])\](?:\s+|$)/.exec(line)
     if (taskListMatch) {
+        console.log('taskListMatch', taskListMatch)
         return {
             type: 'taskListItem',
             ordered: false,

@@ -110,8 +110,6 @@ class Input {
         const endInline = this.ast.query.getInlineById(range.end.inlineId)
         if (!endBlock || !endInline) return null
 
-        // console.log('resolveMultiBlockInsert', startBlock.id, startInline.id, range.start.position, endBlock.id, endInline.id, range.end.position)
-
         if (text === '') {
             return {
                 preventDefault: true,

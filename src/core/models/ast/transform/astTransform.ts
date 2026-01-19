@@ -1,4 +1,4 @@
-import type { AstApplyEffect, Block, DetectedBlock, TableCell, TableHeader, List } from '../../../types'
+import type { AstApplyEffect, Block, DetectedBlock, Inline, TableCell, TableHeader, List, ListItem, TaskListItem } from '../../../types'
 import type { AstContext } from '../astContext'
 
 class AstTransform {
@@ -9,17 +9,37 @@ class AstTransform {
         block: Block,
         detected: DetectedBlock,
         caretPosition: number | null = null,
-        removedBlocks: Block[] = [],
+        removedBlocks: Block[] = []
     ): AstApplyEffect | null {
         const { ast, query, parser, effect } = this.ctx
 
-        text = text
-            .replace(/[\u200B\u200C\u200D\uFEFF]/g, '')
-            .replace(/\r$/, '')
+        text = text.replace(/[\u200B\u200C\u200D\uFEFF]/g, '').replace(/\r$/, '')
 
         const flat = query.flattenBlocks(ast.blocks)
         const entry = flat.find(b => b.block.id === block.id)
         if (!entry) return null
+
+        if (
+            block.type === 'paragraph' &&
+            entry.parent &&
+            (entry.parent.type === 'listItem' || entry.parent.type === 'taskListItem')
+        ) {
+            const parent = entry.parent as ListItem | TaskListItem
+            const marker = parent.inlines?.find((i: Inline) => i.type === 'marker')?.text.symbolic ?? ''
+
+            if (/^(\s*[-*+]\s+|\s*\d+[.)]\s+)$/.test(marker)) {
+                const m = /^\[([ xX])\](?:\s+|$)/.exec(text)
+                if (m) {
+                    const checked = m[1].toLowerCase() === 'x'
+                    ;(parent as any).type = 'taskListItem'
+                    ;(parent as any).checked = checked
+                    text = text.slice(m[0].length)
+                } else if (parent.type === 'taskListItem') {
+                    ;(parent as any).type = 'listItem'
+                    delete (parent as any).checked
+                }
+            }
+        }
 
         const newBlocks = parser.reparseTextFragment(text, block.position.start)
         const inline = query.getFirstInline(newBlocks)
@@ -35,7 +55,10 @@ class AstTransform {
             )
         }
 
-        if (entry.parent && entry.parent.type === 'list' && block.type === 'listItem' && block.type !== detected.type) {
+        const isListItemBlock = block.type === 'listItem' || block.type === 'taskListItem'
+        const isListItemDetected = detected.type === 'listItem' || detected.type === 'taskListItem'
+
+        if (entry.parent && entry.parent.type === 'list' && isListItemBlock && !isListItemDetected) {
             const list = entry.parent as List
             const listEntry = flat.find(b => b.block.id === list.id)
             if (!listEntry) return null
@@ -45,20 +68,27 @@ class AstTransform {
                 ast.blocks.splice(listEntry.index, 0, ...newBlocks)
 
                 return effect.compose(
-                effect.update(
-                    [{ at: 'previous', target: list, current: newBlocks[0] }],
-                    [entry.block]
-                ),
-                effect.caret(inline.blockId, inline.id, caretPosition ?? inline.position.start, 'start')
-                )
-            } else {
-                ast.blocks.splice(listEntry.index, 1, ...newBlocks)
-
-                return effect.compose(
-                    effect.update([{ at: 'current', target: list, current: newBlocks[0] }]),
+                    effect.update([{ at: 'previous', target: list, current: newBlocks[0] }], [entry.block]),
                     effect.caret(inline.blockId, inline.id, caretPosition ?? inline.position.start, 'start')
                 )
             }
+
+            ast.blocks.splice(listEntry.index, 1, ...newBlocks)
+
+            return effect.compose(
+                effect.update([{ at: 'current', target: list, current: newBlocks[0] }]),
+                effect.caret(inline.blockId, inline.id, caretPosition ?? inline.position.start, 'start')
+            )
+        }
+
+        if (entry.parent && 'blocks' in entry.parent && Array.isArray((entry.parent as any).blocks)) {
+            const parent = entry.parent as any
+            parent.blocks.splice(entry.index, 1, ...newBlocks)
+
+            return effect.compose(
+                effect.update([{ at: 'current', target: parent, current: parent }], removedBlocks),
+                effect.caret(inline.blockId, inline.id, caretPosition ?? inline.position.start, 'start')
+            )
         }
 
         const oldBlock = block

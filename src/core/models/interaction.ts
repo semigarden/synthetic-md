@@ -98,6 +98,29 @@ class Interaction {
         const target = event.target as HTMLElement | null
         if (!target) return
 
+        const checkbox = target.closest('.taskCheckbox') as HTMLInputElement | null
+        if (checkbox) {
+            event.preventDefault()
+
+            const blockEl = checkbox.closest('[data-block-id]') as HTMLElement | null
+            if (!blockEl) return
+
+            requestAnimationFrame(() => {
+                const blockId = blockEl.dataset.blockId
+                if (!blockId) return
+
+                const context = this.select.resolveTaskContext(blockId)
+                if (!context) return
+
+                const effect = this.intent.resolveEffect('toggleTask', context)
+                if (!effect) return
+
+                this.editor.apply(effect)
+            })
+
+            return
+        }
+
         const anchor = target.closest('a') as HTMLAnchorElement | null
         if (!anchor) return
 

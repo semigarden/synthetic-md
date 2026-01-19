@@ -69,6 +69,7 @@ export type Intent =
     | 'splitInCell'
     | 'undo'
     | 'redo'
+    | 'toggleTask'
 
 export type InputEvent = {
     text: string

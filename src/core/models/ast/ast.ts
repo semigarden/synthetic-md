@@ -83,6 +83,7 @@ class Ast {
     public insertParagraphBelowTable(...args: Parameters<Edit['insertParagraphBelowTable']>) { return this.edit.insertParagraphBelowTable(...args) }
     public pasteMultiBlock(...args: Parameters<Edit['pasteMultiBlock']>) { return this.edit.pasteMultiBlock(...args) }
     public deleteMultiBlock(...args: Parameters<Edit['deleteMultiBlock']>) { return this.edit.deleteMultiBlock(...args) }
+    public toggleTask(...args: Parameters<Edit['toggleTask']>) { return this.edit.toggleTask(...args) }
 }
 
 export default Ast

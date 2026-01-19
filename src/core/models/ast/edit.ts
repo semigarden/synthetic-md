@@ -1,58 +1,75 @@
 import { detectBlockType } from '../parser/block/blockDetect'
 import { uuid } from '../../utils/utils'
 import type { AstContext } from './astContext'
-import type { AstApplyEffect, Block, Inline, List, ListItem, Table, TableRow, TableHeader, TableCell } from '../../types'
+import type { AstApplyEffect, Block, Inline, List, ListItem, Table, TableRow, TableHeader, TableCell, TaskListItem } from '../../types'
 
 class Edit {
     constructor(private context: AstContext) {}
 
     public input(blockId: string, inlineId: string, text: string, caretPosition: number): AstApplyEffect | null {
         const { query, parser, transform, effect } = this.context
-
+    
         const block = query.getBlockById(blockId)
         if (!block) return null
-
+    
         const inline = query.getInlineById(inlineId)
         if (!inline) return null
-
+    
         const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
         const absoluteCaretPosition =
             block.inlines
                 .slice(0, inlineIndex)
                 .reduce((sum, i) => sum + i.text.symbolic.length, 0)
             + caretPosition
-
-        const newText = block.inlines.slice(0, inlineIndex).map(i => i.text.symbolic).join('') + text + block.inlines.slice(inlineIndex + 1).map(i => i.text.symbolic).join('')
+    
+        const newText =
+            block.inlines.slice(0, inlineIndex).map(i => i.text.symbolic).join('') +
+            text +
+            block.inlines.slice(inlineIndex + 1).map(i => i.text.symbolic).join('')
+    
         const detectedBlock = detectBlockType(newText)
-
+    
         const blockTypeChanged =
             detectedBlock.type !== block.type ||
             (detectedBlock.type === 'heading' && block.type === 'heading' && detectedBlock.level !== block.level)
-
+    
         const ignoreTypes = ['blankLine', 'codeBlock', 'table']
-        if (blockTypeChanged && !ignoreTypes.includes(detectedBlock.type)) {
+    
+        const inListItem = (() => {
+            const flat = query.flattenBlocks(this.context.ast.blocks)
+            const entry = flat.find(b => b.block.id === block.id)
+            if (!entry?.parent) return false
+            return entry.parent.type === 'listItem' || entry.parent.type === 'taskListItem'
+        })()
+    
+        const taskPrefix = /^\[([ xX])\](?:\s+|$)/.test(newText)
+    
+        if (
+            (blockTypeChanged && !ignoreTypes.includes(detectedBlock.type)) ||
+            (block.type === 'paragraph' && inListItem && taskPrefix)
+        ) {
             if (detectedBlock.type === 'listItem') caretPosition = 0
             return transform.transformBlock(newText, block, detectedBlock, caretPosition)
         }
-
+    
         if (block.type === 'paragraph' && this.isTableDivider(newText)) {
             const prevBlock = this.getPreviousBlock(block)
             if (prevBlock?.type === 'paragraph' && this.isTableHeader(prevBlock.text)) {
                 return this.mergeIntoTable(prevBlock, block, newText)
             }
         }
-        
+    
         const newInlines = parser.inline.parseInline(newText, block.id, block.type, block.position.start)
         const hit = query.getInlineAtPosition(newInlines, absoluteCaretPosition)
         const newInline = hit?.inline
         const position = hit?.position ?? 0
         if (!newInline) return null
-
+    
         block.text = newInlines.map((i: Inline) => i.text.symbolic).join('')
         block.position = { start: block.position.start, end: block.position.start + block.text.length }
         block.inlines = newInlines
         newInlines.forEach((i: Inline) => (i.blockId = block.id))
-
+    
         return effect.compose(
             effect.update([{ at: 'current', target: block, current: block }]),
             effect.caret(block.id, newInline.id, position, 'start')
@@ -1190,7 +1207,18 @@ class Edit {
             effect.update(updateEffects, blocksToRemove),
             effect.caret(lastBlock.id, lastInline.id, lastBlock.text.length, 'start')
         )
-    }     
+    }
+    
+    public toggleTask(blockId: string, inlineId: string, caretPosition: number): AstApplyEffect | null {
+        console.log('toggleTask', blockId, inlineId, caretPosition)
+        const { query, effect } = this.context
+
+        const block = query.getBlockById(blockId) as TaskListItem
+        if (!block || block.type !== 'taskListItem') return null
+
+        block.checked = !block.checked
+        return effect.compose(effect.update([{ at: 'current', target: block, current: block }]), effect.caret(blockId, inlineId, caretPosition, 'start'))
+    }
 }
 
 export default Edit

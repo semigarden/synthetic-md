@@ -163,6 +163,54 @@ class Select {
         return resolveInlineContext(this.ast, this.caret, this.rootElement)
     }
 
+    public resolveTaskContext(blockId: string): EditContext | null {
+        const block = this.ast.query.getBlockById(blockId)
+        if (!block) return null
+
+        const blockElement = this.rootElement.querySelector(`[data-block-id="${blockId}"]`) as HTMLElement | null
+        if (!blockElement) return null
+
+        const inlineElement = this.placeCaretInFirstInline(blockElement, 'start')
+        if (!inlineElement) return null
+
+        const inlineId = inlineElement.dataset.inlineId
+        if (!inlineId) return null
+
+        const inline = this.ast.query.getInlineById(inlineId)
+        if (!inline) return null
+        
+        this.caret.blockId = block.id
+        this.caret.inlineId = inline.id
+        this.caret.position = 0
+
+        return { block, inline, inlineIndex: 0, inlineElement: inlineElement }
+    }
+
+    private placeCaretInFirstInline(blockEl: HTMLElement, at: 'start' | 'end' = 'start') {
+        const inlineEl = blockEl.querySelector('[data-inline-id]') as HTMLElement | null
+        if (!inlineEl) return null
+      
+        const target = (inlineEl.querySelector('.symbolic') as HTMLElement | null) ?? inlineEl
+      
+        if (target.childNodes.length === 0) {
+            target.appendChild(document.createTextNode('\u200B'))
+        }
+      
+        this.rootElement.focus()
+      
+        const sel = target.ownerDocument.getSelection()
+        if (!sel) return null
+      
+        const range = target.ownerDocument.createRange()
+        range.selectNodeContents(target)
+        range.collapse(at === 'start')
+      
+        sel.removeAllRanges()
+        sel.addRange(range)
+      
+        return inlineEl
+    }
+
     public resolveRange(): SelectionRange | null {
         return this.range
     }
