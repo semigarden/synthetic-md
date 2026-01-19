@@ -8,7 +8,7 @@ class Edit {
 
     public input(blockId: string, inlineId: string, text: string, caretPosition: number): AstApplyEffect | null {
         const { query, parser, transform, effect } = this.context
-    
+
         const block = query.getBlockById(blockId)
         if (!block) return null
     

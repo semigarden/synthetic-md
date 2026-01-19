@@ -30,13 +30,14 @@ class Interaction {
     }
 
     private onBeforeInput = (event: InputEvent) => {
+        console.log('onBeforeInput', event.inputType)
         if (event.inputType === 'insertFromPaste') {
             event.preventDefault()
             return
         }
         
         const effect = this.input.resolveEffect({ text: event.data ?? '', type: event.inputType })
-        
+        console.log('effect', effect)
         if (!effect) return
         if (effect.preventDefault) {
             event.preventDefault()

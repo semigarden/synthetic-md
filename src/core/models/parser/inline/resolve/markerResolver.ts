@@ -51,6 +51,24 @@ class MarkerResolver {
             }
         }
 
+        if (blockType === "taskListItem") {
+            const taskMatch = /^\s*([-*+])\s+\[([ xX])\](?:\s+|$)/.exec(text)
+            if (!taskMatch) return null
+      
+            const markerText = taskMatch[0]
+            const length = markerText.length
+      
+            stream.advance(length)
+      
+            return {
+                id: uuid(),
+                type: "marker",
+                blockId,
+                text: { symbolic: markerText, semantic: "" },
+                position: { start: position, end: position + length },
+            }
+        }
+
         if (blockType === 'listItem') {
             const unorderedListMatch = /^\s*([-*+])\s+/.exec(text);
             if (unorderedListMatch) {

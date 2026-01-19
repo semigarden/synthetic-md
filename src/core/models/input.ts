@@ -13,7 +13,6 @@ class Input {
     public resolveEffect(event: InputEvent): EditEffect | null {
         const isInsert = event.type.startsWith('insert')
         const isDelete = event.type.startsWith('delete')
-    
         if (!isInsert && !isDelete) return null
     
         const range = this.select?.resolveRange()
@@ -39,7 +38,6 @@ class Input {
 
     private resolveInsert(text: string, range: SelectionRange): EditEffect | null {
         if (range.start.blockId !== range.end.blockId) {
-            console.log('resolveInsert', JSON.stringify(text, null, 2))
             return this.resolveMultiBlockInsert(text, range)
         }
 
@@ -85,9 +83,6 @@ class Input {
         
         const newText = textBefore + text + textAfter
         const newCaretPosition = textBefore.length + text.length
-
-        console.log('resolveInsert', JSON.stringify(newText, null, 2))
-        console.log('resolveInsert', JSON.stringify(newCaretPosition, null, 2))
 
         return {
             preventDefault: true,

@@ -122,7 +122,7 @@ function tryOpenList(
 
     const markerLen = info.markerLen
     const content = line.slice(indent + markerLen)
-    const listItemText = line.slice(0, indent + markerLen) + content
+    const listItemText = line.slice(0, indent + markerLen)
 
     while (true) {
         const top = openBlocks.at(-1)

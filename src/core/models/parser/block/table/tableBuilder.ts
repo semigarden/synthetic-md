@@ -65,6 +65,8 @@ function buildTableBlock(context: {
                 inlines: [],
             }
         }
+        
+        if (detected.type === 'taskListItem') {}
 
         if (detected.type === 'codeBlock') {
             return {

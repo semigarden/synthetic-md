@@ -70,7 +70,7 @@ class AstQuery {
         for (const block of blocks) {
             if (block.inlines && block.inlines.length > 0) {
                 const inline = block.inlines[0]
-                if (block.type === 'listItem') {
+                if (block.type === 'listItem' || block.type === 'taskListItem') {
                     if (inline.type !== 'marker') return inline
                 } else {
                     return inline
@@ -94,7 +94,7 @@ class AstQuery {
         }
 
         if (block.inlines && block.inlines.length > 0) {
-            if (block.type === 'listItem') {
+            if (block.type === 'listItem' || block.type === 'taskListItem') {
                 const contentInlines = block.inlines.filter(i => i.type !== 'marker')
                 if (contentInlines.length > 0) {
                     return contentInlines[contentInlines.length - 1]
@@ -154,7 +154,7 @@ class AstQuery {
             const parent = this.getParentBlock(current)
             if (!parent) return null
     
-            if (parent.type === 'listItem') {
+            if (parent.type === 'listItem' || parent.type === 'taskListItem') {
                 current = parent
                 continue
             }
@@ -245,6 +245,7 @@ class AstQuery {
     private isInlineMergeBoundary(block: Block): boolean {
         switch (block.type) {
             case 'listItem':
+            case 'taskListItem':
             case 'tableCell':
             case 'tableHeader':
                 return true

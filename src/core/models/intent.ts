@@ -104,14 +104,14 @@ class Intent {
         }
 
         const listItem = this.ast.query.getParentBlock(context.block)
-        if (listItem?.type === 'listItem') {
+        if (listItem?.type === 'listItem' || listItem?.type === 'taskListItem') {
             const list = this.ast.query.getListFromBlock(listItem)
             if (list) {
                 const itemIndex = list.blocks.indexOf(listItem)
                 const isFirstItem = itemIndex === 0
 
                 const parentOfList = this.ast.query.getParentBlock(list)
-                const isNestedList = parentOfList?.type === 'listItem'
+                const isNestedList = parentOfList?.type === 'listItem' || parentOfList?.type === 'taskListItem'
                 
                 if (isFirstItem && isNestedList) {
                     return {
@@ -156,7 +156,7 @@ class Intent {
         }
 
         const listItem = this.ast.query.getParentBlock(context.block)
-        if (!listItem || listItem.type !== 'listItem') return { preventDefault: false }
+        if (!listItem || (listItem.type !== 'listItem' && listItem.type !== 'taskListItem')) return { preventDefault: false }
 
         return {
             preventDefault: true,
@@ -208,7 +208,7 @@ class Intent {
         }
 
         const listItem = this.ast.query.getParentBlock(context.block)
-        if (!listItem || listItem.type !== 'listItem') return { preventDefault: false }
+        if (!listItem || (listItem.type !== 'listItem' && listItem.type !== 'taskListItem')) return { preventDefault: false }
 
         return {
             preventDefault: true,
