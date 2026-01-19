@@ -1,4 +1,4 @@
-import type { AstApplyEffect, Block, DetectedBlock, Inline, TableCell, TableHeader, List, ListItem, TaskListItem } from '../../../types'
+import type { AstApplyEffect, Block, DetectedBlock, Inline, TableCell, TableHeader, List, ListItem, TaskListItem, BlockQuote } from '../../../types'
 import type { AstContext } from '../astContext'
 
 class AstTransform {
@@ -14,6 +14,8 @@ class AstTransform {
         const { ast, query, parser, effect } = this.ctx
 
         text = text.replace(/[\u200B\u200C\u200D\uFEFF]/g, '').replace(/\r$/, '')
+
+        console.log('text', JSON.stringify(text, null, 2))
 
         const flat = query.flattenBlocks(ast.blocks)
         const entry = flat.find(b => b.block.id === block.id)
@@ -42,6 +44,7 @@ class AstTransform {
         }
 
         const newBlocks = parser.reparseTextFragment(text, block.position.start)
+        console.log('newBlocks', JSON.stringify(newBlocks, null, 2))
         const inline = query.getFirstInline(newBlocks)
         if (!inline) return null
 

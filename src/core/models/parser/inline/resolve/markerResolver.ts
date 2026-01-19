@@ -51,6 +51,28 @@ class MarkerResolver {
             }
         }
 
+        if (blockType === 'blockQuote') {
+            const match = text.match(/^(\s{0,3}>\s?)/)
+            if (!match) return null
+        
+            const markerText = match[1]
+            const length = markerText.length
+            console.log('markerText', JSON.stringify(markerText, null, 2))
+        
+            stream.advance(length)
+        
+            return {
+                id: uuid(),
+                type: 'marker',
+                blockId,
+                text: { symbolic: markerText, semantic: '' },
+                position: {
+                    start: position,
+                    end: position + length
+                }
+            }
+        }
+
         if (blockType === "taskListItem") {
             const taskMatch = /^\s*([-*+])\s+\[([ xX])\](?:\s+|$)/.exec(text)
             if (!taskMatch) return null

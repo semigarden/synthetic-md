@@ -1,7 +1,7 @@
 import { detectBlockType } from '../parser/block/blockDetect'
 import { uuid } from '../../utils/utils'
 import type { AstContext } from './astContext'
-import type { AstApplyEffect, Block, Inline, List, ListItem, Table, TableRow, TableHeader, TableCell, TaskListItem } from '../../types'
+import type { AstApplyEffect, Block, Inline, List, ListItem, Table, TableRow, TableHeader, TableCell, TaskListItem, BlockQuote } from '../../types'
 
 class Edit {
     constructor(private context: AstContext) {}
@@ -82,7 +82,43 @@ class Edit {
         const block = query.getBlockById(blockId)
         if (!block) return null
 
-        const result = mutation.splitBlockPure(block, inlineId, caretPosition)
+        const parent = query.getParentBlock(block)
+        if (!parent) return null
+
+        if (parent.type === 'blockQuote') {
+            const quote = parent as BlockQuote
+            const split = mutation.splitBlockPure(block, inlineId, caretPosition)
+            if (!split) return null
+
+            const leftChild  = split.left
+            const rightChild = split.right
+
+            const leftQuoteText  = query.prefixAsBlockQuote(leftChild.text)
+            const rightQuoteText = query.prefixAsBlockQuote(rightChild.text)
+
+            const newLeftQuote  = parser.reparseTextFragment(leftQuoteText,  quote.position.start)
+            const newRightQuote = parser.reparseTextFragment(rightQuoteText, newLeftQuote[0].position.end)
+
+            const quoteIndex = ast.blocks.findIndex(b => b.id === quote.id)
+            ast.blocks.splice(quoteIndex, 1, ...newLeftQuote, ...newRightQuote)
+
+            const rightQuoteBlock = newRightQuote[0] as BlockQuote
+            const rightParagraph = rightQuoteBlock.blocks?.[0]
+            const rightInline = rightParagraph?.inlines?.[0]
+            if (!rightParagraph || !rightInline) return null
+
+            return effect.compose(
+                effect.update([
+                    { at: 'current', target: quote, current: newLeftQuote[0] },
+                    { at: 'next', target: newLeftQuote[0], current: newRightQuote[0] },
+                ]),
+                effect.caret(rightParagraph.id, rightInline.id, 0, 'start')
+            )
+        }
+
+        const result = mutation.splitBlockPure(block, inlineId, caretPosition, {
+            rightType: block.type === 'blockQuote' ? 'blockQuote' : undefined,
+        })
         if (!result) return null
 
         const { left, right } = result

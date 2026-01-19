@@ -70,7 +70,7 @@ class AstQuery {
         for (const block of blocks) {
             if (block.inlines && block.inlines.length > 0) {
                 const inline = block.inlines[0]
-                if (block.type === 'listItem' || block.type === 'taskListItem') {
+                if (block.type === 'listItem' || block.type === 'taskListItem' || block.type === 'blockQuote') {
                     if (inline.type !== 'marker') return inline
                 } else {
                     return inline
@@ -263,6 +263,7 @@ class AstQuery {
             case 'taskListItem':
             case 'tableCell':
             case 'tableHeader':
+            case 'blockQuote':
                 return true
             default:
                 return false
@@ -273,6 +274,11 @@ class AstQuery {
         const flattenedBlocks = this.flattenBlocks(this.blocks)
         const flatBlock = flattenedBlocks.find(b => position >= b.block.position.start && position <= b.block.position.end)
         return flatBlock?.block ?? null
+    }
+
+    public prefixAsBlockQuote(text: string) {
+        const lines = text.split('\n')
+        return lines.map(l => `> ${l}`).join('\n')
     }
 }
 

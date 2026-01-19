@@ -85,7 +85,6 @@ class BlockParser {
 
         switch (detected.type) {
             case 'heading':
-                console.log('heading', detected)
                 blocks.push(buildHeading(line, start, end, detected.level!))
                 break
 

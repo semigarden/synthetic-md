@@ -11,7 +11,7 @@ class AstMutation {
         return new AstQuery(this.ast.blocks)
     }
 
-    public splitBlockPure(block: Block, inlineId: string, caretPosition: number): { left: Block; right: Block } | null {
+    public splitBlockPure(block: Block, inlineId: string, caretPosition: number, options: { rightType?: Block['type']; leftType?: Block['type'] } = {}): { left: Block; right: Block } | null {
         const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
         if (inlineIndex === -1) return null
     
@@ -22,11 +22,14 @@ class AstMutation {
     
         const beforeInlines = block.inlines.slice(0, inlineIndex)
         const afterInlines = block.inlines.slice(inlineIndex + 1)
+
+        const leftType = options.leftType ?? block.type
+        const rightType = options.rightType ?? block.type
     
         const leftInlines = this.parser.inline.parseInline(
             leftText,
             block.id,
-            block.type,
+            leftType,
             block.position.start
         )
     
@@ -35,29 +38,30 @@ class AstMutation {
         const rightInlines = this.parser.inline.parseInline(
             rightText,
             rightBlockId,
-            block.type,
+            rightType,
             0
         ).concat(afterInlines)
     
         rightInlines.forEach((i: Inline) => (i.blockId = rightBlockId))
     
-        const leftBlock: Block = {
+        const leftBlock = {
             ...block,
+            type: leftType,
             inlines: [...beforeInlines, ...leftInlines],
-        }
+        } as Block
     
         leftBlock.text = leftBlock.inlines.map(i => i.text.symbolic).join('')
         leftBlock.position = {
             start: block.position.start,
             end: block.position.start + leftBlock.text.length,
         }
-        if (leftBlock.text.trim() === '') {
+        if (leftBlock.text.trim() === '' && leftType !== 'blockQuote') {
             leftBlock.type = 'paragraph'
         }
     
         const rightBlock = {
             id: rightBlockId,
-            type: block.type,
+            type: rightType,
             inlines: rightInlines,
             text: rightInlines.map((i: Inline) => i.text.symbolic).join(''),
             position: {
@@ -81,7 +85,17 @@ class AstMutation {
 
         if (sameOwner && leftOwner) {
             const owner = leftOwner
-            const mergedText = leftInline.text.symbolic.slice(0, -1) + rightInline.text.symbolic
+            let mergedText = leftInline.text.symbolic.slice(0, -1) + rightInline.text.symbolic
+
+            if (leftInline.type === 'marker' && leftBlock.type === 'blockQuote') {
+                mergedText = rightInline.text.symbolic
+
+                return {
+                    leftBlock: rightBlock,
+                    mergedInline: rightInline,
+                    removedBlock: leftBlock,
+                }
+            }
 
             const mergedInlines = this.parser.inline.parseInline(
                 mergedText,
@@ -123,8 +137,8 @@ class AstMutation {
         }
 
         const mergedText =
-        leftInline.text.symbolic +
-        rightInline.text.symbolic
+            leftInline.text.symbolic +
+            rightInline.text.symbolic
 
         const mergedInlines = this.parser.inline.parseInline(
             mergedText,
