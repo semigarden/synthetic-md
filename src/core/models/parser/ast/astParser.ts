@@ -38,8 +38,6 @@ class AstParser {
             this.inline.applyRecursive(block)
         }
 
-        console.log('parse blocks', JSON.stringify(this.blocks, null, 2))
-
         return this.blocks
     }
 
