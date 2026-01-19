@@ -59,12 +59,13 @@ function renderInline(inline: Inline): HTMLElement {
 
     if (inline.type === 'autolink') {
         ;(inlineElement as HTMLAnchorElement).href = inline.url || ''
+        ;(inlineElement as HTMLAnchorElement).title = 'Ctrl + Click to open in a new tab'
     }
 
     if (inline.type === 'image') {
         const img = document.createElement('img')
         img.classList.add('inline', 'image')
-        img.src = clean(inline.url)
+        img.src = inline.url || ''
         img.alt = inline.alt || ''
         img.title = inline.title || ''
         semanticText.textContent = ''
@@ -72,10 +73,6 @@ function renderInline(inline: Inline): HTMLElement {
     }
 
     return inlineElement
-}
-
-function clean(text?: string): string {
-    return (text ?? '').replace(/[\u200B\u200C\u200D\uFEFF]/g, '')
 }
 
 export { renderInlines }

@@ -18,6 +18,7 @@ class Interaction {
         this.rootElement.addEventListener('keydown', this.onKeyDown)
         this.rootElement.addEventListener('paste', this.onPaste)
         this.rootElement.addEventListener('copy', this.onCopy)
+        this.rootElement.addEventListener('click', this.onClick)
     }
 
     detach() {
@@ -25,6 +26,7 @@ class Interaction {
         this.rootElement.removeEventListener('keydown', this.onKeyDown)
         this.rootElement.removeEventListener('paste', this.onPaste)
         this.rootElement.removeEventListener('copy', this.onCopy)
+        this.rootElement.removeEventListener('click', this.onClick)
     }
 
     private onBeforeInput = (event: InputEvent) => {
@@ -90,6 +92,24 @@ class Interaction {
         }
 
         this.editor.apply(effect)
+    }
+
+    private onClick = (event: MouseEvent) => {
+        const target = event.target as HTMLElement | null
+        if (!target) return
+
+        const anchor = target.closest('a') as HTMLAnchorElement | null
+        if (!anchor) return
+
+        const follow = event.ctrlKey || event.metaKey
+    
+        if (!follow) {
+            event.preventDefault()
+            return
+        }
+    
+        event.preventDefault()
+        window.open(anchor.href, '_blank', 'noopener,noreferrer')
     }
 
     private resolveIntentFromEvent = (event: KeyboardEvent): IntentType | null => {
