@@ -9,13 +9,24 @@ class StrikethroughResolver {
 
         while (current < delimiters.length) {
             const closer = delimiters[current]
+
             if (
                 closer.type !== '~' ||
-                !closer.canClose ||
                 !closer.active ||
-                closer.position >= nodes.length ||
-                nodes[closer.position].type !== 'text'
+                !closer.canClose ||
+                closer.position < 0 ||
+                closer.position >= nodes.length
             ) {
+                current++
+                continue
+            }
+
+            const closerNode = nodes[closer.position]
+            if (
+                closerNode.type !== 'text' ||
+                !closerNode.text.symbolic.includes('~')
+            ) {
+                closer.active = false
                 current++
                 continue
             }
@@ -24,15 +35,21 @@ class StrikethroughResolver {
             for (let i = current - 1; i >= 0; i--) {
                 const opener = delimiters[i]
                 if (
-                    opener.type !== '~' ||
-                    !opener.canOpen ||
-                    !opener.active ||
-                    opener.position >= nodes.length ||
-                    nodes[opener.position].type !== 'text'
+                opener.type !== '~' ||
+                !opener.active ||
+                !opener.canOpen ||
+                opener.position < 0 ||
+                opener.position >= nodes.length
                 ) continue
 
-                if ((opener.length + closer.length) % 3 === 0 &&
-                    opener.length !== 1 && closer.length !== 1) continue
+                const openerNode = nodes[opener.position]
+                if (
+                openerNode.type !== 'text' ||
+                !openerNode.text.symbolic.includes('~')
+                ) {
+                opener.active = false
+                continue
+                }
 
                 openerIndex = i
                 break
@@ -44,19 +61,17 @@ class StrikethroughResolver {
             }
 
             const opener = delimiters[openerIndex]
-            const useLength = Math.min(opener.length, closer.length, 2);
-            const type = useLength === 2 ? 'strikethrough' : 'text'
+
+            const useLength = Math.min(opener.length, closer.length)
+            if (useLength < 2) {
+                current++
+                continue
+            }
 
             const startNodeIndex = opener.position
             const endNodeIndex = closer.position
 
-            if (
-                opener.position < 0 ||
-                closer.position < 0 ||
-                opener.position >= nodes.length ||
-                closer.position >= nodes.length ||
-                opener.position > closer.position
-            ) {
+            if (startNodeIndex > endNodeIndex) {
                 opener.active = false
                 closer.active = false
                 current++
@@ -73,44 +88,33 @@ class StrikethroughResolver {
                 symbolic += node.text.symbolic
 
                 if (i > 0 && i < affected.length - 1) {
-                    semantic += node.text.semantic
+                semantic += node.text.semantic
                 }
             }
 
-            const strikethroughNode = {
+            const strikeNode: Inline = {
                 id: uuid(),
-                type,
+                type: 'strikethrough',
                 blockId,
                 text: { symbolic, semantic },
                 position: {
-                    start: nodes[startNodeIndex].position.start,
-                    end: nodes[endNodeIndex].position.end,
-                }
+                start: nodes[startNodeIndex].position.start,
+                end: nodes[endNodeIndex].position.end,
+                },
             } as Inline
 
             const deleteCount = endNodeIndex - startNodeIndex + 1
-            nodes.splice(startNodeIndex, deleteCount, strikethroughNode)
+            nodes.splice(startNodeIndex, deleteCount, strikeNode)
 
             delimiters.splice(current, 1)
             delimiters.splice(openerIndex, 1)
 
             const removed = deleteCount - 1
             for (const d of delimiters) {
-                if (d.position > startNodeIndex) {
-                    d.position -= removed
-                }
+                if (d.position > startNodeIndex) d.position -= removed
             }
 
-            const start = startNodeIndex
-            const end = endNodeIndex
-
-            for (const d of delimiters) {
-                if (d.position >= start && d.position <= end) {
-                    d.active = false
-                }
-            }
-
-            current = startNodeIndex;
+            current = startNodeIndex
         }
     }
 }

@@ -86,15 +86,11 @@ class EmphasisResolver {
             const deleteCount = endNodeIndex - startNodeIndex + 1
             nodes.splice(startNodeIndex, deleteCount, emphasisNode)
 
-            delimiters.splice(current, 1)
-            delimiters.splice(openerIndex, 1)
+            opener.length -= useLength
+            closer.length -= useLength
 
-            const removed = deleteCount - 1
-            for (const d of delimiters) {
-                if (d.position > startNodeIndex) {
-                    d.position -= removed
-                }
-            }
+            if (opener.length === 0) opener.active = false
+            if (closer.length === 0) closer.active = false
 
             const start = startNodeIndex
             const end = endNodeIndex
@@ -102,6 +98,13 @@ class EmphasisResolver {
             for (const d of delimiters) {
                 if (d.position >= start && d.position <= end) {
                     d.active = false
+                }
+            }
+
+            const removed = deleteCount - 1
+            for (const d of delimiters) {
+                if (d.position > startNodeIndex) {
+                    d.position -= removed
                 }
             }
 

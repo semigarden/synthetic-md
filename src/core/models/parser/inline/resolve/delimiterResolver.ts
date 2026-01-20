@@ -10,34 +10,35 @@ class DelimiterResolver {
         result: Inline[],
         delimiterStack: Delimiter[]
     ): boolean {
-        const ch = stream.peek()
-        if (ch !== '*' && ch !== '_' && ch !== '~') return false
+        const char = stream.peek()
+        if (char !== '*' && char !== '_' && char !== '~') return false
 
         const start = stream.position()
-        const char = stream.next()!
+
+        const prevChar = stream.peekBack() ?? null
+
+        stream.next()
         let count = 1
-
-        const prev = stream.peekBack() ?? null
-        const next = stream.peek() ?? null
-
-        const leftFlanking =
-        !this.isWhitespace(next) &&
-        !(this.isPunctuation(next) && !this.isWhitespace(prev) && !this.isPunctuation(prev))
-
-        const rightFlanking =
-        !this.isWhitespace(prev) &&
-        !(this.isPunctuation(prev) && !this.isWhitespace(next) && !this.isPunctuation(next))
-
-        const canOpen =
-            char === '_' ? leftFlanking && (!rightFlanking || this.isPunctuation(prev)) : leftFlanking
-
-        const canClose =
-            char === '_' ? rightFlanking && (!leftFlanking || this.isPunctuation(next)) : rightFlanking
-
         while (stream.peek() === char) {
             stream.next()
             count++
         }
+
+        const nextChar = stream.peek() ?? null
+
+        const leftFlanking =
+        !this.isWhitespace(nextChar) &&
+        !(this.isPunctuation(nextChar) && !this.isWhitespace(prevChar) && !this.isPunctuation(prevChar))
+
+        const rightFlanking =
+        !this.isWhitespace(prevChar) &&
+        !(this.isPunctuation(prevChar) && !this.isWhitespace(nextChar) && !this.isPunctuation(nextChar))
+
+        const canOpen =
+            char === '_' ? leftFlanking && (!rightFlanking || this.isPunctuation(prevChar)) : leftFlanking
+
+        const canClose =
+            char === '_' ? rightFlanking && (!leftFlanking || this.isPunctuation(nextChar)) : rightFlanking
 
         const inlinePos = result.length
 
@@ -67,12 +68,12 @@ class DelimiterResolver {
         return true
     }
 
-    private isWhitespace(ch: string | null) {
-        return ch === null || /\s/.test(ch)
+    private isWhitespace(char: string | null) {
+        return char === null || /\s/.test(char)
     }
 
-    private isPunctuation(ch: string | null) {
-        return ch !== null && /[!-/:-@[-`{-~]/.test(ch)
+    private isPunctuation(char: string | null) {
+        return char !== null && /[!-/:-@[-`{-~]/.test(char)
     }
 }
 

@@ -187,10 +187,19 @@ class InlineParser {
     
         flushText()
 
-        this.emphasisResolver.apply(result, delimiterStack, blockId)
-        this.pruneDelimiters(delimiterStack, result)
-        this.strikethroughResolver.apply(result, delimiterStack, blockId)
-        this.pruneDelimiters(delimiterStack, result)
+        let changed = true
+        while (changed) {
+            const activeBefore = delimiterStack.filter(d => d.active).length
+
+            this.emphasisResolver.apply(result, delimiterStack, blockId)
+            this.pruneDelimiters(delimiterStack, result)
+
+            this.strikethroughResolver.apply(result, delimiterStack, blockId)
+            this.pruneDelimiters(delimiterStack, result)
+
+            const activeAfter = delimiterStack.filter(d => d.active).length
+            changed = activeAfter < activeBefore
+        }
 
         return result
     }
@@ -209,8 +218,7 @@ class InlineParser {
             if (
                 !d.active ||
                 d.position < 0 ||
-                d.position >= nodes.length ||
-                nodes[d.position].type !== 'text'
+                d.position >= nodes.length
             ) {
                 d.active = false
             }
