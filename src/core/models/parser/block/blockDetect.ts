@@ -20,7 +20,6 @@ function detectBlockType(line: string): DetectedBlock {
 
     const taskListMatch = /^\s*([-*+])\s+\[([ xX])\](?:\s+|$)/.exec(line)
     if (taskListMatch) {
-        console.log('taskListMatch', taskListMatch)
         return {
             type: 'taskListItem',
             ordered: false,

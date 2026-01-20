@@ -97,6 +97,18 @@ class BlockParser {
                 break
             }
 
+            case 'taskListItem': {
+                const list = buildListFromItem(line, start, end, detected)
+                const last = blocks[blocks.length - 1]
+                if (last && last.type === 'list' && (last as any).ordered === !!(detected as any).ordered) {
+                    ;(last as any).blocks.push(...(list as any).blocks)
+                    last.position.end = end
+                } else {
+                    blocks.push(list)
+                }
+                break
+            }
+
             case 'listItem': {
                 const list = buildListFromItem(line, start, end, detected)
                 const last = blocks[blocks.length - 1]
