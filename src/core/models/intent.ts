@@ -201,7 +201,7 @@ class Intent {
         if (parentBlock.type === 'blockQuote') {
             return {
                 preventDefault: true,
-                ast: [{ type: 'indentBlockQuote', blockQuoteId: parentBlock.id }],
+                ast: [{ type: 'indentBlockQuote', blockQuoteId: parentBlock.id, blockId: context.block.id, inlineId: context.inline.id }],
             }
         }
 

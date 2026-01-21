@@ -568,29 +568,44 @@ class Edit {
         )
     }
 
-    public indentBlockQuote(blockQuoteId: string): AstApplyEffect | null {
+    public indentBlockQuote(blockQuoteId: string, blockId: string, inlineId: string): AstApplyEffect | null {
         const { query, effect } = this.context
-    
+
         const blockQuote = query.getBlockById(blockQuoteId) as BlockQuote | null
         if (!blockQuote || blockQuote.type !== 'blockQuote') return null
     
-        const newBlockQuote: BlockQuote = {
-            ...blockQuote,
-            id: uuid(),
+        blockQuote.blocks = blockQuote.blocks ?? []
+    
+        const index = blockQuote.blocks.findIndex(b => b.id === blockId)
+        if (index < 0) return null
+    
+        const block = blockQuote.blocks[index]
+        const oldId = block.id
+    
+        const nested: BlockQuote = {
+            id: oldId,
+            type: 'blockQuote',
+            text: '> ',
+            position: { start: 0, end: 0 },
+            inlines: [{
+                id: uuid(),
+                type: 'marker',
+                blockId: oldId,
+                text: { symbolic: '> ', semantic: '' },
+                position: { start: 0, end: 2 },
+            }] as any,
+            blocks: [],
         }
-    
-        blockQuote.blocks = [newBlockQuote]
-        blockQuote.text = '> '
-        blockQuote.position = { start: 0, end: 0 }
-    
-        const caretBlockId = (newBlockQuote.blocks?.[0] as any)?.id ?? newBlockQuote.id
-        const caretInlineId =
-            ((newBlockQuote.blocks?.[0] as any)?.inlines?.[0] as any)?.id ??
-            (newBlockQuote.inlines?.[0] as any)?.id
-    
+
+        block.id = uuid()
+        ;(block as any).inlines.forEach((i: Inline) => i.blockId = block.id)
+
+        nested.blocks.push(block)
+        blockQuote.blocks.splice(index, 1, nested)
+
         return effect.compose(
             effect.update([{ at: 'current', target: blockQuote, current: blockQuote }]),
-            effect.caret(caretBlockId, caretInlineId, 0, 'start')
+            effect.caret(block.id, inlineId, 0, 'start')
         )
     }
 

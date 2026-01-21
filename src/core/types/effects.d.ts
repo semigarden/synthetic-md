@@ -10,7 +10,7 @@ type AstEffect =
     | { type: 'mergeInline'; leftInlineId: string; rightInlineId: string }
     | { type: 'indentListItem'; listItemId: string }
     | { type: 'indentTaskListItem'; taskListItemId: string }
-    | { type: 'indentBlockQuote'; blockQuoteId: string }
+    | { type: 'indentBlockQuote'; blockQuoteId: string, blockId: string, inlineId: string }
     | { type: 'outdentListItem'; listItemId: string }
     | { type: 'outdentTaskListItem'; taskListItemId: string }
     | { type: 'outdentBlockQuote'; blockQuoteId: string }
