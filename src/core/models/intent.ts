@@ -2,7 +2,7 @@ import Ast from './ast/ast'
 import Caret from './caret'
 import Render from './render/render'
 import Select from './select/select'
-import { EditContext, EditEffect, Intent as IntentType } from '../types'
+import { BlockQuote, EditContext, EditEffect, Intent as IntentType } from '../types'
 
 class Intent {
     constructor(
@@ -148,13 +148,24 @@ class Intent {
             }
         }
 
-        // if (parentBlock?.type === 'blockQuote') {
-        //     console.log('outdentBlockQuote parentBlock', JSON.stringify(parentBlock, null, 2))
-        //     return {
-        //         preventDefault: true,
-        //         ast: [{ type: 'outdentBlockQuote', blockQuoteId: parentBlock.id }],
-        //     }
-        // }
+        if (parentBlock?.type === 'blockQuote') {
+            const quote = parentBlock as BlockQuote
+            const quoteParent = this.ast.query.getParentBlock(quote)
+            const isNested = quoteParent?.type === 'blockQuote'
+
+            if (!isNested) {
+                const firstChild = quote.blocks?.[0] as any
+                const isFirstChild = firstChild?.id === context.block.id
+                const isFirstInline = firstChild?.inlines?.[0]?.id === context.inline.id
+
+                if (isFirstChild && isFirstInline) {
+                    return {
+                        preventDefault: true,
+                        ast: [{ type: 'outdentBlockQuote', blockQuoteId: quote.id }],
+                    }
+                }
+            }
+        }
 
         const list = this.ast.query.getListFromBlock(context.block)
         const previousInline = list && list.blocks.length > 1 ? this.ast.query.getPreviousInlineInList(context.inline) ?? this.ast.query.getPreviousInline(context.inline.id) : this.ast.query.getPreviousInline(context.inline.id)
