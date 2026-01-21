@@ -85,6 +85,8 @@ class AstParser {
         const flushed = this.block.flush(offset)
         if (flushed) blocks.push(...flushed)
 
+        this.mergeAdjacent(blocks)
+
         for (const block of blocks) {
             this.inline.applyRecursive(block)
         }
@@ -154,6 +156,37 @@ class AstParser {
         const flushed = this.block.flush(offset)
         if (flushed) this.blocks.push(...flushed)
     }
+
+    private mergeAdjacent(blocks: Block[]) {
+        let i = 0
+    
+        while (i < blocks.length - 1) {
+            const a = blocks[i]
+            const b = blocks[i + 1]
+    
+            if (a.type === 'list' && b.type === 'list' && (a as any).ordered === (b as any).ordered) {
+                ;(a as any).blocks.push(...(b as any).blocks)
+                a.position.end = b.position.end
+                blocks.splice(i + 1, 1)
+                continue
+            }
+    
+            if (a.type === 'blockQuote' && b.type === 'blockQuote') {
+                ;(a as any).blocks.push(...(b as any).blocks)
+                a.position.end = b.position.end
+                blocks.splice(i + 1, 1)
+                continue
+            }
+    
+            i++
+        }
+    
+        for (const block of blocks) {
+            if ('blocks' in block && Array.isArray(block.blocks)) {
+                this.mergeAdjacent(block.blocks)
+            }
+        }
+    }    
 
     public reparseTextFragment(text: string, offset: number): Block[] {
         this.block.reset()
