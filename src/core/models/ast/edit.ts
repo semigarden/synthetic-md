@@ -568,6 +568,32 @@ class Edit {
         )
     }
 
+    public indentBlockQuote(blockQuoteId: string): AstApplyEffect | null {
+        const { query, effect } = this.context
+    
+        const blockQuote = query.getBlockById(blockQuoteId) as BlockQuote | null
+        if (!blockQuote || blockQuote.type !== 'blockQuote') return null
+    
+        const newBlockQuote: BlockQuote = {
+            ...blockQuote,
+            id: uuid(),
+        }
+    
+        blockQuote.blocks = [newBlockQuote]
+        blockQuote.text = '> '
+        blockQuote.position = { start: 0, end: 0 }
+    
+        const caretBlockId = (newBlockQuote.blocks?.[0] as any)?.id ?? newBlockQuote.id
+        const caretInlineId =
+            ((newBlockQuote.blocks?.[0] as any)?.inlines?.[0] as any)?.id ??
+            (newBlockQuote.inlines?.[0] as any)?.id
+    
+        return effect.compose(
+            effect.update([{ at: 'current', target: blockQuote, current: blockQuote }]),
+            effect.caret(caretBlockId, caretInlineId, 0, 'start')
+        )
+    }
+
     public outdentListItem(listItemId: string): AstApplyEffect | null {
         const { ast, query, parser, effect } = this.context
 
@@ -981,6 +1007,218 @@ class Edit {
         return effect.compose(
             effect.update([{ at: 'current', target: parentTaskListItem, current: parentTaskListItem }, { at: 'next', target: parentTaskListItem, current: taskListItem }]),
             effect.caret(taskListItem.id, taskListItem.blocks[0].inlines[0].id, 0, 'start')
+        )
+    }
+
+    public outdentBlockQuote(blockQuoteId: string): AstApplyEffect | null {
+        const { ast, query, parser, effect } = this.context
+
+        const blockQuote = query.getBlockById(blockQuoteId) as BlockQuote
+        if (!blockQuote) return null
+
+        console.log('outdentBlockQuote blockQuote')
+        return null
+    
+
+        const sublist = query.getListFromBlock(listItem)
+        if (!sublist) return null
+
+        const parentListItem = query.getParentBlock(sublist) as ListItem | null
+        
+        if (!parentListItem || parentListItem.type !== 'listItem') {
+            const flat = query.flattenBlocks(ast.blocks)
+            const listEntry = flat.find(b => b.block.id === sublist.id)
+            if (!listEntry) return null
+
+            const listIndex = ast.blocks.findIndex(b => b.id === sublist.id)
+            const itemIndex = sublist.blocks.indexOf(listItem)
+
+            const itemsBefore = sublist.blocks.slice(0, itemIndex)
+            const itemsAfter = sublist.blocks.slice(itemIndex + 1)
+
+            const contentBlocks = listItem.blocks.filter(b => b.type !== 'list')
+            const nestedList = listItem.blocks.find(b => b.type === 'list') as List | undefined
+
+            const blocksToInsert: Block[] = []
+            const blocksToRemove: Block[] = []
+            const insertEffects: Array<{ at: 'current' | 'next'; target: Block; current: Block }> = []
+
+            if (contentBlocks.length > 0) {
+                contentBlocks.forEach(block => {
+                    const newBlock: Block = {
+                        ...block,
+                        id: uuid(),
+                    }
+                    newBlock.inlines = newBlock.inlines.map(inline => ({
+                        ...inline,
+                        blockId: newBlock.id,
+                    }))
+                    blocksToInsert.push(newBlock)
+                })
+            } else {
+                const emptyParagraph: Block = {
+                    id: uuid(),
+                    type: 'paragraph',
+                    text: '',
+                    position: { start: 0, end: 0 },
+                    inlines: [],
+                }
+                emptyParagraph.inlines = parser.inline.parseInline('', emptyParagraph.id, 'paragraph', 0)
+                emptyParagraph.inlines.forEach((i: Inline) => i.blockId = emptyParagraph.id)
+                blocksToInsert.push(emptyParagraph)
+            }
+
+            if (nestedList) {
+                const newNestedList: List = {
+                    ...nestedList,
+                    id: uuid(),
+                }
+                blocksToInsert.push(newNestedList)
+            }
+
+            if (itemsBefore.length > 0 && itemsAfter.length > 0) {
+                const beforeList: List = {
+                    id: uuid(),
+                    type: 'list',
+                    ordered: sublist.ordered,
+                    listStart: sublist.listStart,
+                    tight: sublist.tight,
+                    blocks: itemsBefore,
+                    inlines: [],
+                    text: '',
+                    position: { start: 0, end: 0 },
+                }
+                const afterList: List = {
+                    id: uuid(),
+                    type: 'list',
+                    ordered: sublist.ordered,
+                    listStart: sublist.listStart,
+                    tight: sublist.tight,
+                    blocks: itemsAfter,
+                    inlines: [],
+                    text: '',
+                    position: { start: 0, end: 0 },
+                }
+
+                ast.blocks.splice(listIndex, 1, beforeList)
+                blocksToRemove.push(sublist)
+
+                const insertIndex = listIndex + 1
+                ast.blocks.splice(insertIndex, 0, ...blocksToInsert)
+
+                ast.blocks.splice(insertIndex + blocksToInsert.length, 0, afterList)
+
+                insertEffects.push({ at: 'current', target: sublist, current: beforeList })
+                blocksToInsert.forEach((block, idx) => {
+                    insertEffects.push({
+                        at: 'next',
+                        target: idx === 0 ? beforeList : blocksToInsert[idx - 1],
+                        current: block,
+                    })
+                })
+                insertEffects.push({
+                    at: 'next',
+                    target: blocksToInsert[blocksToInsert.length - 1],
+                    current: afterList,
+                })
+            } else if (itemsBefore.length > 0) {
+                const beforeList: List = {
+                    id: uuid(),
+                    type: 'list',
+                    ordered: sublist.ordered,
+                    listStart: sublist.listStart,
+                    tight: sublist.tight,
+                    blocks: itemsBefore,
+                    inlines: [],
+                    text: '',
+                    position: { start: 0, end: 0 },
+                }
+
+                ast.blocks.splice(listIndex, 1, beforeList)
+                blocksToRemove.push(sublist)
+
+                const insertIndex = listIndex + 1
+                ast.blocks.splice(insertIndex, 0, ...blocksToInsert)
+
+                insertEffects.push({ at: 'current', target: sublist, current: beforeList })
+                blocksToInsert.forEach((block, idx) => {
+                    insertEffects.push({
+                        at: 'next',
+                        target: idx === 0 ? beforeList : blocksToInsert[idx - 1],
+                        current: block,
+                    })
+                })
+            } else if (itemsAfter.length > 0) {
+                const afterList: List = {
+                    id: uuid(),
+                    type: 'list',
+                    ordered: sublist.ordered,
+                    listStart: sublist.listStart,
+                    tight: sublist.tight,
+                    blocks: itemsAfter,
+                    inlines: [],
+                    text: '',
+                    position: { start: 0, end: 0 },
+                }
+
+                ast.blocks.splice(listIndex, 1, ...blocksToInsert, afterList)
+                blocksToRemove.push(sublist)
+
+                insertEffects.push({ at: 'current', target: sublist, current: blocksToInsert[0] })
+                blocksToInsert.slice(1).forEach((block, idx) => {
+                    insertEffects.push({
+                        at: 'next',
+                        target: blocksToInsert[idx],
+                        current: block,
+                    })
+                })
+                insertEffects.push({
+                    at: 'next',
+                    target: blocksToInsert[blocksToInsert.length - 1],
+                    current: afterList,
+                })
+            } else {
+                ast.blocks.splice(listIndex, 1, ...blocksToInsert)
+                blocksToRemove.push(sublist)
+
+                insertEffects.push({ at: 'current', target: sublist, current: blocksToInsert[0] })
+                blocksToInsert.slice(1).forEach((block, idx) => {
+                    insertEffects.push({
+                        at: 'next',
+                        target: blocksToInsert[idx],
+                        current: block,
+                    })
+                })
+            }
+
+            const focusBlock = blocksToInsert[0]
+            const focusInline = focusBlock?.inlines?.[0]
+            if (!focusInline) return null
+
+            return effect.compose(
+                effect.update(insertEffects),
+                effect.caret(focusBlock.id, focusInline.id, 0, 'start')
+            )
+        }
+
+        const parentList = query.getListFromBlock(parentListItem)
+        if (!parentList) return null
+
+        const sublistIndex = sublist.blocks.indexOf(listItem)
+        const parentIndex = parentList.blocks.indexOf(parentListItem)
+
+        sublist.blocks.splice(sublistIndex, 1)
+
+        if (sublist.blocks.length === 0) {
+            const sublistIdx = parentListItem.blocks.indexOf(sublist)
+            parentListItem.blocks.splice(sublistIdx, 1)
+        }
+
+        parentList.blocks.splice(parentIndex + 1, 0, listItem)
+
+        return effect.compose(
+            effect.update([{ at: 'current', target: parentListItem, current: parentListItem }, { at: 'next', target: parentListItem, current: listItem }]),
+            effect.caret(listItem.id, listItem.blocks[0].inlines[0].id, 0, 'start')
         )
     }
 

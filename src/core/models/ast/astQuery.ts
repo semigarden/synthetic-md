@@ -1,4 +1,5 @@
 import { FlatBlockEntry, FlatInlineEntry, Block, Inline, List, ListItem, TaskListItem } from '../../types'
+import Ast from './ast'
 
 class AstQuery {
     constructor(private blocks: Block[]) {}
@@ -254,7 +255,7 @@ class AstQuery {
     
         collect(block)
         return inlines
-    }    
+    }   
 
     private isInlineMergeBoundary(block: Block): boolean {
         switch (block.type) {

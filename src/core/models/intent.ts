@@ -94,22 +94,22 @@ class Intent {
     private resolveMerge(context: EditContext): EditEffect {
         if (this.caret.getPositionInInline(context.inlineElement) !== 0) return { preventDefault: false }
 
-        const tableCell = this.ast.query.getParentBlock(context.block)
-        if (tableCell?.type === 'tableCell' || tableCell?.type === 'tableHeader') {
+        const parentBlock = this.ast.query.getParentBlock(context.block)
+        if (parentBlock?.type === 'tableCell' || parentBlock?.type === 'tableHeader') {
             const isFirstInline = context.inlineIndex === 0
-            const blockIndex = tableCell.blocks.findIndex(b => b.id === context.block.id)
+            const blockIndex = parentBlock.blocks.findIndex(b => b.id === context.block.id)
             const isFirstBlockInCell = blockIndex === 0
 
             if (isFirstInline) {
                 if (isFirstBlockInCell) {
                     return {
                         preventDefault: true,
-                        ast: [{ type: 'mergeTableCell', cellId: tableCell.id }],
+                        ast: [{ type: 'mergeTableCell', cellId: parentBlock.id }],
                     }
                 } else {
                     return {
                         preventDefault: true,
-                        ast: [{ type: 'mergeBlocksInCell', cellId: tableCell.id, blockId: context.block.id }],
+                        ast: [{ type: 'mergeBlocksInCell', cellId: parentBlock.id, blockId: context.block.id }],
                     }
                 }
             } else {
@@ -117,30 +117,44 @@ class Intent {
                 if (previousInline) {
                     return {
                         preventDefault: true,
-                        ast: [{ type: 'mergeInlineInCell', cellId: tableCell.id, leftInlineId: previousInline.id, rightInlineId: context.inline.id }],
+                        ast: [{ type: 'mergeInlineInCell', cellId: parentBlock.id, leftInlineId: previousInline.id, rightInlineId: context.inline.id }],
                     }
                 }
             }
         }
 
-        const listItem = this.ast.query.getParentBlock(context.block)
-        if (listItem?.type === 'listItem' || listItem?.type === 'taskListItem') {
-            const list = this.ast.query.getListFromBlock(listItem)
+        if (parentBlock?.type === 'listItem' || parentBlock?.type === 'taskListItem') {
+            const list = this.ast.query.getListFromBlock(parentBlock)
             if (list) {
-                const itemIndex = list.blocks.indexOf(listItem)
+                const itemIndex = list.blocks.indexOf(parentBlock)
                 const isFirstItem = itemIndex === 0
 
                 const parentOfList = this.ast.query.getParentBlock(list)
                 const isNestedList = parentOfList?.type === 'listItem' || parentOfList?.type === 'taskListItem'
                 
                 if (isFirstItem && isNestedList) {
-                    return {
-                        preventDefault: true,
-                        ast: [{ type: 'outdentListItem', listItemId: listItem.id }],
+                    if (parentBlock.type === 'listItem') {
+                        return {
+                            preventDefault: true,
+                            ast: [{ type: 'outdentListItem', listItemId: parentBlock.id }],
+                        }
+                    } else if (parentBlock.type === 'taskListItem') {
+                        return {
+                            preventDefault: true,
+                            ast: [{ type: 'outdentTaskListItem', taskListItemId: parentBlock.id }],
+                        }
                     }
                 }
             }
         }
+
+        // if (parentBlock?.type === 'blockQuote') {
+        //     console.log('outdentBlockQuote parentBlock', JSON.stringify(parentBlock, null, 2))
+        //     return {
+        //         preventDefault: true,
+        //         ast: [{ type: 'outdentBlockQuote', blockQuoteId: parentBlock.id }],
+        //     }
+        // }
 
         const list = this.ast.query.getListFromBlock(context.block)
         const previousInline = list && list.blocks.length > 1 ? this.ast.query.getPreviousInlineInList(context.inline) ?? this.ast.query.getPreviousInline(context.inline.id) : this.ast.query.getPreviousInline(context.inline.id)
@@ -160,14 +174,14 @@ class Intent {
     }
 
     private resolveIndent(context: EditContext): EditEffect {
-        const tableCell = this.ast.query.getParentBlock(context.block)
-        if (tableCell?.type === 'tableCell' || tableCell?.type === 'tableHeader') {
+        const parentBlock = this.ast.query.getParentBlock(context.block)
+        if (parentBlock?.type === 'tableCell' || parentBlock?.type === 'tableHeader') {
             const caretPosition = this.caret.getPositionInInline(context.inlineElement)
             return {
                 preventDefault: true,
                 ast: [{
                     type: 'splitTableCellAtCaret',
-                    cellId: tableCell.id,
+                    cellId: parentBlock.id,
                     blockId: context.block.id,
                     inlineId: context.inline.id,
                     caretPosition: caretPosition,
@@ -175,19 +189,25 @@ class Intent {
             }
         }
 
-        const listItem = this.ast.query.getParentBlock(context.block)
-        if (!listItem || (listItem.type !== 'listItem' && listItem.type !== 'taskListItem')) return { preventDefault: false }
+        if (!parentBlock || (parentBlock.type !== 'listItem' && parentBlock.type !== 'taskListItem' && parentBlock.type !== 'blockQuote')) return { preventDefault: false }
 
-        if (listItem.type === 'taskListItem') {
+        if (parentBlock.type === 'taskListItem') {
             return {
                 preventDefault: true,
-                ast: [{ type: 'indentTaskListItem', taskListItemId: listItem.id }],
+                ast: [{ type: 'indentTaskListItem', taskListItemId: parentBlock.id }],
+            }
+        }
+
+        if (parentBlock.type === 'blockQuote') {
+            return {
+                preventDefault: true,
+                ast: [{ type: 'indentBlockQuote', blockQuoteId: parentBlock.id }],
             }
         }
 
         return {
             preventDefault: true,
-            ast: [{ type: 'indentListItem', listItemId: listItem.id }],
+            ast: [{ type: 'indentListItem', listItemId: parentBlock.id }],
         }
     }
 
@@ -235,12 +255,29 @@ class Intent {
         }
 
         const listItem = this.ast.query.getParentBlock(context.block)
-        if (!listItem || (listItem.type !== 'listItem' && listItem.type !== 'taskListItem')) return { preventDefault: false }
+        if (!listItem || (listItem.type !== 'listItem' && listItem.type !== 'taskListItem' && listItem.type !== 'blockQuote')) return { preventDefault: false }
 
-        return {
-            preventDefault: true,
-            ast: [{ type: 'outdentListItem', listItemId: listItem.id }],
+        const blockQuote = this.ast.query.getParentBlock(context.block)
+        if (blockQuote?.type === 'blockQuote') {
+            return {
+                preventDefault: true,
+                ast: [{ type: 'outdentBlockQuote', blockQuoteId: blockQuote.id }],
+            }
         }
+
+        if (listItem.type === 'listItem') {
+            return {
+                preventDefault: true,
+                ast: [{ type: 'outdentListItem', listItemId: listItem.id }],
+            }
+        } else if (listItem.type === 'taskListItem') {
+            return {
+                preventDefault: true,
+                ast: [{ type: 'outdentTaskListItem', taskListItemId: listItem.id }],
+            }
+        }
+
+        return { preventDefault: false }
     }
 
     private resolveInsertRowAbove(context: EditContext): EditEffect {

@@ -10,8 +10,10 @@ type AstEffect =
     | { type: 'mergeInline'; leftInlineId: string; rightInlineId: string }
     | { type: 'indentListItem'; listItemId: string }
     | { type: 'indentTaskListItem'; taskListItemId: string }
+    | { type: 'indentBlockQuote'; blockQuoteId: string }
     | { type: 'outdentListItem'; listItemId: string }
     | { type: 'outdentTaskListItem'; taskListItemId: string }
+    | { type: 'outdentBlockQuote'; blockQuoteId: string }
     | { type: 'mergeTableCell'; cellId: string }
     | { type: 'addTableColumn'; cellId: string }
     | { type: 'addTableRow'; cellId: string }

@@ -73,8 +73,10 @@ class Ast {
     public mergeInline(...args: Parameters<Edit['mergeInline']>) { return this.edit.mergeInline(...args) }
     public indentListItem(...args: Parameters<Edit['indentListItem']>) { return this.edit.indentListItem(...args) }
     public indentTaskListItem(...args: Parameters<Edit['indentTaskListItem']>) { return this.edit.indentTaskListItem(...args) }
+    public indentBlockQuote(...args: Parameters<Edit['indentBlockQuote']>) { return this.edit.indentBlockQuote(...args) }
     public outdentListItem(...args: Parameters<Edit['outdentListItem']>) { return this.edit.outdentListItem(...args) }
     public outdentTaskListItem(...args: Parameters<Edit['outdentTaskListItem']>) { return this.edit.outdentTaskListItem(...args) }
+    public outdentBlockQuote(...args: Parameters<Edit['outdentBlockQuote']>) { return this.edit.outdentBlockQuote(...args) }
     public mergeTableCell(...args: Parameters<Edit['mergeTableCell']>) { return this.edit.mergeTableCell(...args) }
     public addTableColumn(...args: Parameters<Edit['addTableColumn']>) { return this.edit.addTableColumn(...args) }
     public addTableRow(...args: Parameters<Edit['addTableRow']>) { return this.edit.addTableRow(...args) }
