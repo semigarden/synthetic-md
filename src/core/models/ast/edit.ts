@@ -120,35 +120,68 @@ class Edit {
 
         const { leftBlock, mergedInline, removedBlock } = result
 
+        const mergeAdjacentIn = (arr: Block[]) => {
+            let i = 0
+            while (i < arr.length - 1) {
+                const a = arr[i]
+                const b = arr[i + 1]
+        
+                if (a.type === 'blockQuote' && b.type === 'blockQuote') {
+                    ;(a as BlockQuote).blocks.push(...(b as BlockQuote).blocks)
+                    a.position.end = b.position.end
+                    arr.splice(i + 1, 1)
+                    continue
+                }
+        
+                i++
+            }
+        }
+
         let removedBlocks: Block[] = []
         if (removedBlock) {
+            console.log('removedBlock', JSON.stringify(removedBlock, null, 2))
             if (removedBlock.type === 'blockQuote') {
-                const parent = query.getParentBlock(removedBlock)
+                console.log('removedBlock', JSON.stringify(removedBlock, null, 2))
+                const quote = removedBlock as BlockQuote
+                const lifted = quote.blocks ?? []
+        
+                const parent = query.getParentBlock(quote) as Block | null
+        
                 if (parent && parent.type === 'blockQuote') {
-              
-                    const idx = parent.blocks.findIndex(b => b.id === removedBlock.id)
-                    if (idx === -1) return null as any
-                
-                    (parent).blocks.splice(idx, 1, ...removedBlock.blocks)
-                
-                    parent.blocks = parent.blocks.flatMap(b => {
-                        if (b.type === 'blockQuote') return b.blocks as any
-                        return [b]
-                    })
-
+                    const p = parent as BlockQuote
+                    const idx = p.blocks.findIndex(b => b.id === quote.id)
+                    if (idx === -1) return null
+        
+                    p.blocks.splice(idx, 1, ...lifted)
+        
+                    mergeAdjacentIn(p.blocks)
+        
+                    const caretBlock = leftBlock
+                    const caretInline = mergedInline
+                    const caretPos = 0
+        
                     return effect.compose(
-                        effect.update([{ at: 'current', target: parent, current: parent }], [removedBlock]),
-                        effect.caret(leftBlock.id, mergedInline.id, 0, 'start')
+                        effect.update([{ at: 'current', target: p, current: p }], [quote]),
+                        effect.caret(caretBlock.id, caretInline.id, caretPos, 'start')
                     )
-                } else {
-                    ast.blocks.splice(ast.blocks.findIndex(b => b.id === removedBlock.id), 1, leftBlock)
                 }
-
+        
+                const idx = ast.blocks.findIndex(b => b.id === quote.id)
+                if (idx === -1) return null
+        
+                ast.blocks.splice(idx, 1, ...lifted)
+        
+                mergeAdjacentIn(ast.blocks)
+        
+                const caretBlock = leftBlock
+                const caretInline = mergedInline
+                const caretPos = 0
+        
                 return effect.compose(
-                    effect.update([{ at: 'current', target: leftBlock, current: leftBlock }], [removedBlock]),
-                    effect.caret(leftBlock.id, mergedInline.id, 0, 'start')
+                    effect.update([{ at: 'current', target: caretBlock, current: caretBlock }], [quote]),
+                    effect.caret(caretBlock.id, caretInline.id, caretPos, 'start')
                 )
-            }              
+            }
 
             removedBlocks = mutation.removeBlockCascade(removedBlock)
         }
@@ -336,9 +369,6 @@ class Edit {
         let block = query.getBlockById(blockId)
         if (!block) return null
 
-        console.log('block', JSON.stringify(block, null, 2))
-        console.log('rootQuote', JSON.stringify(rootQuote, null, 2))
-
         {
             let p: Block | null = block
             const chain: string[] = []
@@ -346,7 +376,6 @@ class Edit {
                 chain.push(`${p.type}:${p.id}`)
                 p = query.getParentBlock(p) as Block | null
             }
-            console.log('ancestorChain', JSON.stringify(chain, null, 2))
         }
     
         if (block.type === 'blockQuote') {

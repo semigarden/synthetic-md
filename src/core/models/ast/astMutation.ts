@@ -87,13 +87,49 @@ class AstMutation {
             const owner = leftOwner
             let mergedText = leftInline.text.symbolic.slice(0, -1) + rightInline.text.symbolic
 
-            if (leftInline.type === 'marker' && leftOwner.type === 'blockQuote') {
-                mergedText = rightInline.text.symbolic
+            if (leftOwner.type === 'blockQuote') {
+                if (leftInline.type === 'marker') {
+                    mergedText = rightInline.text.symbolic
+    
+                    return {
+                        leftBlock: rightBlock,
+                        mergedInline: rightInline,
+                        removedBlock: leftBlock,
+                    }
+                }
 
-                return {
-                    leftBlock: rightBlock,
-                    mergedInline: rightInline,
-                    removedBlock: leftBlock,
+                if (leftBlock.id !== rightBlock.id) {
+                    const mergedText =
+                    leftInline.text.symbolic +
+                    rightInline.text.symbolic
+
+                    const mergedInlines = this.parser.inline.parseInline(
+                        mergedText,
+                        leftBlock.id,
+                        leftBlock.type,
+                        leftBlock.position.start
+                    )
+
+                    const rightIndex = rightBlock.inlines.findIndex(i => i.id === rightInline.id)
+
+                    const tailInlines = rightBlock.inlines.slice(rightIndex + 1)
+                    tailInlines.forEach(i => (i.blockId = leftBlock.id))
+
+                    leftBlock.inlines = [
+                    ...leftBlock.inlines.slice(0, -1),
+                    ...mergedInlines,
+                    ...tailInlines,
+                    ]
+
+                    leftBlock.text = leftBlock.inlines.map(i => i.text.symbolic).join('')
+                    leftBlock.position.end =
+                    leftBlock.position.start + leftBlock.text.length
+
+                    return {
+                        leftBlock,
+                        mergedInline: mergedInlines[0],
+                        removedBlock: rightBlock,
+                    }
                 }
             }
 
