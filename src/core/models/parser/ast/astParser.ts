@@ -7,6 +7,7 @@ import { parseLinkReferenceDefinitions } from './linkReferences'
 import { continueBlocks } from './blockState'
 import { addParagraph, getOpenParagraph, hasOpenBlockQuote, resolveBlankLine } from './paragraph'
 import { tryOpenBlockQuote, tryOpenList, tryOpenLeafBlock } from './openers'
+import { uuid } from '../../../utils/utils'
 
 class AstParser {
     public linkReferences = new LinkReferenceState()
@@ -96,6 +97,8 @@ class AstParser {
         if (flushed) blocks.push(...flushed)
 
         this.mergeAdjacent(blocks)
+
+        this.hydrateCodeBlocks(blocks)
 
         for (const block of blocks) {
             this.inline.applyRecursive(block)
@@ -194,6 +197,28 @@ class AstParser {
         for (const block of blocks) {
             if ('blocks' in block && Array.isArray(block.blocks)) {
                 this.mergeAdjacent(block.blocks)
+            }
+        }
+    }
+    
+    private hydrateCodeBlocks(blocks: Block[]) {
+        for (const block of blocks) {
+            if (block.type === 'codeBlock') {
+                const len = block.text.length
+    
+                block.inlines = [{
+                    id: uuid(),
+                    type: 'text',
+                    blockId: block.id,
+                    text: { symbolic: block.text, semantic: block.text },
+                    position: { start: 0, end: len },
+                }]
+    
+                continue
+            }
+    
+            if ('blocks' in block && Array.isArray(block.blocks)) {
+                this.hydrateCodeBlocks(block.blocks)
             }
         }
     }    
