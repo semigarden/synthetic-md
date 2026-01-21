@@ -52,16 +52,19 @@ class BlockParser {
             const closeMatch = line.match(
                 new RegExp(`^\\s{0,3}${codeBlockFence.charAt(0)}{${codeBlockFence.length},}\\s*$`)
             )
-
-            currentCodeBlock.text += '\n' + line
-            currentCodeBlock.position.end = end + 1
-
+          
             if (closeMatch) {
+                currentCodeBlock.position.end = end + 1
                 this.context.isFencedCodeBlock = false
                 this.context.codeBlockFence = ''
                 this.context.currentCodeBlock = null
+                return null
             }
 
+            currentCodeBlock.text =
+            currentCodeBlock.text.length === 0 ? line : currentCodeBlock.text + '\n' + line
+          
+            currentCodeBlock.position.end = end + 1
             return null
         }
 

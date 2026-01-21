@@ -1,7 +1,7 @@
 import BlockParser from '../block/blockParser'
 import InlineParser from '../inline/inlineParser'
 import LinkReferenceState from './linkReferenceState'
-import type { OpenBlock, Block, List, BlockQuote } from '../../../types'
+import type { OpenBlock, Block, List, BlockQuote, CodeBlock } from '../../../types'
 
 import { parseLinkReferenceDefinitions } from './linkReferences'
 import { continueBlocks } from './blockState'
@@ -74,6 +74,16 @@ class AstParser {
                         ;(last as BlockQuote).blocks.push(...(b as BlockQuote).blocks)
                         last.position.end = b.position.end
                         continue
+                    }
+
+                    if (last && last.type === 'codeBlock' && b.type === 'codeBlock') {
+                        const a = last as CodeBlock
+                        const c = b as CodeBlock
+                        if (!a.isFenced && !c.isFenced) {
+                            a.text = a.text.length === 0 ? c.text : a.text + '\n' + c.text
+                            a.position.end = c.position.end
+                            continue
+                        }
                     }
 
                     blocks.push(b)

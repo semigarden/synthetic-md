@@ -53,6 +53,8 @@ class InlineParser {
     }
 
     public applyRecursive(block: Block) {
+        if (block.type === 'codeBlock') return
+
         if (block.type === 'tableCell' || block.type === 'listItem' || block.type === 'taskListItem' || block.type === 'blockQuote') {
             block.inlines = this.apply(block)
         }

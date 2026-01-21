@@ -64,7 +64,7 @@ function buildFencedCodeBlock(
     return {
         id: uuid(),
         type: 'codeBlock',
-        text: line,
+        text: '',
         language,
         isFenced: true,
         fence,
