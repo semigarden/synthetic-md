@@ -48,7 +48,7 @@ class Edit {
             (blockTypeChanged && !ignoreTypes.includes(detectedBlock.type)) ||
             (block.type === 'paragraph' && inListItem && taskPrefix)
         ) {
-            if (detectedBlock.type === 'listItem') caretPosition = 0
+            if (detectedBlock.type === 'listItem' || detectedBlock.type === 'taskListItem' || detectedBlock.type === 'blockQuote') caretPosition = 0
             return transform.transformBlock(newText, block, detectedBlock, caretPosition)
         }
     

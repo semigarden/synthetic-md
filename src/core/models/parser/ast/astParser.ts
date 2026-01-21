@@ -174,8 +174,6 @@ class AstParser {
             this.inline.applyRecursive(block)
         }
 
-        console.log('blocks', JSON.stringify(blocks, null, 2))
-
         return blocks
     }
 
