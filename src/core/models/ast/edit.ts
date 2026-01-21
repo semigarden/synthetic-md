@@ -1,7 +1,7 @@
 import { detectBlockType } from '../parser/block/blockDetect'
 import { uuid } from '../../utils/utils'
 import type { AstContext } from './astContext'
-import type { AstApplyEffect, Block, Inline, List, ListItem, Table, TableRow, TableHeader, TableCell, TaskListItem, BlockQuote } from '../../types'
+import type { AstApplyEffect, Block, Inline, List, ListItem, Table, TableRow, TableHeader, TableCell, TaskListItem, BlockQuote, Paragraph } from '../../types'
 
 class Edit {
     constructor(private context: AstContext) {}
@@ -155,15 +155,35 @@ class Edit {
 
         let removedBlocks: Block[] = []
         if (removedBlock) {
-            removedBlocks = mutation.removeBlockCascade(removedBlock)
             if (removedBlock.type === 'blockQuote') {
-                ast.blocks.splice(ast.blocks.findIndex(b => b.id === removedBlock.id), 1, leftBlock)
+                const parent = query.getParentBlock(removedBlock)
+                if (parent && parent.type === 'blockQuote') {
+              
+                    const idx = parent.blocks.findIndex(b => b.id === removedBlock.id)
+                    if (idx === -1) return null as any
+                
+                    (parent).blocks.splice(idx, 1, ...removedBlock.blocks)
+                
+                    parent.blocks = parent.blocks.flatMap(b => {
+                        if (b.type === 'blockQuote') return b.blocks as any
+                        return [b]
+                    })
+
+                    return effect.compose(
+                        effect.update([{ at: 'current', target: parent, current: parent }], [removedBlock]),
+                        effect.caret(leftBlock.id, mergedInline.id, 0, 'start')
+                    )
+                } else {
+                    ast.blocks.splice(ast.blocks.findIndex(b => b.id === removedBlock.id), 1, leftBlock)
+                }
 
                 return effect.compose(
-                    effect.update([{ at: 'current', target: leftBlock, current: leftBlock }], removedBlocks),
+                    effect.update([{ at: 'current', target: leftBlock, current: leftBlock }], [removedBlock]),
                     effect.caret(leftBlock.id, mergedInline.id, 0, 'start')
                 )
-            }
+            }              
+
+            removedBlocks = mutation.removeBlockCascade(removedBlock)
         }
 
         const caretPositionInMergedInline = removedBlock ? leftInline.text.symbolic.length : leftInline.text.symbolic.length - 1
