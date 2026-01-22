@@ -69,6 +69,8 @@ class Edit {
         block.position = { start: block.position.start, end: block.position.start + block.text.length }
         block.inlines = newInlines
         newInlines.forEach((i: Inline) => (i.blockId = block.id))
+
+        console.log('inline', inline)
     
         return effect.compose(
             effect.update([{ at: 'current', target: block, current: block }]),
@@ -81,6 +83,20 @@ class Edit {
 
         const block = query.getBlockById(blockId)
         if (!block) return null
+
+        if (block.type === 'codeBlock') {
+            const inline = query.getInlineById(inlineId)
+            if (!inline) return null
+
+            inline.text.symbolic = inline.text.symbolic.slice(0, caretPosition) + '\n' + inline.text.symbolic.slice(caretPosition)
+            inline.text.semantic = inline.text.semantic.slice(0, caretPosition) + '\n' + inline.text.semantic.slice(caretPosition)
+            inline.position.end = inline.position.start + inline.text.symbolic.length
+
+            return effect.compose(
+                effect.update([{ at: 'current', target: block, current: block }]),
+                effect.caret(block.id, inline.id, caretPosition, 'start')
+            )
+        }
 
         const result = mutation.splitBlockPure(block, inlineId, caretPosition, {
             rightType: block.type === 'blockQuote' ? 'blockQuote' : undefined,
