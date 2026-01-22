@@ -9,7 +9,7 @@ import {
     buildIndentedCodeBlock,
     buildListFromItem,
 } from './blockBuilders'
-import type { ParseBlockContext, Block, DetectedBlock } from '../../../types'
+import type { ParseBlockContext, Block, DetectedBlock, CodeBlock } from '../../../types'
 
 class BlockParser {
     private context: ParseBlockContext
@@ -39,6 +39,15 @@ class BlockParser {
     }
 
     public flush(offset: number): Block[] | null {
+        const { isFencedCodeBlock, currentCodeBlock } = this.context
+
+        if (isFencedCodeBlock && currentCodeBlock) {
+            ;(currentCodeBlock as CodeBlock).position.end = offset
+            this.context.isFencedCodeBlock = false
+            this.context.codeBlockFence = ''
+            this.context.currentCodeBlock = null
+        }
+
         return this.tableParser.flush()
     }
 
@@ -54,6 +63,10 @@ class BlockParser {
             )
           
             if (closeMatch) {
+                const fenceChar = codeBlockFence.charAt(0)
+                const fenceLen = codeBlockFence.length
+                ;(currentCodeBlock as CodeBlock).close = `${fenceChar.repeat(fenceLen)}\n`
+            
                 currentCodeBlock.position.end = end + 1
                 this.context.isFencedCodeBlock = false
                 this.context.codeBlockFence = ''
@@ -62,7 +75,7 @@ class BlockParser {
             }
 
             currentCodeBlock.text =
-            currentCodeBlock.text.length === 0 ? line : currentCodeBlock.text + '\n' + line
+                currentCodeBlock.text.length === 0 ? line : currentCodeBlock.text + '\n' + line
           
             currentCodeBlock.position.end = end + 1
             return null
@@ -127,16 +140,20 @@ class BlockParser {
             case 'codeBlock': {
                 const fenceMatch = line.match(/^(\s{0,3})(```+|~~~+)(.*)$/)
                 if (fenceMatch) {
-                    const block = buildFencedCodeBlock(
-                        line,
-                        start,
-                        end,
-                        fenceMatch[2],
-                        fenceMatch[3].trim() || undefined
-                    )
+                    const indent = fenceMatch[1].length
+                    const fence = fenceMatch[2]
+                    const rawInfo = fenceMatch[3] ?? ''
+                    const info = rawInfo.trim()
+
+                    if (fence.charAt(0) === '`' && /`/.test(info)) {
+                        blocks.push(buildParagraph(line, start, end))
+                        break
+                    }
+
+                    const block = buildFencedCodeBlock(start, end, fence, info || undefined, indent)
                     blocks.push(block)
                     this.context.isFencedCodeBlock = true
-                    this.context.codeBlockFence = fenceMatch[2]
+                    this.context.codeBlockFence = fence
                     this.context.currentCodeBlock = block
                 } else {
                     blocks.push(buildIndentedCodeBlock(line, start, end))

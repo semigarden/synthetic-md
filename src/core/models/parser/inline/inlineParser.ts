@@ -32,52 +32,62 @@ class InlineParser {
 
         if (block.type === 'codeBlock') {
             const codeBlock = block as CodeBlock
-        
+
             if (codeBlock.isFenced) {
-              const fence = codeBlock.fence || '```'
-              const lang = codeBlock.language ? String(codeBlock.language).trim() : ''
-        
-              // NOTE: marker is OPEN ONLY (single marker inline)
-              const open = lang ? `${fence}${lang}\n` : `${fence}\n`
-        
-              const base = block.position?.start ?? 0
-              const openStart = base
-              const openEnd = openStart + open.length
-        
-              // NOTE: content stays in block.text; for empty, keep caret target
-              const contentSymbolic = text.length === 0 ? '\u200B' : text
-              const contentSemantic = text // '' when empty
-        
-              const contentStart = openEnd
-              const contentEnd = contentStart + contentSymbolic.length
-        
-              // IMPORTANT: do NOT overwrite block.text (keep content-only)
-              // IMPORTANT: do NOT add close fence into any inline
-        
-              return [
-                {
-                  id: uuid(),
-                  type: 'marker',
-                  blockId: block.id,
-                  text: { symbolic: open, semantic: '' },
-                  position: { start: openStart, end: openEnd },
-                },
-                {
-                  id: uuid(),
-                  type: 'text',
-                  blockId: block.id,
-                  text: { symbolic: contentSymbolic, semantic: contentSemantic },
-                  position: { start: contentStart, end: contentEnd },
-                },
-              ]
-            }  
+                const fenceChar = codeBlock.fenceChar ?? '`'
+                const fenceLength = codeBlock.fenceLength ?? 3
+                const fence = fenceChar.repeat(fenceLength)
+                const indent = codeBlock.openIndent ?? 0
+                const lang = codeBlock.language ? String(codeBlock.language).trim() : ''
+                const open = `${' '.repeat(indent)}${fence}${lang ? lang : ''}\n`
+            
+                const base = block.position?.start ?? 0
+                const openStart = base
+                const openEnd = openStart + open.length
+            
+                const contentSymbolic = text.length === 0 ? '\u200B' : text
+                const contentSemantic = text
+                const contentStart = openEnd
+                const contentEnd = contentStart + contentSymbolic.length
+            
+                const inlines: Inline[] = [
+                    {
+                        id: uuid(),
+                        type: 'marker',
+                        blockId: block.id,
+                        text: { symbolic: open, semantic: '' },
+                        position: { start: openStart, end: openEnd },
+                    },
+                    {
+                        id: uuid(),
+                        type: 'text',
+                        blockId: block.id,
+                        text: { symbolic: contentSymbolic, semantic: contentSemantic },
+                        position: { start: contentStart, end: contentEnd },
+                    },
+                ]
+            
+                const close = (codeBlock as any).close ? String((codeBlock as any).close) : ''
+                if (close) {
+                    const closeStart = contentEnd
+                    const closeEnd = closeStart + close.length
+                    inlines.push({
+                        id: uuid(),
+                        type: 'marker',
+                        blockId: block.id,
+                        text: { symbolic: close, semantic: '' },
+                        position: { start: closeStart, end: closeEnd },
+                    })
+                }
+            
+                return inlines
+            }
 
             const base = block.position?.start ?? 0
             const open = '    '
             const openStart = base
             const openEnd = openStart + open.length
             const codeStart = openEnd
-            const codeEnd = codeStart + text.length
 
             return [
                 {
@@ -85,28 +95,23 @@ class InlineParser {
                     type: 'marker',
                     blockId: block.id,
                     text: { symbolic: open, semantic: '' },
-                    position: { start: openStart, end: openEnd }
+                    position: { start: openStart, end: openEnd },
                 },
                 {
                     id: uuid(),
                     type: 'text',
                     blockId: block.id,
-                    text: { symbolic: text, semantic: text },
-                    position: { start: codeStart, end: codeEnd }
-                }
+                    text: { symbolic: text.length === 0 ? '\u200B' : text, semantic: text },
+                    position: { start: codeStart, end: codeStart + (text.length === 0 ? 1 : text.length) },
+                },
             ]
         }
 
-        let parseText = text
-        let textOffset = 0
-        const inlines = this.parseInline(parseText, block.id, block.type, textOffset)
-
+        const inlines = this.parseInline(text, block.id, block.type, 0)
         return inlines.map(i => ({ ...i, id: uuid(), blockId: block.id }))
     }
 
     public applyRecursive(block: Block) {
-        // if (block.type === 'codeBlock') return
-
         if (block.type === 'tableCell' || block.type === 'listItem' || block.type === 'taskListItem' || block.type === 'blockQuote') {
             block.inlines = this.apply(block)
         }
@@ -156,19 +161,6 @@ class InlineParser {
             // Marker
             if (stream.position() === 0) {
                 const marker = this.markerResolver.tryParse(stream, text, blockId, blockType, position)
-                // if (marker && blockType === 'codeBlock') {
-                //     const rest = text.slice(stream.position())
-                //     if (rest.length) {
-                //         result.push({
-                //             id: uuid(),
-                //             type: 'text',
-                //             blockId,
-                //             text: { symbolic: rest, semantic: rest },
-                //             position: { start: position + stream.position(), end: position + text.length }
-                //         })
-                //     }
-                //     return result
-                // }
                 if (marker) {
                     result.push(marker)
                     textStart = stream.position()

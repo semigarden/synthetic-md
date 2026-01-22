@@ -45,7 +45,10 @@ export interface BlockQuote extends BlockType<'blockQuote'> {
 export interface CodeBlock extends BlockType<'codeBlock'> {
     language?: string
     isFenced: boolean
-    fence?: string
+    fenceChar?: '`' | '~'
+    fenceLength?: number
+    openIndent?: number
+    close?: string
 }
 
 export interface List extends BlockType<'list'> {

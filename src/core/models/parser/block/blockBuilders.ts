@@ -1,5 +1,5 @@
 import { uuid } from '../../../utils/utils'
-import type { Block, DetectedBlock, List, ListItem, TaskListItem } from '../../../types'
+import type { Block, CodeBlock, DetectedBlock, List, ListItem, TaskListItem } from '../../../types'
 
 function buildHeading(line: string, start: number, end: number, level: number): Block {
     return {
@@ -42,7 +42,6 @@ function buildBlockQuote(
     if (!match) throw new Error('Invalid block quote line')
 
     const markerText = match[1]
-    // const contentText = originalLine.slice(markerText.length)
 
     return {
         id: uuid(),
@@ -55,25 +54,27 @@ function buildBlockQuote(
 }
 
 function buildFencedCodeBlock(
-    line: string,
     start: number,
     end: number,
     fence: string,
-    language: string | undefined
-): Block {
+    language: string | undefined,
+    indent: number
+): CodeBlock {
     return {
         id: uuid(),
         type: 'codeBlock',
         text: '',
         language,
         isFenced: true,
-        fence,
+        fenceChar: fence.charAt(0) as '`' | '~',
+        fenceLength: fence.length,
+        openIndent: indent,
         position: { start, end },
         inlines: [],
     }
 }
 
-function buildIndentedCodeBlock(line: string, start: number, end: number): Block {
+function buildIndentedCodeBlock(line: string, start: number, end: number): CodeBlock {
     return {
         id: uuid(),
         type: 'codeBlock',
