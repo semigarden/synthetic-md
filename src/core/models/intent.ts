@@ -38,9 +38,6 @@ class Intent {
 
     public resolveSplit(context: EditContext): EditEffect {
         const caretPosition = this.caret.getPositionInInline(context.inlineElement)
-
-        console.log('resolveSplit caretPosition', caretPosition)
-        
         const parentBlock = this.ast.query.getParentBlock(context.block)
 
         if (context.block.type === 'codeBlock') {
@@ -201,6 +198,18 @@ class Intent {
         const previousInline = list && list.blocks.length > 1 ? this.ast.query.getPreviousInlineInList(context.inline) ?? this.ast.query.getPreviousInline(context.inline.id) : this.ast.query.getPreviousInline(context.inline.id)
 
         if (previousInline) {
+            // if (previousInline.type === 'marker' && context.block.type === 'codeBlock') {
+            //     return {
+            //         preventDefault: true,
+            //         ast: [{
+            //             type: 'mergeCodeBlockContent',
+            //             blockId: context.block.id,
+            //             inlineId: previousInline.id,
+            //             caretPosition: this.caret.getPositionInInline(context.inlineElement),
+            //         }],
+            //     }
+            // }
+
             return {
                 preventDefault: true,
                 ast: [{

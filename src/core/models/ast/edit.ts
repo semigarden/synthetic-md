@@ -1,5 +1,4 @@
 import { detectBlockType } from '../parser/block/blockDetect'
-import { buildFencedCodeBlock } from '../parser/block/blockBuilders'
 import { uuid } from '../../utils/utils'
 import type { AstContext } from './astContext'
 import type { AstApplyEffect, Block, Inline, List, ListItem, Table, TableRow, TableHeader, TableCell, TaskListItem, BlockQuote, Paragraph, CodeBlock } from '../../types'
@@ -137,9 +136,41 @@ class Edit {
         if (marker.text.symbolic && !marker.text.symbolic.endsWith('\n')) {
             marker.text.symbolic = marker.text.symbolic + '\n'
         }
-}
+    }
 
-public mergeInline(inlineAId: string, inlineBId: string): AstApplyEffect | null {
+    private normalizeFencedCodeBlockPayloadNewlines(cb: CodeBlock) {
+        if (!cb.isFenced) return
+
+        const t = cb.inlines?.find(i => i.type === 'text') ?? null
+        if (!t) return
+
+        let sym = t.text.symbolic === '\u200B' ? '' : (t.text.symbolic ?? '')
+        let sem = t.text.semantic ?? ''
+
+        if (sym.startsWith('\n')) sym = sym.slice(1)
+        if (sem.startsWith('\n')) sem = sem.slice(1)
+        if (sym.endsWith('\n')) sym = sym.slice(0, -1)
+        if (sem.endsWith('\n')) sem = sem.slice(0, -1)
+      
+
+        if (sym.length === 0) {
+            t.text.symbolic = '\u200B'
+            t.text.semantic = ''
+        } else {
+            t.text.symbolic = sym
+            t.text.semantic = sem
+        }
+
+        const marker = cb.inlines?.find(i => i.type === 'marker') ?? null
+        if (marker) {
+            t.position.start = marker.position.end
+            t.position.end = t.position.start + t.text.symbolic.length
+        }
+
+        cb.text = t.text.semantic.replace(/^\u200B$/, '')
+    }      
+
+    public mergeInline(inlineAId: string, inlineBId: string): AstApplyEffect | null {
         const { ast, query, mutation, transform, effect } = this.context
 
         const flattened = query.flattenInlines(ast.blocks)
@@ -226,6 +257,7 @@ public mergeInline(inlineAId: string, inlineBId: string): AstApplyEffect | null 
 
             if (cb.isFenced) {
                 this.syncFencedCodeBlockFromMarker(cb)
+                this.normalizeFencedCodeBlockPayloadNewlines(cb)
 
                 const t = cb.inlines?.find(i => i.type === 'text') ?? null
                 cb.text = t ? (t.text.semantic ?? '').replace(/^\u200B$/, '') : ''
@@ -2152,14 +2184,20 @@ public mergeInline(inlineAId: string, inlineBId: string): AstApplyEffect | null 
         const moved = after.replace(/\n$/, '')
 
         const current = textInline.text.semantic === '\u200B' ? '' : (textInline.text.semantic ?? '')
-        const next = moved + current
+
+        const indent = block.openIndent ?? 0
+        let info = (block.infoString ? String(block.infoString) : (block.language ? String(block.language) : '')).trim()
+        const nlIndex = indent + (block.fenceLength ?? 3) + info.length
+
+        const atOpenNewline = caretPosition === nlIndex
+        const next = atOpenNewline ? ('\n' + moved + current) : (moved + current)
 
         markerInline.text.symbolic = beforeNoNl + '\n'
         markerInline.text.semantic = ''
         markerInline.position.end = markerInline.position.start + markerInline.text.symbolic.length
 
         const rawInfo = m[3] ?? ''
-        const info = rawInfo.trim()
+        info = rawInfo.trim()
 
         if (info.length > 0) {
             block.infoString = info
@@ -2179,9 +2217,10 @@ public mergeInline(inlineAId: string, inlineBId: string): AstApplyEffect | null 
 
         return effect.compose(
             effect.update([{ at: 'current', target: block, current: block }]),
-            effect.caret(block.id, textInline.id, 0, 'start')
+            effect.caret(block.id, textInline.id, atOpenNewline ? 1 : 0, 'start')
         )
     }
+
 
     public exitCodeBlock(blockId: string, direction: 'above' | 'below'): AstApplyEffect | null {
         const { ast, query, parser, effect } = this.context
