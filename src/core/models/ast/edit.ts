@@ -1993,7 +1993,6 @@ public mergeInline(inlineAId: string, inlineBId: string): AstApplyEffect | null 
         )
     }
 
-
     private syncFencedCodeBlockFromOpenMarker(block: CodeBlock) {
         if (!block.isFenced) return
 
@@ -2027,9 +2026,9 @@ public mergeInline(inlineAId: string, inlineBId: string): AstApplyEffect | null 
 
         marker.text.symbolic = `${' '.repeat(indent)}${fence}${info ? info : ''}\n`
         marker.text.semantic = ''
-}
+    }
 
-public mergeCodeBlockContent(blockId: string, inlineId: string, caretPosition: number): AstApplyEffect | null {
+    public mergeCodeBlockContent(blockId: string, inlineId: string, caretPosition: number): AstApplyEffect | null {
         const { query, transform, effect } = this.context
 
         const block = query.getBlockById(blockId) as CodeBlock
@@ -2090,19 +2089,13 @@ public mergeCodeBlockContent(blockId: string, inlineId: string, caretPosition: n
 
         if (inline.type === 'text') {
             const symbolicText = inline.text.symbolic
-            const hasLeadingNewline = symbolicText.startsWith('\n')
-            const contentStart = hasLeadingNewline ? 1 : 0
-
-            if (caretPosition <= contentStart) {
-                return null
-            }
 
             const beforeCaret = symbolicText.slice(0, caretPosition - 1)
             const afterCaret = symbolicText.slice(caretPosition)
             const newSymbolic = beforeCaret + afterCaret
 
             inline.text.symbolic = newSymbolic
-            inline.text.semantic = newSymbolic.slice(contentStart)
+            inline.text.semantic = newSymbolic.slice(0)
             inline.position.end = inline.position.start + newSymbolic.length
 
             block.text = inline.text.semantic.replace(/^\u200B$/, '')
