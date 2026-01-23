@@ -240,6 +240,19 @@ class Input {
             .replace(/\r$/, '')
 
         if (direction === 'backward') {
+            if (inline.type === 'marker') {
+                return {
+                    preventDefault: true,
+                    ast: [{
+                        type: 'inputCodeBlock',
+                        blockId: block.id,
+                        inlineId: inline.id,
+                        text: cleanedText,
+                        caretPosition: position,
+                    }],
+                }
+            }
+                    
             return {
                 preventDefault: true,
                 ast: [{

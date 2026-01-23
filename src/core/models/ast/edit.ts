@@ -1977,7 +1977,37 @@ class Edit {
 
             return effect.compose(
                 effect.update([{ at: 'current', target: block, current: block }]),
-                effect.caret(block.id, inline.id, caretPosition, 'start')
+                effect.caret(block.id, inline.id, caretPosition + 1, 'start')
+            )
+        }
+
+        if (inline.type === 'marker') {
+            const symbolicText = inline.text.symbolic
+            const beforeCaret = symbolicText.slice(0, caretPosition - 1)
+            const afterCaret = symbolicText.slice(caretPosition)
+            const newSymbolic = beforeCaret + afterCaret
+
+            inline.text.symbolic = newSymbolic
+            inline.text.semantic = newSymbolic.replace(/^\u200B$/, '')
+            inline.position.end = inline.position.start + newSymbolic.length
+
+            const newText = block.inlines.map(i => i.text.symbolic).join('')
+            const newBlocks = this.context.parser.reparseTextFragment(newText, block.position.start)
+            if (newBlocks.length === 0) return null
+
+            const newBlock = newBlocks[0]
+            if (!newBlock) return null
+
+            const entry = this.context.query.flattenBlocks(this.context.ast.blocks).find(e => e.block.id === block.id)
+            if (!entry) return null
+
+            const newCaretPosition = caretPosition - 1
+
+            this.context.ast.blocks.splice(entry.index, 1, ...newBlocks)
+
+            return effect.compose(
+                effect.update([{ at: 'current', target: block, current: newBlock }]),
+                effect.caret(newBlock.id, newBlock.inlines[newBlock.inlines.length - 1].id, newCaretPosition, 'start')
             )
         }
 
@@ -2069,12 +2099,14 @@ class Edit {
         const inline = query.getInlineById(inlineId)
         if (!inline) return null
 
+        console.log('mergeCodeBlockContent caretPosition', caretPosition, JSON.stringify(inline.text.symbolic, null, 2))
+
         if (inline.type === 'marker') {
+            console.log('mergeCodeBlockContent marker')
             if (caretPosition <= 0) return null
             if (caretPosition > inline.text.symbolic.length) return null
 
             const symbolicText = inline.text.symbolic
-
             const beforeCaret = symbolicText.slice(0, caretPosition - 1)
             const afterCaret = symbolicText.slice(caretPosition)
             const newSymbolic = beforeCaret + afterCaret
