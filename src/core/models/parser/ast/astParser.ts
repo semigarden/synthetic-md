@@ -77,8 +77,6 @@ class AstParser {
 
         this.blocks = blocks
 
-        console.log('blocks', JSON.stringify(this.blocks, null, 2))
-
         return this.blocks
     }
 

@@ -49,8 +49,6 @@ class Interaction {
         const text = event.clipboardData?.getData('text/plain') ?? ''
         if (!text) return
 
-        console.log('paste', JSON.stringify(text, null, 2))
-        
         const effect = this.select.paste(text)
         if (effect) {
             this.editor.apply(effect)

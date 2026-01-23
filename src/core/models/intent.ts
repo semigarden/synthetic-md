@@ -42,6 +42,18 @@ class Intent {
         const parentBlock = this.ast.query.getParentBlock(context.block)
 
         if (context.block.type === 'codeBlock') {
+            if (context.inline.type === 'marker') {
+                return {
+                    preventDefault: true,
+                    ast: [{
+                        type: 'splitCodeBlockFromMarker',
+                        blockId: context.block.id,
+                        inlineId: context.inline.id,
+                        caretPosition: caretPosition,
+                    }],
+                }
+            }
+
             return {
                 preventDefault: true,
                 ast: [{

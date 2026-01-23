@@ -57,7 +57,6 @@ class MarkerResolver {
         
             const markerText = match[1]
             const length = markerText.length
-            console.log('markerText', JSON.stringify(markerText, null, 2))
         
             stream.advance(length)
         

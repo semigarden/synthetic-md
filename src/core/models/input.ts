@@ -232,24 +232,14 @@ class Input {
     }
 
     private resolveCodeBlockDelete(direction: 'backward' | 'forward', block: any, inline: any, range: SelectionRange): EditEffect | null {
-        if (inline.type !== 'text') {
-            return { preventDefault: true }
-        }
-
         const position = range.start.position
         const currentText = inline.text.symbolic
-        const hasLeadingNewline = currentText.startsWith('\n')
-        const contentStart = hasLeadingNewline ? 1 : 0
 
         const cleanedText = currentText
             .replace(/[\u200B\u200C\u200D\uFEFF]/g, '')
             .replace(/\r$/, '')
 
         if (direction === 'backward') {
-            if (position <= contentStart) {
-                return { preventDefault: true }
-            }
-
             return {
                 preventDefault: true,
                 ast: [{

@@ -43,8 +43,6 @@ function getInlineElementsInSelection(root: HTMLElement, selection: Selection): 
         }
     }
 
-    // console.log('getInlineElementsInSelection', foundElements)
-    
     return foundElements
 }
 
@@ -113,8 +111,6 @@ function resolvePoint(ast: Ast, node: Node, offset: number): SelectionPoint | nu
 
     localOffset = Math.max(0, Math.min(localOffset, inline.text.symbolic.length))
 
-    // const position = inlineToAstPosition(ast, inlineId, localOffset)
-    // console.log('resolvePoint', inline.blockId, inline.id, inline.text.symbolic, position)
     return { blockId: inline.blockId, inlineId, position: localOffset }
 }
 

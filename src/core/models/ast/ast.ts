@@ -70,6 +70,7 @@ class Ast {
     public splitListItem(...args: Parameters<Edit['splitListItem']>) { return this.edit.splitListItem(...args) }
     public splitTaskListItem(...args: Parameters<Edit['splitTaskListItem']>) { return this.edit.splitTaskListItem(...args) }
     public splitBlockQuote(...args: Parameters<Edit['splitBlockQuote']>) { return this.edit.splitBlockQuote(...args) }
+    public splitCodeBlockFromMarker(...args: Parameters<Edit['splitCodeBlockFromMarker']>) { return this.edit.splitCodeBlockFromMarker(...args) }
     public mergeInline(...args: Parameters<Edit['mergeInline']>) { return this.edit.mergeInline(...args) }
     public indentListItem(...args: Parameters<Edit['indentListItem']>) { return this.edit.indentListItem(...args) }
     public indentTaskListItem(...args: Parameters<Edit['indentTaskListItem']>) { return this.edit.indentTaskListItem(...args) }

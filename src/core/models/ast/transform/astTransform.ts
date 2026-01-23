@@ -4,6 +4,17 @@ import type { AstContext } from '../astContext'
 class AstTransform {
     constructor(private ctx: AstContext) {}
 
+    private resolveCaret(inline: Inline, caretPosition: number | null) {
+        if (caretPosition == null) {
+            return { blockId: inline.blockId, inlineId: inline.id, pos: 0 }
+        }
+
+        const local = caretPosition - (inline.position?.start ?? 0)
+        const pos = Math.max(0, Math.min(local, inline.text.symbolic.length))
+
+        return { blockId: inline.blockId, inlineId: inline.id, pos: pos }
+    }
+
     transformBlock(
         text: string,
         block: Block,
@@ -18,6 +29,45 @@ class AstTransform {
         const flat = query.flattenBlocks(ast.blocks)
         const entry = flat.find(b => b.block.id === block.id)
         if (!entry) return null
+
+        if (block.type === 'codeBlock' && detected.type === 'paragraph') {
+            const newBlocks = parser.reparseTextFragment(text, block.position.start)
+            const inline = query.getFirstInline(newBlocks)
+            if (!inline) return null
+
+            const { blockId, inlineId, pos } = this.resolveCaret(inline, caretPosition)
+
+            if (entry.parent && (entry.parent.type === 'tableCell' || entry.parent.type === 'tableHeader')) {
+                const cell = entry.parent as TableCell | TableHeader
+                cell.blocks.splice(entry.index, 1, ...newBlocks)
+
+                return effect.compose(
+                    effect.update([{ at: 'current', target: cell, current: cell }], removedBlocks),
+                    effect.caret(blockId, inlineId, pos, 'start')
+                )
+            }
+
+            if (entry.parent && 'blocks' in entry.parent && Array.isArray((entry.parent as any).blocks)) {
+                const parent = entry.parent as any
+                parent.blocks.splice(entry.index, 1, ...newBlocks)
+
+                return effect.compose(
+                    effect.update([{ at: 'current', target: parent, current: parent }], removedBlocks),
+                    effect.caret(blockId, inlineId, pos, 'start')
+                )
+            }
+
+            const oldBlock = block
+            ast.blocks.splice(entry.index, 1, ...newBlocks)
+
+            const effects: AstApplyEffect['renderEffect']['render']['insert'] = []
+
+            newBlocks.forEach((b, idx) => {
+                effects.push({ at: idx === 0 ? 'current' as const : 'next' as const, target: idx === 0 ? oldBlock : newBlocks[idx - 1], current: b })
+            })
+
+            return effect.compose(effect.update(effects, removedBlocks), effect.caret(blockId, inlineId, pos, 'start'))
+        }
 
         if (
             block.type === 'paragraph' &&
