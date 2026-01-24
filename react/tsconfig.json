@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "rootDir": ".",
+        "outDir": "dist",
+    
+        "target": "ES2020",
+        "lib": ["ES2020", "DOM"],
+        "jsx": "react-jsx",
+    
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+    
+        "declaration": true,
+        "declarationDir": "dist",
+        "emitDeclarationOnly": false,
+    
+        "strict": true,
+        "skipLibCheck": true
+    },
+    "include": ["**/*.ts", "**/*.tsx", "types/**/*.d.ts"]
+}
+  

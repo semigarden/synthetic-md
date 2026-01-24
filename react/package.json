@@ -1,0 +1,54 @@
+{
+    "name": "@semigarden/synthetic-md-react",
+    "version": "0.0.1",
+    "description": "React wrapper for synthetic-md",
+    "license": "MIT",
+    "author": {
+        "name": "semigarden",
+        "url": "https://github.com/semigarden"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/semigarden/synthetic-md.git",
+        "directory": "synthetic-md/react"
+    },
+    "bugs": {
+        "url": "https://github.com/semigarden/synthetic-md/issues"
+    },
+    "homepage": "https://github.com/semigarden/synthetic-md#readme",
+    "type": "module",
+    "publishConfig": {
+        "access": "public"
+    },
+    "sideEffects": false,
+    "main": "./dist/index.cjs.js",
+    "module": "./dist/index.esm.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.esm.js",
+            "require": "./dist/index.cjs.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup index.ts --format esm,cjs --dts",
+        "dev": "tsup index.ts --watch --format esm,cjs --dts",
+        "prepublishOnly": "npm run build"
+    },
+    "peerDependencies": {
+        "@semigarden/synthetic-md": "^0.0.1",
+        "react": ">=18.2.0",
+        "react-dom": ">=18.2.0"
+    },
+    "devDependencies": {
+        "@types/react": "^19.2.9",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.0"
+    }
+}

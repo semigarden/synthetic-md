@@ -1,21 +1,21 @@
-import { useEffect } from 'react'
-import { defineElement } from '../core'
+import { useEffect, forwardRef } from 'react'
+import { defineElement } from '@semigarden/synthetic-md'
 
 type Props = {
-    ref?: (el: HTMLTextAreaElement) => void
+    ref?: React.RefObject<HTMLTextAreaElement>
     className?: string
     value: string
     onChange: (e: Event) => void
 }
 
-const SyntheticText = ({ ref, className, value, onChange }: Props) => {
+const SyntheticText = forwardRef<HTMLTextAreaElement, Props>(({ className, value, onChange }, ref) => {
     useEffect(() => {
         defineElement()
     }, [])
 
     return (
-        <synthetic-text ref={(el: HTMLTextAreaElement) => ref?.(el)} className={className} value={value} onChange={onChange} />
+        <synthetic-text ref={ref} className={className} value={value} onChange={onChange} />
     )
-}
+})
 
 export default SyntheticText
