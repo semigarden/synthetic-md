@@ -6,7 +6,7 @@ import Editor from './editor'
 import Render from './render/render'
 import Input from './input'
 import Intent from './intent'
-// import css from '../styles/element.css'
+import cssText from '../styles/element.css'
 
 class Element extends HTMLElement {
     private shadowRootElement: ShadowRoot
@@ -90,8 +90,8 @@ class Element extends HTMLElement {
     private async addStyles() {
         if (this.styled) return
       
-        const url = this.getCssUrl()
-        const cssText = await fetch(url).then(r => r.text())
+        // const url = this.getCssUrl()
+        // const cssText = await fetch(url).then(r => r.text())
       
         const style = document.createElement('style')
         style.textContent = cssText

@@ -6,4 +6,5 @@ function defineElement() {
     }
 }
 
-export { defineElement }
+export { defineElement, Element }
+export default Element

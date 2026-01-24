@@ -1,6 +1,6 @@
 {
     "name": "@semigarden/synthetic-md",
-    "version": "0.0.1",
+    "version": "0.0.3",
     "description": "Synthetic Markdown",
     "license": "MIT",
     "author": {
@@ -38,14 +38,10 @@
     "scripts": {
         "build:css": "sass styles/element.scss styles/element.css --no-source-map",
         "build:distcss": "node -e \"require('fs').copyFileSync('styles/element.css','dist/index.css')\"",
-
         "build": "npm run build:css && tsup && npm run build:distcss",
-
         "watch:css": "sass styles/element.scss styles/element.css --no-source-map --watch",
         "watch:distcss": "node -e \"const fs=require('fs'); const src='styles/element.css'; const dst='dist/index.css'; const copy=()=>{fs.mkdirSync('dist',{recursive:true}); fs.copyFileSync(src,dst); console.log('[css] copied ->',dst)}; copy(); fs.watchFile(src,{interval:200},copy);\"",
-
         "dev": "concurrently -n TSUP,CSS,COPY \"tsup index.ts --watch --clean=false\" \"npm:watch:css\" \"npm:watch:distcss\"",
-
         "lint": "eslint .",
         "test": "vitest",
         "prepublishOnly": "npm run build"
