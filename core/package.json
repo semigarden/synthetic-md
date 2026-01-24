@@ -1,6 +1,6 @@
 {
     "name": "@semigarden/synthetic-md",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "description": "Synthetic Markdown",
     "license": "MIT",
     "author": {
@@ -35,14 +35,14 @@
     ],
     "sideEffects": false,
     "scripts": {
-        "build:css": "sass styles/element.scss styles/element.css --no-source-map",
-        "build:css-ts": "node scripts/generate-css-ts.js",
-        "build:distcss": "node -e \"require('fs').copyFileSync('styles/element.css','dist/index.css')\"",
+        "build:css": "sass src/styles/element.scss src/styles/element.css --no-source-map",
+        "build:css-ts": "node src/scripts/generate-css-ts.js",
+        "build:distcss": "node -e \"require('fs').copyFileSync('src/styles/element.css','dist/index.css')\"",
         "build": "npm run build:css && npm run build:css-ts && tsup && npm run build:distcss",
-        "watch:css": "sass styles/element.scss styles/element.css --no-source-map --watch",
-        "watch:css-ts": "node -e \"const fs=require('fs'); const {spawn}=require('child_process'); const src='styles/element.css'; const copy=()=>{spawn('npm',['run','build:css-ts'],{stdio:'inherit'});}; copy(); fs.watchFile(src,{interval:200},copy);\"",
-        "watch:distcss": "node -e \"const fs=require('fs'); const src='styles/element.css'; const dst='dist/index.css'; const copy=()=>{fs.mkdirSync('dist',{recursive:true}); fs.copyFileSync(src,dst); console.log('[css] copied ->',dst)}; copy(); fs.watchFile(src,{interval:200},copy);\"",
-        "dev": "concurrently -n TSUP,CSS,CSS-TS,COPY \"tsup index.ts --watch --clean=false\" \"npm:watch:css\" \"npm:watch:css-ts\" \"npm:watch:distcss\"",
+        "watch:css": "sass src/styles/element.scss src/styles/element.css --no-source-map --watch",
+        "watch:css-ts": "node -e \"const fs=require('fs'); const {spawn}=require('child_process'); const src='src/styles/element.css'; const copy=()=>{spawn('npm',['run','build:css-ts'],{stdio:'inherit'});}; copy(); fs.watchFile(src,{interval:200},copy);\"",
+        "watch:distcss": "node -e \"const fs=require('fs'); const src='src/styles/element.css'; const dst='dist/index.css'; const copy=()=>{fs.mkdirSync('dist',{recursive:true}); fs.copyFileSync(src,dst); console.log('[css] copied ->',dst)}; copy(); fs.watchFile(src,{interval:200},copy);\"",
+        "dev": "concurrently -n TSUP,CSS,CSS-TS,COPY \"tsup src/index.ts --watch --clean=false\" \"npm:watch:css\" \"npm:watch:css-ts\" \"npm:watch:distcss\"",
         "lint": "eslint .",
         "test": "vitest",
         "prepublishOnly": "npm run build"

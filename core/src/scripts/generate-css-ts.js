@@ -1,8 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-const cssPath = path.join(process.cwd(), 'styles', 'element.css')
-const outputPath = path.join(process.cwd(), 'styles', 'element-css.ts')
+const cssPath = path.join(process.cwd(), 'src', 'styles', 'element.css')
+const outputPath = path.join(process.cwd(), 'src', 'styles', 'element-css.ts')
 
 const cssContent = fs.readFileSync(cssPath, 'utf8')
 const escapedCss = cssContent
