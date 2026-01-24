@@ -2099,10 +2099,7 @@ class Edit {
         const inline = query.getInlineById(inlineId)
         if (!inline) return null
 
-        console.log('mergeCodeBlockContent caretPosition', caretPosition, JSON.stringify(inline.text.symbolic, null, 2))
-
         if (inline.type === 'marker') {
-            console.log('mergeCodeBlockContent marker')
             if (caretPosition <= 0) return null
             if (caretPosition > inline.text.symbolic.length) return null
 

@@ -1,16 +1,7 @@
 {
-    "name": "@semigarden/synthetic-md-core",
-    "version": "0.1.0",
-    "description": "Framework-agnostic real-time Markdown editor core",
-    "keywords": [
-        "markdown",
-        "editor",
-        "parser",
-        "wysiwyg",
-        "textarea",
-        "realtime",
-        "commonmark"
-    ],
+    "name": "@semigarden/synthetic-md",
+    "version": "0.0.1",
+    "description": "Synthetic Markdown",
     "license": "MIT",
     "author": {
         "name": "semigarden",
@@ -26,6 +17,9 @@
     },
     "homepage": "https://github.com/semigarden/synthetic-md#readme",
     "type": "module",
+    "publishConfig": {
+        "access": "public"
+    },
     "main": "./dist/index.cjs.js",
     "module": "./dist/index.esm.js",
     "types": "./dist/index.d.ts",

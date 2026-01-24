@@ -1,0 +1,12 @@
+node_modules
+
+dist
+*.tgz
+
+styles/element.css
+
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.env
