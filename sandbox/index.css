@@ -1,8 +1,0 @@
-body {
-    width: calc(100vw - 40px);
-    height: calc(100vh - 40px);
-    padding: 20px;
-    margin: 0;
-    background-color: #110f16;
-    color: #d4cfee;
-}
