@@ -1,6 +1,6 @@
 {
     "name": "@semigarden/synthetic-md-react",
-    "version": "0.0.1",
+    "version": "0.0.5",
     "description": "React wrapper for synthetic-md",
     "license": "MIT",
     "author": {
@@ -35,12 +35,12 @@
         "dist"
     ],
     "scripts": {
-        "build": "tsup index.ts --format esm,cjs --dts",
-        "dev": "tsup index.ts --watch --format esm,cjs --dts",
+        "build": "tsup src/index.ts --format esm,cjs --dts",
+        "dev": "tsup src/index.ts --watch --format esm,cjs --dts",
         "prepublishOnly": "npm run build"
     },
     "peerDependencies": {
-        "@semigarden/synthetic-md": "^0.0.1",
+        "@semigarden/synthetic-md": "*",
         "react": ">=18.2.0",
         "react-dom": ">=18.2.0"
     },
