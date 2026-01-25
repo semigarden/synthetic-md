@@ -43,7 +43,7 @@ syntheticElement.addEventListener('change', (e) => {
     console.log(text)
 })
 
-syntheticElement.value = 'Hello, world!'
+syntheticElement.value = '# Hello'
 ```
 
 #### React
