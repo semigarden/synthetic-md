@@ -1,7 +1,7 @@
 {
     "name": "@semigarden/synthetic-md-react",
-    "version": "0.0.8",
-    "description": "React wrapper for synthetic-md",
+    "version": "0.0.9",
+    "description": "A UI primitive for unified Markdown editing and rendering",
     "license": "MIT",
     "author": {
         "name": "semigarden",

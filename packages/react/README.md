@@ -1,14 +1,9 @@
 # Synthetic Markdown
 
-A UI primitive for unified Markdown editing and rendering.
+A UI primitive for unified Markdown editing and rendering
 
-## Installation
+---
 
-```bash
-npm install @semigarden/synthetic-md-react
-```
-
-## Usage
 ```
 import { useState } from 'react'
 import { SyntheticText } from '@semigarden/synthetic-md-react'
