@@ -3,6 +3,7 @@ import { SyntheticText } from '@semigarden/synthetic-md-react'
 import styles from '../styles/Sandbox.module.scss'
 import { saveText, loadText } from '../utils'
 
+
 const Sandbox = () => {
     const [text, setText] = useState('')
     
