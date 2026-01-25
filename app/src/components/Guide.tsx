@@ -17,14 +17,23 @@ const Guide = ({ className = '', active = false }: { className?: string, active?
     return (
         <div className={`${styles.guide} ${active && styles.active} ${className}`}>
             <h2>Overview</h2>
-            <p>Synthetic Markdown is a lightweight JavaScript editor built as a primitive UI element.
+            <p>Synthetic Markdown is a lightweight <a href="https://www.markdownguide.org/" target="_blank">Markdown</a> editor built as a primitive UI element.
                 It behaves like a textarea, while rendering markdown in real time on a unified editing surface.
                 Editing and preview are combined into a single interface, removing the need for split views or mode switching.
-                The core is framework agnostic and currently available for Vanilla JS and React, with a minimal controlled API.
+                The core is framework-agnostic and currently available for Vanilla JS and React, with a minimal controlled API.
             </p>
             <hr/>
-            <h2>Trying Online</h2>
-            <p>You can try Synthetic Markdown online on the sandbox page. Just start typing and try out different markdown syntax.
+            <h2>Status</h2>
+            <p>This project is still in development. Interactions with the following blocks are not yet fully implemented:
+                <ul>
+                    <li>Tables</li>
+                    <li>Task Lists</li>
+                    <li>Code Blocks</li>
+                </ul>
+            </p>
+            <hr/>
+            <h2>Try It Online</h2>
+            <p>Visit the sandbox page and start typing to explore supported Markdown syntax.
             </p>
             <hr/>
             <h2>Installation</h2>
@@ -77,7 +86,7 @@ syntheticElement.addEventListener('change', (e) => {
     console.log(text)
 })
 
-syntheticElement.value = 'Hello, world!'`)}>{copiedKey === 'usage-vanilla' && 'Copied' || 'Copy'}</button>
+syntheticElement.value = '# Hello'`)}>{copiedKey === 'usage-vanilla' && 'Copied' || 'Copy'}</button>
                         <span className={styles.language}>js</span>
                         <pre>
                             <code>
@@ -102,7 +111,7 @@ syntheticElement.value = 'Hello, world!'`)}>{copiedKey === 'usage-vanilla' && 'C
                                 <span>{`})`}</span>
                                 <br/>
                                 <br/>
-                                <span>{`syntheticElement.value = '${'`Hello, world!`'}'`}</span>
+                                <span>{`syntheticElement.value = '${'# Hello'}'`}</span>
                             </code>
                         </pre>
                     </div>}
