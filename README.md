@@ -1,14 +1,16 @@
 # Synthetic Markdown
 
-![Synthetic Markdown](apps/web/public/synth.gif)
+Synthetic Markdown is a UI primitive for editing and rendering Markdown in a unified interface, removing the need for split panes. The core is framework-agnostic and has zero runtime dependencies.
 
 > [!NOTE]
 > The project is designed as a building block rather than a complete editor application
 
 > [!TIP]
 > Try it online: <https://semigarden.github.io/synthetic-md/>
+> 
+---
 
-Synthetic Markdown is a UI primitive for editing and rendering Markdown in a unified interface, removing the need for split panes. The core is framework-agnostic and has zero runtime dependencies.
+![Synthetic Markdown](apps/web/public/synth.gif)
 
 ---
 
