@@ -15,18 +15,18 @@
         .title {
             padding: 5px 0;
             cursor: pointer;
-            color: #cccccc70;
+            color: #ffffff80;
             transition: color 0.8s, border-bottom-color 0.8s;
             border-bottom: 1px solid transparent;
 
             &:hover {
-                border-bottom-color: #ccc;
-                color: #ccc;
+                border-bottom-color: #fff;
+                color: #fff;
             }
 
             &.active {
-                border-bottom-color: #ccc;
-                color: #ccc;
+                border-bottom-color: #fff;
+                color: #fff;
             }
         }
     }
