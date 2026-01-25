@@ -44,7 +44,7 @@ const Guide = ({ className = '', active = false }: { className?: string, active?
                 <div className={styles.blocks}>
                     {installTab === 'vanilla' && <div className={styles.content}>
                         <button className={styles.button} onClick={() => copy('install-vanilla', 'npm install @semigarden/synthetic-md')}>{copiedKey === 'install-vanilla' && 'Copied' || 'Copy'}</button>
-                        <span className={styles.language}>bash</span>
+                        {/* <span className={styles.language}>bash</span> */}
                         <pre>
                             <code>
                                 npm install @semigarden/synthetic-md
@@ -53,7 +53,7 @@ const Guide = ({ className = '', active = false }: { className?: string, active?
                     </div>}
                     {installTab === 'react' && <div className={styles.content}>
                         <button className={styles.button} onClick={() => copy('install-react', 'npm install @semigarden/synthetic-md-react')}>{copiedKey === 'install-react' && 'Copied' || 'Copy'}</button>
-                        <span className={styles.language}>bash</span>
+                        {/* <span className={styles.language}>bash</span> */}
                         <pre>
                             <code>
                                 npm install @semigarden/synthetic-md-react
@@ -86,7 +86,7 @@ syntheticElement.addEventListener('change', (e) => {
 })
 
 syntheticElement.value = '# Hello'`)}>{copiedKey === 'usage-vanilla' && 'Copied' || 'Copy'}</button>
-                        <span className={styles.language}>js</span>
+                        {/* <span className={styles.language}>js</span> */}
                         <pre>
                             <code>
                                 <span>{`import { defineElement } from '@semigarden/synthetic-md'`}</span>
@@ -126,7 +126,7 @@ const App = () => {
     }
     return <SyntheticText className={styles.synthetic} value={text} onChange={onChange} />
 }`)}>{copiedKey === 'usage-react' && 'Copied' || 'Copy'}</button>
-                        <span className={styles.language}>tsx</span>
+                        {/* <span className={styles.language}>tsx</span> */}
                         <pre>
                             <code>
                                 <span>{`import { useState } from 'react'`}</span>
