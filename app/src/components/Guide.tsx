@@ -23,13 +23,13 @@ const Guide = ({ className = '', active = false }: { className?: string, active?
             </p>
             <hr/>
             <h2>Status</h2>
-            <p>This project is still in development. Interactions with the following blocks are not yet fully implemented:
+            <div>This project is still in development. Interactions with the following blocks are not yet fully implemented:
                 <ul>
                     <li>Tables</li>
                     <li>Task Lists</li>
                     <li>Code Blocks</li>
                 </ul>
-            </p>
+            </div>
             <hr/>
             <h2>Try It Online</h2>
             <p>Visit the sandbox page and start typing to explore supported <a href="https://www.markdownguide.org/" target="_blank">Markdown</a> syntax.

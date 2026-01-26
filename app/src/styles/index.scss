@@ -74,3 +74,19 @@ button:focus-visible {
         background-color: #f9f9f9;
     }
 }
+
+html[data-theme="light"] {
+    color: #000000;
+    background-color: #f9f9f9;
+
+    :root {
+        color: #213547;
+        background-color: #ffffff;
+    }
+    a:hover {
+        color: #747bff;
+    }
+    button {
+        background-color: #f9f9f9;
+    }
+}
