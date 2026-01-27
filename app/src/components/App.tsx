@@ -11,7 +11,7 @@ import moon from '../assets/moon.svg'
 
 const App = () => {
     const [activeTab, setActiveTab] = useState<'guide' | 'sandbox'>('guide')
-    const [theme, setTheme] = useState('light')
+    const [theme, setTheme] = useState('dark')
 
     useEffect(() => {
         const path = window.location.pathname
