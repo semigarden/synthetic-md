@@ -9,17 +9,9 @@ import github from '../assets/github.svg'
 import sun from '../assets/sun.svg'
 import moon from '../assets/moon.svg'
 
-const App = () => {
-    const [activeTab, setActiveTab] = useState<'guide' | 'sandbox'>('guide')
+const App = ({ tab = 'guide' }: { tab?: 'guide' | 'sandbox' }) => {
+    const [activeTab, setActiveTab] = useState<'guide' | 'sandbox'>(tab)
     const [theme, setTheme] = useState('dark')
-
-    useEffect(() => {
-        const path = window.location.pathname
-
-        if (path === '/synthetic-md' || path === '/synthetic-md/') {
-            history.replaceState({}, '', '/synthetic-md/guide')
-        }
-    }, [])
 
     useEffect(() => {
         const syncFromUrl = () => {
@@ -27,11 +19,11 @@ const App = () => {
 
             switch (path) {
                 case '/synthetic-md/sandbox':
-                    setActiveTab('sandbox')
+                    go('sandbox')
                     break
                 case '/synthetic-md/guide':
                 default:
-                    setActiveTab('guide')
+                    go('guide')
                     break
             }
         }
