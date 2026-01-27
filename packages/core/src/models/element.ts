@@ -24,6 +24,8 @@ class Element extends HTMLElement {
     private styled = false
     private hasAcceptedExternalValue = false
 
+    public autofocus = false
+
     constructor() {
         super()
         this.shadowRootElement = this.attachShadow({ mode: 'open' })
@@ -31,6 +33,7 @@ class Element extends HTMLElement {
 
     connectedCallback() {
         const attrValue = this.getAttribute('value') ?? ''
+        this.autofocus = this.hasAttribute('autofocus')
 
         this.ast.setText(attrValue)
 
@@ -50,6 +53,7 @@ class Element extends HTMLElement {
         this.interaction.attach()
 
         this.renderDOM()
+        this.autoFocus()
     }
 
     disconnectedCallback() {
@@ -64,6 +68,7 @@ class Element extends HTMLElement {
         if (!this.hasAcceptedExternalValue && value !== '' || value !== '' && value !== this.ast.text) {
             this.ast.setText(value)
             this.renderDOM()
+            this.autoFocus()
             this.hasAcceptedExternalValue = true
         }
     }
@@ -105,6 +110,10 @@ class Element extends HTMLElement {
             bubbles: true,
             composed: true,
         }))
+    }
+
+    private autoFocus() {
+        if (this.autofocus && this.rootElement && this.select) this.select.autoFocus()
     }
 }
 

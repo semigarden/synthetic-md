@@ -14,9 +14,13 @@ const cssText = `@charset "UTF-8";
   --color-text: #d4cfee;
   --color-muted: #8b85a3;
   --color-accent: #4a9eff;
+  --color-accent-hover: #74b5ff;
   --color-code-bg: #1a1625;
   --color-blockquote-border: #4a9eff;
   --color-selection-bg: #2a2340;
+  --color-divider: rgba(255,255,255,0.18);
+  --color-caret: #ffffff;
+  --color-focus-bg: rgba(74,158,255,0.12);
   position: relative;
   width: 100%;
   height: 100%;
@@ -292,19 +296,19 @@ const cssText = `@charset "UTF-8";
 }
 
 .link, .autolink {
-  color: #646cff;
+  color: var(--color-accent);
   text-decoration: inherit;
   cursor: pointer;
 }
 .link:hover, .autolink:hover {
-  color: #535bf2;
+  color: var(--color-accent-hover);
 }
 
 .caret {
   position: absolute;
   width: 1px;
   height: 1em;
-  background-color: #fff;
+  background-color: var(--color-caret);
   animation: blink 1s step-end infinite;
   pointer-events: none;
   z-index: 10;
@@ -316,7 +320,7 @@ const cssText = `@charset "UTF-8";
   word-break: break-word;
 }
 .inline.focus {
-  background: rgba(0, 120, 255, 0.1);
+  background: var(--color-focus-bg);
   border-radius: 3px;
   padding: 0 2px;
   min-height: 1.2em;

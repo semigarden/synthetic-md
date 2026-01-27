@@ -39,6 +39,10 @@ class Select {
         this.rootElement.removeEventListener('focusout', this.onRootFocusOut)
     }
 
+    public autoFocus() {
+        this.focus.autoFocus()
+    }
+
     private onSelectionChange = () => {
         if (this.suppressSelectionChange) return
 

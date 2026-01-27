@@ -21,7 +21,7 @@ const Sandbox = ({ className = '', active = false }: { className?: string, activ
 
     return (
         <div className={`${styles.sandbox} ${active && styles.active} ${className}`}>
-            <SyntheticText className={styles.synthetic} value={text} onChange={onChange} />
+            <SyntheticText className={styles.synthetic} value={text} onChange={onChange} autofocus={true} />
         </div>
     )
 }
