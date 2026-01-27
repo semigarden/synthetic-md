@@ -49,45 +49,89 @@
         flex-direction: column;
         gap: 2px;
 
-        .tabs {
+        .header {
             display: flex;
-            gap: 30px;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
             border-radius: 16px 16px 0 0;
             background-color: var(--color-background);
-            padding: 15px 20px;
 
-            .title {
-                position: relative;
-                color: var(--color-text-inactive);
-                border: none;
-                cursor: pointer;
-                transition: color 1s ease;
+            .tabs {
+                display: flex;
+                // gap: 30px;
+                padding: 0 5px;
 
-                &::after {
-                    opacity: 0;
-                    content: '';
-                    position: absolute;
-                    bottom: -17px;
-                    left: 0;
-                    width: 100%;
-                    height: 2px;
-                    background-color: transparent;
-                    transition: background-color 1s ease, opacity 1s ease;
-                }
-
-                &.active {
-                    color: var(--color-text);
-
+                .tab {
+                    position: relative;
+                    color: var(--color-text-inactive);
+                    border: none;
+                    cursor: pointer;
+                    transition: color 1s ease;
+                    padding: 10px 15px;
+                    font-size: 14px;
+    
                     &::after {
-                        opacity: 1;
+                        opacity: 0;
                         content: '';
                         position: absolute;
-                        bottom: -17px;
-                        left: 0;
-                        width: 100%;
+                        bottom: -2px;
+                        left: 15px;
+                        width: calc(100% - 30px);
                         height: 2px;
                         background-color: var(--color-text);
+                        transition: background-color 1s ease, opacity 1s ease;
                     }
+
+                    &:hover {
+                        color: var(--color-text);
+
+                        &::after {
+                            opacity: 1;
+                            content: '';
+                            position: absolute;
+                            bottom: -2px;
+                            left: 15px;
+                            width: calc(100% - 30px);
+                            height: 2px;
+                            background-color: var(--color-text);
+                        }
+                    }
+    
+                    &.active {
+                        color: var(--color-text);
+    
+                        &::after {
+                            opacity: 1;
+                            content: '';
+                            position: absolute;
+                            bottom: -2px;
+                            left: 15px;
+                            width: calc(100% - 30px);
+                            height: 2px;
+                            background-color: var(--color-text);
+                        }
+                    }
+                }
+            }
+
+            .button {
+                background-color: transparent;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                font-size: 12px;
+                cursor: pointer;
+
+                &:hover .icon {
+                    fill: var(--color-text);
+                }
+
+                .icon {
+                    width: 16px;
+                    height: 16px;
+                    object-fit: contain;
+                    fill: var(--color-text-inactive);
                 }
             }
         }
@@ -111,45 +155,23 @@
                     .button {
                         opacity: 1;
                     }
-
-                    .language {
-                        opacity: 0;
-                    }
-                }
-
-                .code pre {
-                    background-color: var(--color-background) !important;
-                }
-
-                .button {
-                    opacity: 0;
-                    position: absolute;
-                    top: 0px;
-                    right: 0;
-                    background-color: var(--color-button-bg);
-                    color: var(--color-button-text);
-                    border: none;
-                    padding: 2px 5px;
-                    border-radius: 5px;
-                    font-size: 12px;
-                    cursor: pointer;
-                    transition: background-color 0.2s ease, opacity 1s ease;
-                    z-index: 1;
-
-                    &:hover {
-                        background-color: var(--color-button-bg-hover);
-                    }
                 }
 
                 .language {
                     position: absolute;
                     top: 0;
                     right: 0;
-                    color: var(--color-text);
+                    color: var(--color-text-inactive);
                     font-size: 12px;
                     font-weight: 500;
                     text-align: right;
                     transition: opacity 1s ease;
+                    user-select: none;
+                    pointer-events: none;
+                }
+
+                .code pre {
+                    background-color: var(--color-background) !important;
                 }
         
                 pre {
@@ -172,41 +194,48 @@
         }
     
         .code {
-            .tabs {
+            .header {
                 background-color: var(--color-background-area);
     
-                .title {
-                    color: var(--color-text-inactive);
-
-                    &.active {
-                        color: var(--color-text);
+                .tabs { 
+                    .tab {
+                        color: var(--color-text-inactive);
     
-                        &::after {
-                            background-color: var(--color-text);
+                        &:hover {
+                            color: var(--color-text);
                         }
+    
+                        &.active {
+                            color: var(--color-text);
+    
+                            &::after {
+                                background-color: var(--color-text);
+                            }
+                        }
+                    }
+                }
+    
+                .button {
+                    &:hover .icon {
+                        fill: var(--color-text);
+                    }
+    
+                    .icon {
+                        fill: var(--color-text-inactive);
                     }
                 }
             }
     
             .blocks {
                 background-color: var(--color-background-area);
-
+    
                 .content {
-                    .code pre {
-                        background-color: var(--color-background-area);
-                    }
-
-                    .button {
-                        background-color: var(--color-button-bg);
-                        color: var(--color-button-text);
-    
-                        &:hover {
-                            background-color: var(--color-button-bg-hover);
-                        }
-                    }
-    
                     .language {
-                        color: var(--color-text);
+                        color: var(--color-text-inactive);
+                    }
+    
+                    .code pre {
+                        background-color: var(--color-background-area) !important;
                     }
                 }
             }
@@ -222,18 +251,34 @@ html[data-theme="light"] .guide {
     }
 
     .code {
-        .tabs {
+        .header {
             background-color: var(--color-background-area);
 
-            .title {
-                color: var(--color-text-inactive);
+            .tabs { 
+                .tab {
+                    color: var(--color-text-inactive);
 
-                &.active {
-                    color: var(--color-text);
-
-                    &::after {
-                        background-color: var(--color-text);
+                    &:hover {
+                        color: var(--color-text);
                     }
+
+                    &.active {
+                        color: var(--color-text);
+
+                        &::after {
+                            background-color: var(--color-text);
+                        }
+                    }
+                }
+            }
+
+            .button {
+                &:hover .icon {
+                    fill: var(--color-text);
+                }
+
+                .icon {
+                    fill: var(--color-text-inactive);
                 }
             }
         }
@@ -242,21 +287,12 @@ html[data-theme="light"] .guide {
             background-color: var(--color-background-area);
 
             .content {
+                .language {
+                    color: var(--color-text-inactive);
+                }
+
                 .code pre {
                     background-color: var(--color-background-area) !important;
-                }
-
-                .button {
-                    background-color: var(--color-button-bg);
-                    color: var(--color-button-text);
-
-                    &:hover {
-                        background-color: var(--color-button-bg-hover);
-                    }
-                }
-
-                .language {
-                    color: var(--color-text);
                 }
             }
         }

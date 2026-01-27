@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createHighlighter } from 'shiki'
 import styles from '../styles/Guide.module.scss'
+import CopyIcon from '../assets/copy.svg?react'
 
 const usageVanilla = `import { defineElement } from '@semigarden/synthetic-md'
 
@@ -93,13 +94,22 @@ const Guide = ({ className = '', active = false, theme = 'dark' }: { className?:
             <hr/>
             <h2>Installation</h2>
             <div className={styles.code}>
-                <div className={styles.tabs}>
-                    <div className={`${styles.title} ${installTab === 'vanilla' && styles.active}`} onClick={() => setInstallTab('vanilla')}>Vanilla</div>
-                    <div className={`${styles.title} ${installTab === 'react' && styles.active}`} onClick={() => setInstallTab('react')}>React</div>
+                <div className={styles.header}>
+                    <div className={styles.tabs}>
+                        <div className={`${styles.tab} ${installTab === 'vanilla' && styles.active}`} onClick={() => setInstallTab('vanilla')}>Vanilla</div>
+                        <div className={`${styles.tab} ${installTab === 'react' && styles.active}`} onClick={() => setInstallTab('react')}>React</div>
+                    </div>
+                    <button className={styles.button} onClick={() => {
+                        if (installTab === 'vanilla') copy('install-vanilla', 'npm install @semigarden/synthetic-md')
+                        else copy('install-react', 'npm install @semigarden/synthetic-md-react')
+                    }}
+                    title="Copy">
+                        {copiedKey === 'install-vanilla' || copiedKey === 'install-react' ? <span className={styles.icon} title="Copied">✓</span> : <CopyIcon className={styles.icon} title="Copy" />}
+                    </button>
                 </div>
+                
                 <div className={styles.blocks}>
                     {installTab === 'vanilla' && <div className={styles.content}>
-                        <button className={styles.button} onClick={() => copy('install-vanilla', 'npm install @semigarden/synthetic-md')}>{copiedKey === 'install-vanilla' && 'Copied' || 'Copy'}</button>
                         <span className={styles.language}>bash</span>
                         <pre>
                             <code>
@@ -108,7 +118,6 @@ const Guide = ({ className = '', active = false, theme = 'dark' }: { className?:
                         </pre>
                     </div>}
                     {installTab === 'react' && <div className={styles.content}>
-                        <button className={styles.button} onClick={() => copy('install-react', 'npm install @semigarden/synthetic-md-react')}>{copiedKey === 'install-react' && 'Copied' || 'Copy'}</button>
                         <span className={styles.language}>bash</span>
                         <pre>
                             <code>
@@ -123,16 +132,20 @@ const Guide = ({ className = '', active = false, theme = 'dark' }: { className?:
             <hr/>
             <h2>Usage</h2>
             <div className={styles.code}>
-                <div className={styles.tabs}>
-                    <div className={`${styles.title} ${usageTab === 'vanilla' && styles.active}`} onClick={() => setUsageTab('vanilla')}>Vanilla</div>
-                    <div className={`${styles.title} ${usageTab === 'react' && styles.active}`} onClick={() => setUsageTab('react')}>React</div>
+                <div className={styles.header}>
+                    <div className={styles.tabs}>
+                        <div className={`${styles.tab} ${usageTab === 'vanilla' && styles.active}`} onClick={() => setUsageTab('vanilla')}>Vanilla</div>
+                        <div className={`${styles.tab} ${usageTab === 'react' && styles.active}`} onClick={() => setUsageTab('react')}>React</div>
+                    </div>
+                    <button className={styles.button} onClick={() => {
+                        if (usageTab === 'vanilla') copy('usage-vanilla', usageVanilla)
+                        else copy('usage-react', usageReact)
+                    }} title="Copy">
+                        {copiedKey === 'usage-vanilla' || copiedKey === 'usage-react' ? <span className={styles.icon} title="Copied">✓</span> : <CopyIcon className={styles.icon} title="Copy" />}
+                    </button>
                 </div>
                 <div className={styles.blocks}>
                     <div className={styles.content}>
-                        <button className={styles.button} onClick={() => {
-                            if (usageTab === 'vanilla') copy('usage-vanilla', usageVanilla)
-                            else copy('usage-react', usageReact)
-                        }}>{copiedKey === 'usage-vanilla' && 'Copied' || 'Copy'}</button>
                         <span className={styles.language}>{usageTab === 'vanilla' ? 'ts' : 'tsx'}</span>
                         <code className={styles.code} dangerouslySetInnerHTML={{ __html: html }} />
                     </div>
