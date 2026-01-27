@@ -16,7 +16,6 @@ const SyntheticText = forwardRef(({ className, value = '', onChange, autofocus =
         defineElement()
     }, [])
 
-    console.log('autofocus react', autofocus)
     return (
         <synthetic-text 
             ref={(node: HTMLElement | null) => {
