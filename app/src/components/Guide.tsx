@@ -133,7 +133,7 @@ const Guide = ({ className = '', active = false, theme = 'dark' }: { className?:
                             if (usageTab === 'vanilla') copy('usage-vanilla', usageVanilla)
                             else copy('usage-react', usageReact)
                         }}>{copiedKey === 'usage-vanilla' && 'Copied' || 'Copy'}</button>
-                        <span className={styles.language}>{usageTab === 'vanilla' ? 'js' : 'tsx'}</span>
+                        <span className={styles.language}>{usageTab === 'vanilla' ? 'ts' : 'tsx'}</span>
                         <code className={styles.code} dangerouslySetInnerHTML={{ __html: html }} />
                     </div>
                 </div>
