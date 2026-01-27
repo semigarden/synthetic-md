@@ -112,6 +112,10 @@
                     }
                 }
 
+                .code pre {
+                    background-color: var(--color-background) !important;
+                }
+
                 .button {
                     opacity: 0;
                     position: absolute;
@@ -183,6 +187,10 @@
                 background-color: var(--color-background-area);
 
                 .content {
+                    .code pre {
+                        background-color: var(--color-background-area);
+                    }
+
                     .button {
                         background-color: var(--color-button-bg);
                         color: var(--color-button-text);
@@ -229,6 +237,10 @@ html[data-theme="light"] .guide {
             background-color: var(--color-background-area);
 
             .content {
+                .code pre {
+                    background-color: var(--color-background-area) !important;
+                }
+
                 .button {
                     background-color: var(--color-button-bg);
                     color: var(--color-button-text);

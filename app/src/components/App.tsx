@@ -12,7 +12,7 @@ import moon from '../assets/moon.svg'
 const App = () => {
     const [activeTab, setActiveTab] = useState('guide')
 
-    const [theme, setTheme] = useState('dark')
+    const [theme, setTheme] = useState('light')
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme)
@@ -45,7 +45,7 @@ const App = () => {
             </div>
             <div className={styles.tabs}>
                 <div className={styles.activeTab}>
-                    <Guide active={activeTab === 'guide'} />
+                    <Guide active={activeTab === 'guide'} theme={theme} />
                     <Sandbox active={activeTab === 'sandbox'} />
                     {/* <Documentation active={activeTab === 'documentation'} /> */}
                 </div>
