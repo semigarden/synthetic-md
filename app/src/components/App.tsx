@@ -10,9 +10,50 @@ import sun from '../assets/sun.svg'
 import moon from '../assets/moon.svg'
 
 const App = () => {
-    const [activeTab, setActiveTab] = useState('guide')
-
+    const [activeTab, setActiveTab] = useState<'guide' | 'sandbox'>('guide')
     const [theme, setTheme] = useState('light')
+
+    useEffect(() => {
+        const path = window.location.pathname
+
+        if (path === '/synthetic-md' || path === '/synthetic-md/') {
+            history.replaceState({}, '', '/synthetic-md/guide')
+        }
+    }, [])
+
+    useEffect(() => {
+        const syncFromUrl = () => {
+            const path = window.location.pathname
+
+            switch (path) {
+                case '/synthetic-md/sandbox':
+                    setActiveTab('sandbox')
+                    break
+                case '/synthetic-md/guide':
+                default:
+                    setActiveTab('guide')
+                    break
+            }
+        }
+
+        syncFromUrl()
+
+        window.addEventListener('popstate', syncFromUrl)
+        return () => window.removeEventListener('popstate', syncFromUrl)
+    }, [])
+
+    function go(tab: 'guide' | 'sandbox') {
+        setActiveTab(tab)
+
+        const url =
+          tab === 'sandbox'
+            ? '/synthetic-md/sandbox'
+            : '/synthetic-md/guide'
+
+        document.title = `synthetic-md - ${tab === 'sandbox' ? 'Sandbox' : 'Guide'}`
+      
+        history.pushState({}, '', url)
+    }
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme)
@@ -24,16 +65,13 @@ const App = () => {
     return (
         <div className={styles.app}>
             <div className={styles.panel}>
-                {/* <div className={`${styles.title} ${styles.github}`} onClick={() => setActiveTab('guide')}>
-                    <img className={styles.icon} src={github} alt="github" />
-                </div> */}
-                <div className={`${styles.title} ${activeTab === 'guide' && styles.active}`} onClick={() => setActiveTab('guide')}>
+                <div className={`${styles.title} ${activeTab === 'guide' && styles.active}`} onClick={() => go('guide')}>
                     <img className={styles.icon} src={guide} alt="guide" /> Guide
                 </div>
-                <div className={`${styles.title} ${activeTab === 'sandbox' && styles.active}`} onClick={() => setActiveTab('sandbox')}>
+                <div className={`${styles.title} ${activeTab === 'sandbox' && styles.active}`} onClick={() => go('sandbox')}>
                     <img className={styles.icon} src={sandbox} alt="sandbox" /> Sandbox
                 </div>
-                <div className={`${styles.title} ${activeTab === 'github' && styles.active}`} onClick={() => window.open('https://github.com/semigarden/synthetic-md#readme', '_blank')}>
+                <div className={`${styles.title}`} onClick={() => window.open('https://github.com/semigarden/synthetic-md#readme', '_blank')}>
                     <img className={styles.icon} src={github} alt="github" /> GitHub
                 </div>
                 <div className={`${styles.title} ${styles.theme}`} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
@@ -49,10 +87,6 @@ const App = () => {
                     <Sandbox active={activeTab === 'sandbox'} />
                     {/* <Documentation active={activeTab === 'documentation'} /> */}
                 </div>
-
-                {/* {activeTab === 'sandbox' && <Sandbox />}
-                {activeTab === 'guide' && <Guide />}
-                {activeTab === 'documentation' && <Documentation />} */}
             </div>
         </div>
     )
