@@ -21,7 +21,7 @@
             gap: 5px;
             padding: 5px 0;
             cursor: pointer;
-            color: #ffffff80;
+            color: var(--color-text-inactive);
             transition: color 1s, border-bottom-color 1s;
             border-bottom: 1px solid transparent;
 
@@ -39,8 +39,8 @@
             }
 
             &:hover {
-                border-bottom-color: #fff;
-                color: #fff;
+                border-bottom-color: var(--color-text);
+                color: var(--color-text);
 
                 .icon {
                     filter: invert(1);
@@ -48,8 +48,8 @@
             }
 
             &.active {
-                border-bottom-color: #fff;
-                color: #fff;
+                border-bottom-color: var(--color-text);
+                color: var(--color-text);
 
                 .icon {
                     filter: invert(1);
@@ -84,11 +84,11 @@
 
     @media (prefers-color-scheme: light) {
         .panel .title {
-            color: #00000080;
+            color: var(--color-text-inactive);
 
             &:hover {
-                border-bottom-color: #000000;
-                color: #000000;
+                border-bottom-color: var(--color-text);
+                color: var(--color-text);
 
                 .icon {
                     filter: invert(0);
@@ -100,8 +100,8 @@
             }
 
             &.active {
-                border-bottom-color: #000000;
-                color: #000000;
+                border-bottom-color: var(--color-text);
+                color: var(--color-text);
 
                 .icon {
                     filter: invert(0);
@@ -121,11 +121,11 @@
 
 html[data-theme="light"] .app {
     .panel .title {
-        color: #00000080;
+        color: var(--color-text-inactive);
 
         &:hover {
-            border-bottom-color: #000000;
-            color: #000000;
+            border-bottom-color: var(--color-text);
+            color: var(--color-text);
 
             .icon {
                 filter: invert(0);
@@ -137,8 +137,8 @@ html[data-theme="light"] .app {
         }
 
         &.active {
-            border-bottom-color: #000000;
-            color: #000000;
+            border-bottom-color: var(--color-text);
+            color: var(--color-text);
 
             .icon {
                 filter: invert(0);
