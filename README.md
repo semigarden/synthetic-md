@@ -40,7 +40,7 @@ import { defineElement } from '@semigarden/synthetic-md'
 
 defineElement()
 
-const syntheticElement = document.querySelector<any>('#synthetic')
+const syntheticElement = document.querySelector('#synthetic')
 
 syntheticElement.addClasses(['synthetic'])
 
