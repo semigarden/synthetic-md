@@ -16,7 +16,9 @@ Synthetic Markdown is a UI primitive for editing and rendering Markdown in a uni
 
 ---
 
-![Synthetic Markdown](app/public/synth.gif)
+<p align="center">
+  <img src="app/public/synthetic.gif" alt="Synthetic Markdown" />
+</p>
 
 ---
 
