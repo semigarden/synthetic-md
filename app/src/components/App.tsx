@@ -14,6 +14,14 @@ const App = ({ tab = 'guide' }: { tab?: 'guide' | 'sandbox' }) => {
     const [theme, setTheme] = useState('dark')
 
     useEffect(() => {
+        const path = window.location.pathname
+
+        if (path === '/synthetic-md' || path === '/synthetic-md/') {
+            history.replaceState({}, '', '/synthetic-md/guide')
+        }
+    }, [])
+
+    useEffect(() => {
         const syncFromUrl = () => {
             const path = window.location.pathname
 
