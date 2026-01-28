@@ -150,7 +150,7 @@ class AstTransform {
         )
     }
 
-    toCodeBlock(text: string, block: Block, inline: Inline, caretPosition: number): AstApplyEffect | null {
+    toCodeBlock(text: string, block: Block): AstApplyEffect | null {
         const { ast, query, parser, effect } = this.ctx
 
         const blocks = query.flattenBlocks(ast.blocks)
