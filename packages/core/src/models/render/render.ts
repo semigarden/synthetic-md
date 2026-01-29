@@ -67,6 +67,23 @@ class Render {
                         }
                     })
                     break
+                // case 'deleteBlock':
+                //     effect.deleteBlock.forEach(deleteBlock => {
+                //         const block = this.rootElement.querySelector(`[data-block-id="${deleteBlock.blockId}"]`) as HTMLElement | null
+                //         if (!block) return
+                //         block.remove()
+                //     })
+                //     break
+                case 'deleteInline':
+                    effect.deleteInline.forEach(deleteInline => {
+                        const block = this.rootElement.querySelector(`[data-block-id="${deleteInline.blockId}"]`) as HTMLElement | null
+                        if (!block) return
+
+                        const inline = block.querySelector(`[data-inline-id="${deleteInline.inlineId}"]`) as HTMLElement | null
+                        if (!inline) return
+                        inline.remove()
+                    })
+                    break
             }
         }
     }

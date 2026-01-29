@@ -2002,7 +2002,40 @@ class Edit {
                             effect.caret(block.id, inline.id, caretPosition, 'start')
                         )
                     } else {
-                        // exit code block
+                        inline.text.symbolic = newText + '\n'
+                        block.text = block.inlines.map(i => i.text.symbolic).join('')
+
+                        const newBlocks = parser.reparseTextFragment(block.text, block.position.start)
+                        if (newBlocks.length === 0) return null
+
+                        const entry = query.flattenBlocks(ast.blocks).find(e => e.block.id === block.id)
+                        if (!entry) return null
+
+                        ast.blocks.splice(entry.index, 1, ...newBlocks)
+
+                        const inlineIndex = block.inlines.findIndex(i => i.id === inline.id)
+                        const absoluteCaretPosition =
+                            block.inlines
+                                .slice(0, inlineIndex)
+                                .reduce((sum, i) => sum + i.text.symbolic.length, 0)
+                            + caretPosition
+
+                        let newInline: Inline | undefined
+                        for (const b of newBlocks) {
+                            for (const i of b.inlines) {
+                                if (i.position.start <= absoluteCaretPosition && i.position.end >= absoluteCaretPosition) {
+                                    newInline = i
+                                    break
+                                }
+                            }
+                            if (newInline) break
+                        }
+                        if (!newInline) return null
+
+                        return effect.compose(
+                            [effect.update(newBlocks.map((b, idx) => ({ at: idx === 0 ? 'current' as const : 'next' as const, target: idx === 0 ? block : newBlocks[idx - 1], current: b })), [block])],
+                            effect.caret(newInline.blockId, newInline.id, newInline.position.end, 'start')
+                        )
                     }
                 } else {
                     inline.text.symbolic = text
@@ -2024,8 +2057,7 @@ class Edit {
 
             if (inline === block.inlines[block.inlines.length - 1]) {
                 const markerText = text.slice(0, caretPosition)
-                console.log('markerText at end', JSON.stringify(markerText, null, 2))
-                
+
                 if (markerText.length >= 3) {
                     inline.text.symbolic = markerText
                     inline.position.end = inline.position.start + markerText.length
@@ -2035,8 +2067,6 @@ class Edit {
                     block.position.end = block.position.start + block.text.length
 
                     block.close = markerText
-
-                    console.log('mark', JSON.stringify(block, null, 2))
 
                     return effect.compose(
                         [effect.input([{ type: 'text', text, blockId: block.id, inlineId: inline.id }])],
@@ -2048,14 +2078,12 @@ class Edit {
 
                     inlineText.text.symbolic += markerText
                     inlineText.text.semantic += markerText
-                    inlineText.position.end = inlineText.position.start + markerText.length
+                    inlineText.position.end = inlineText.position.start + inlineText.text.symbolic.length
 
                     delete block.close
                     block.inlines.pop()
                     block.text = block.inlines.map(i => i.text.symbolic).join('')
                     block.position.end = block.position.start + block.text.length
-
-                    console.log('mark', JSON.stringify(block, null, 2))
 
                     return effect.compose(
                         [

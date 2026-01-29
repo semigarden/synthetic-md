@@ -90,10 +90,10 @@ export type RenderEffect =
         input: RenderInput[]
     } | {
         type: 'deleteBlock'
-        deleteBlock: RenderDelete[]
+        deleteBlock: RenderDelete['block'][]
     } | {
         type: 'deleteInline'
-        deleteInline: RenderDelete[]
+        deleteInline: RenderDelete['inline'][]
 }
 
 
