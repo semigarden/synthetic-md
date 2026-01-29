@@ -1984,6 +1984,26 @@ class Edit {
                 const newText = text.replace(block.fenceChar?.repeat(block.fenceLength ?? 3) ?? '', '').trim()
                 console.log('newText', JSON.stringify(text, null, 2), JSON.stringify(block.fenceChar ?? '', null, 2), JSON.stringify(newText, null, 2))
                 
+                const markerText = text.slice(0, caretPosition)
+                const isMarkerOnly = markerText === (block.fenceChar?.repeat((block.fenceLength ?? 3) - 1) ?? '');
+                console.log('markerText', JSON.stringify(markerText, null, 2), isMarkerOnly)
+
+                if (isMarkerOnly) {
+                    if (markerText.length >= 3) {
+                        inline.text.symbolic = markerText
+                        inline.position.end = inline.position.start + markerText.length
+
+                        block.fenceLength = markerText.length
+                        block.text = block.inlines.map(i => i.text.symbolic).join('')
+                        block.position.end = block.position.start + block.text.length
+
+                        return effect.compose(
+                            effect.input([{ type: 'text', text, blockId: block.id, inlineId: inline.id }]),
+                            effect.caret(block.id, inline.id, caretPosition, 'start')
+                        )
+                    }
+                }
+
                 inline.text.symbolic = text
                 inline.text.semantic = newText
                 inline.position.end = inline.position.start + newText.length
@@ -1998,6 +2018,29 @@ class Edit {
                     ]),
                     effect.caret(block.id, inline.id, caretPosition, 'start')
                 )
+            }
+
+            if (inline === block.inlines[block.inlines.length - 1]) {
+                const markerText = text.slice(0, caretPosition)
+                console.log('markerText at end', JSON.stringify(markerText, null, 2))
+                
+                if (markerText.length >= 3) {
+                    inline.text.symbolic = markerText
+                    inline.position.end = inline.position.start + markerText.length
+
+                    block.fenceLength = markerText.length
+                    block.text = block.inlines.map(i => i.text.symbolic).join('')
+                    block.position.end = block.position.start + block.text.length
+
+                    block.close = markerText
+
+                    console.log('mark', JSON.stringify(block, null, 2))
+
+                    return effect.compose(
+                        effect.input([{ type: 'text', text, blockId: block.id, inlineId: inline.id }]),
+                        effect.caret(block.id, inline.id, caretPosition, 'start')
+                    )
+                }
             }
         }
 
