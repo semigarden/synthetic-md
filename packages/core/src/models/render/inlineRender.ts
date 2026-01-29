@@ -75,4 +75,4 @@ function renderInline(inline: Inline): HTMLElement {
     return inlineElement
 }
 
-export { renderInlines }
+export { renderInlines, renderInline }

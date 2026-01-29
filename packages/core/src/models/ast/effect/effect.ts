@@ -17,6 +17,14 @@ class Effect {
         return [{ type: 'deleteInline', deleteInline }]
     }
 
+    insertBlock(insertBlock: RenderInsert[]): AstApplyEffect['renderEffect'] {
+        return [{ type: 'insertBlock', insertBlock }]
+    }
+
+    insertInline(insertInline: RenderInsert[]): AstApplyEffect['renderEffect'] {
+        return [{ type: 'insertInline', insertInline }]
+    }
+
     caret(blockId: string, inlineId: string, position: number, affinity: 'start' | 'end' = 'start'): AstApplyEffect['caretEffect'] {
         return { type: 'restore', caret: { blockId, inlineId, position, affinity } }
     }
@@ -26,7 +34,7 @@ class Effect {
     }
 
     updateCurrent(target: Block, current: Block, remove: Block[] = []) {
-        return this.update([{ at: 'current', target, current }], remove)
+        return this.update([{ type: 'block', at: 'current', target, current }], remove)
     }
 }
 

@@ -1,6 +1,7 @@
 import BlockRender from './blockRender'
+import { renderInline as createInlineElement } from './inlineRender'
 import { normalizeTables } from './tableNormalizer'
-import type { Block, RenderEffect, RenderPosition } from '../../types'
+import type { Block, Inline, RenderEffect, RenderPosition } from '../../types'
 
 class Render {
     private rootElement: HTMLElement
@@ -24,6 +25,34 @@ class Render {
         return this.blockRender.renderBlock(block, parentElement, renderAt, targetBlock)
     }
 
+    public renderInline(inline: Inline): HTMLElement {
+        return createInlineElement(inline)
+    }
+
+    public insertInlineAt(
+        current: Inline,
+        at: RenderPosition,
+        target: Inline
+    ): void {
+        const targetElement = this.rootElement.querySelector(
+            `[data-inline-id="${target.id}"]`
+        ) as HTMLElement | null
+        if (!targetElement) return
+
+        const element = createInlineElement(current)
+        switch (at) {
+            case 'current':
+                targetElement.replaceWith(element)
+                break
+            case 'previous':
+                targetElement.before(element)
+                break
+            case 'next':
+                targetElement.after(element)
+                break
+        }
+    }
+
     public apply(effects: RenderEffect[]) {
         for (const effect of effects) {
             switch (effect.type) {
@@ -40,7 +69,7 @@ class Render {
                         }
                     })
 
-                    effect.render.insert.forEach(render => {
+                    effect.render.insert.filter(render => render.type === 'block').forEach(render => {
                         this.renderBlock(render.current, this.rootElement, render.at, render.target)
                     })
 
@@ -65,6 +94,11 @@ class Render {
                                 inline.textContent = input.text
                                 break
                         }
+                    })
+                    break
+                case 'insertInline':
+                    effect.insertInline.forEach(({ current, at, target }) => {
+                        this.insertInlineAt(current, at, target)
                     })
                     break
                 // case 'deleteBlock':

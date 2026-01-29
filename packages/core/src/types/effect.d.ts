@@ -43,10 +43,17 @@ export type Executors = {
     [K in keyof AstEffectMap]: (effect: AstEffectMap[K]) => AstApplyEffect | null
 }
 
-export type RenderInsert = {
-    at: RenderPosition
-    target: Block
-    current: Block
+export type RenderInsert = 
+    | {
+        type: 'block'
+        at: RenderPosition
+        target: Block
+        current: Block
+    } | {
+        type: 'inline'
+        at: RenderPosition
+        target: Inline
+        current: Inline
 }
 
 export type RenderInput =
@@ -75,7 +82,7 @@ export type RenderDelete =
 
 export type Render = {
     remove: Block[]
-    insert: RenderInsert[]
+    insert: RenderInsert['block'][]
 }
 
 export type RenderEffect = 
@@ -83,11 +90,17 @@ export type RenderEffect =
         type: 'update'
         render: {
             remove: Block[]
-            insert: RenderInsert[]
+            insert: RenderInsert['block'][]
         }
     } | {
         type: 'input'
         input: RenderInput[]
+    } | {
+        type: 'insertBlock'
+        insertBlock: RenderInsert['block'][]
+    } | {
+        type: 'insertInline'
+        insertInline: RenderInsert['inline'][]
     } | {
         type: 'deleteBlock'
         deleteBlock: RenderDelete['block'][]
