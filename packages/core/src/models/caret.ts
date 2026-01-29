@@ -101,9 +101,15 @@ class Caret {
 
     public apply(effect: CaretEffect) {
         switch (effect.type) {
-            case 'restore':
-                this.restoreCaret(effect.caret.inlineId, effect.caret.position)
+            case 'restore': {
+                const { blockId, inlineId, position, affinity } = effect.caret
+                this.blockId = blockId
+                this.inlineId = inlineId
+                this.position = position
+                this.affinity = affinity
+                this.restoreCaret(inlineId, position)
                 break
+            }
         }
     }
 }

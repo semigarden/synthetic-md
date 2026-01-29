@@ -34,7 +34,12 @@ class Interaction {
             event.preventDefault()
             return
         }
-        
+
+        if (event.inputType === 'insertLineBreak' || event.inputType === 'insertParagraph') {
+            event.preventDefault()
+            return
+        }
+
         const effect = this.input.resolveEffect({ text: event.data ?? '', type: event.inputType })
         if (!effect) return
         if (effect.preventDefault) {
@@ -81,6 +86,7 @@ class Interaction {
         }
 
         const context = this.select.resolveInlineContext()
+        console.log('onKeyDown', intent, JSON.stringify(context, null, 2))
         if (!context) return
 
         const effect = this.intent.resolveEffect(intent, context)

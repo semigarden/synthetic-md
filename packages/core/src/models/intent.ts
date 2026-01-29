@@ -14,6 +14,7 @@ class Intent {
 
     public resolveEffect(intent: IntentType, context: EditContext): EditEffect {
         if (intent === 'split') {
+            console.log('resolveSplit', intent, context)
             return this.resolveSplit(context)
         } else if (intent === 'merge') {
             return this.resolveMerge(context)

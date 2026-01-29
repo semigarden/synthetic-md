@@ -160,12 +160,15 @@ function resolveInlineContext(
 ): EditContext | null {
     const blockId = caret.blockId
     const inlineId = caret.inlineId
+    console.log('resolveInlineContext', blockId, inlineId)
     if (!blockId || !inlineId) return null
 
     const block = ast.query.getBlockById(blockId)
+    console.log('resolveInlineContext block', JSON.stringify(block, null, 2))
     if (!block) return null
 
     const inlineIndex = block.inlines.findIndex(i => i.id === inlineId)
+    console.log('resolveInlineContext inlineIndex', inlineIndex)
     if (inlineIndex === -1) return null
 
     const inline = block.inlines[inlineIndex]

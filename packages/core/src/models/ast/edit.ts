@@ -2155,10 +2155,10 @@ class Edit {
                 if (caretPosition === 0) {
                     const newInline: Inline = {
                         id: uuid(),
-                        type: 'marker',
+                        type: 'text',
                         blockId: block.id,
                         text: { symbolic: '\u200B', semantic: '' },
-                        position: { start: 0, end: 1 },
+                        position: { start: 0, end: 0 },
                     }
 
                     const newBlock: Block = {
@@ -2166,8 +2166,10 @@ class Edit {
                         type: 'paragraph',
                         inlines: [newInline],
                         text: '\u200B',
-                        position: { start: block.position.start, end: block.position.start + 1 },
+                        position: { start: block.position.start, end: block.position.start },
                     }
+
+                    newInline.blockId = newBlock.id
 
                     const blockIndex = query.flattenBlocks(ast.blocks).findIndex(b => b.block.id === block.id)
                     if (blockIndex === -1) return null
@@ -2184,6 +2186,37 @@ class Edit {
 
             if (isCloserMarker) {
                 console.log('isCloserMarker', isCloserMarker)
+                if (caretPosition === inline.text.symbolic.length) {
+                    const newInline: Inline = {
+                        id: uuid(),
+                        type: 'text',
+                        blockId: block.id,
+                        text: { symbolic: '\u200B', semantic: '' },
+                        position: { start: 0, end: 0 },
+                    }
+
+                    const newBlock: Block = {
+                        id: uuid(),
+                        type: 'paragraph',
+                        inlines: [newInline],
+                        text: '\u200B',
+                        position: { start: block.position.start, end: block.position.start },
+                    }
+
+                    newInline.blockId = newBlock.id
+
+                    const blockIndex = query.flattenBlocks(ast.blocks).findIndex(b => b.block.id === block.id)
+                    if (blockIndex === -1) return null
+
+                    ast.blocks.splice(blockIndex + 1, 0, newBlock)
+
+                    console.log('splitCodeBlock from closer marker', JSON.stringify(newBlock, null, 2))
+
+                    return effect.compose(
+                        [effect.update([{ type: 'block', at: 'next', target: block, current: newBlock }])],
+                        effect.caret(newBlock.id, newInline.id, newInline.position.end, 'start')
+                    )
+                }
             }
 
             return null
