@@ -85,8 +85,6 @@ class InlineParser {
                     textInline.text.semantic = textInline.text.semantic + '\n'
                     textInline.position.end = textInline.position.end + '\n'.length
 
-                    block.text = block.text + '\n'
-
                     inlines.push({
                         id: uuid(),
                         type: 'marker',
@@ -96,6 +94,7 @@ class InlineParser {
                     })
                 }
 
+                block.text = inlines.map((i) => i.text.symbolic).join('')
                 return inlines
             }
 
@@ -105,7 +104,7 @@ class InlineParser {
             const openEnd = openStart + open.length
             const codeStart = openEnd
 
-            return [
+            const inlines: Inline[] = [
                 {
                     id: uuid(),
                     type: 'marker',
@@ -121,6 +120,8 @@ class InlineParser {
                     position: { start: codeStart, end: codeStart + (text.length === 0 ? 1 : text.length) },
                 },
             ]
+            block.text = inlines.map((i) => i.text.symbolic).join('')
+            return inlines
         }
 
         const inlines = this.parseInline(text, block.id, block.type, 0)

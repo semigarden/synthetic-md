@@ -1968,6 +1968,11 @@ class Edit {
             block.text = block.inlines.map(i => i.text.symbolic).join('')
             block.position.end = block.position.start + block.text.length
 
+            const newBlocks = parser.reparseTextFragment(block.text, block.position.start)
+            if (newBlocks.length === 0) return null
+
+            console.log('newBlocks', JSON.stringify(newBlocks, null, 2))
+
             return effect.compose(
                 effect.input([{ type: 'text', text, blockId: block.id, inlineId: inline.id }]),
                 effect.caret(block.id, inline.id, caretPosition, 'start')
