@@ -45,6 +45,27 @@ class Render {
 
                 normalizeTables(this.rootElement)
                 break
+            case 'input':
+                console.log('input', effect.input)
+                effect.input.forEach(input => {
+                    const block = this.rootElement.querySelector(`[data-block-id="${input.blockId}"]`) as HTMLElement | null
+                    if (!block) return
+
+                    const inline = block.querySelector(`[data-inline-id="${input.inlineId}"]`) as HTMLElement | null
+                    if (!inline) return
+                
+
+                    switch (input.type) {
+                        case 'codeBlockMarker':
+                            block.setAttribute('data-language', input.language)
+                            inline.textContent = input.text
+                            break
+                        case 'text':
+                            inline.textContent = input.text
+                            break
+                    }
+                })
+                break
         }
     }
 }

@@ -28,10 +28,10 @@ type AstEffect =
     | { type: 'pasteMultiBlock'; blockId: string; inlineId: string; text: string; startPosition: number; endPosition?: number }
     | { type: 'deleteMultiBlock'; startBlockId: string; startInlineId: string; startPosition: number; endBlockId: string; endInlineId: string; endPosition: number }
     | { type: 'toggleTask'; blockId: string; inlineId: string; caretPosition: number }
-    | { type: 'inputCodeBlock'; blockId: string; inlineId: string; text: string; caretPosition: number }
+    | { type: 'inputCodeBlock'; text: string; blockId: string; inlineId: string; caretPosition: number }
     | { type: 'splitCodeBlock'; blockId: string; inlineId: string; caretPosition: number }
     | { type: 'mergeCodeBlockContent'; blockId: string; inlineId: string; caretPosition: number }
-    | { type: 'exitCodeBlock'; blockId: string; direction: 'above' | 'below' }
+    | { type: 'exitCodeBlock'; blockId: string; direction: 'above' | 'below' | 'current' }
     | { type: 'unwrapCodeBlock'; blockId: string }
     | { type: 'setCodeBlockLanguage'; blockId: string; language: string | undefined }
 
@@ -49,6 +49,19 @@ export type RenderInsert = {
     current: Block
 }
 
+export type RenderInput =
+    | { type: 'codeBlockMarker'
+        text: string
+        language: string
+        blockId: string
+        inlineId: string
+    } | {
+        type: 'text'
+        text: string
+        blockId: string
+        inlineId: string
+    }
+
 export type Render = {
     remove: Block[]
     insert: RenderInsert[]
@@ -57,6 +70,9 @@ export type Render = {
 export type RenderEffect = {
     type: 'update'
     render: Render
+} | {
+    type: 'input'
+    input: RenderInput[]
 }
 
 export type CaretEffect = { 

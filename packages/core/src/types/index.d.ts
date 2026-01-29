@@ -40,6 +40,7 @@ export type {
     AstEffectMap,
     Executors,
     RenderInsert,
+    RenderInput,
     Render,
     RenderEffect,
     CaretEffect,

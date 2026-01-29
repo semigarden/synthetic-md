@@ -26,48 +26,11 @@ class AstTransform {
 
         text = text.replace(/[\u200B\u200C\u200D\uFEFF]/g, '').replace(/\r$/, '')
 
+        if (detected.type === 'codeBlock') return this.toCodeBlock(text, block)
+
         const flat = query.flattenBlocks(ast.blocks)
         const entry = flat.find(b => b.block.id === block.id)
         if (!entry) return null
-
-        if (block.type === 'codeBlock' && detected.type === 'paragraph') {
-            const newBlocks = parser.reparseTextFragment(text, block.position.start)
-            const inline = query.getFirstInline(newBlocks)
-            if (!inline) return null
-
-            const { blockId, inlineId, pos } = this.resolveCaret(inline, caretPosition)
-
-            if (entry.parent && (entry.parent.type === 'tableCell' || entry.parent.type === 'tableHeader')) {
-                const cell = entry.parent as TableCell | TableHeader
-                cell.blocks.splice(entry.index, 1, ...newBlocks)
-
-                return effect.compose(
-                    effect.update([{ at: 'current', target: cell, current: cell }], removedBlocks),
-                    effect.caret(blockId, inlineId, pos, 'start')
-                )
-            }
-
-            if (entry.parent && 'blocks' in entry.parent && Array.isArray((entry.parent as any).blocks)) {
-                const parent = entry.parent as any
-                parent.blocks.splice(entry.index, 1, ...newBlocks)
-
-                return effect.compose(
-                    effect.update([{ at: 'current', target: parent, current: parent }], removedBlocks),
-                    effect.caret(blockId, inlineId, pos, 'start')
-                )
-            }
-
-            const oldBlock = block
-            ast.blocks.splice(entry.index, 1, ...newBlocks)
-
-            const effects: AstApplyEffect['renderEffect']['render']['insert'] = []
-
-            newBlocks.forEach((b, idx) => {
-                effects.push({ at: idx === 0 ? 'current' as const : 'next' as const, target: idx === 0 ? oldBlock : newBlocks[idx - 1], current: b })
-            })
-
-            return effect.compose(effect.update(effects, removedBlocks), effect.caret(blockId, inlineId, pos, 'start'))
-        }
 
         if (
             block.type === 'paragraph' &&
@@ -156,7 +119,6 @@ class AstTransform {
         const blocks = query.flattenBlocks(ast.blocks)
         const entry = blocks.find(b => b.block.id === block.id)
         if (!entry) return null
-
     
         const firstCodeBlockEntry = blocks.find(b => b.index >= entry.index && b.block.type === 'codeBlock')
 
@@ -168,14 +130,12 @@ class AstTransform {
         if (newBlocks.length === 0) return null
 
         const oldBlock = block
-        ast.blocks.splice(entry.index, 1, ...newBlocks)
+        ast.blocks.splice(entry.index, removedBlocks.length, ...newBlocks)
 
         return effect.compose(
             effect.update([{ at: 'current', target: oldBlock, current: newBlocks[0] }], removedBlocks),
             effect.caret(newBlocks[0].id, newBlocks[0].inlines[0].id, newBlocks[0].inlines[0].position.end, 'start')
         )
-
-        return null
     }
 }
 

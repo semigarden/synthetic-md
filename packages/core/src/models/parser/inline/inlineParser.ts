@@ -56,26 +56,36 @@ class InlineParser {
                 const contentStart = openEnd
                 const contentEnd = contentStart + contentSymbolic.length
 
+                const openerMarker: Inline = {
+                    id: uuid(),
+                    type: 'marker',
+                    blockId: block.id,
+                    text: { symbolic: open, semantic: '' },
+                    position: { start: openStart, end: openEnd },
+                }
+
+                const textInline: Inline = {
+                    id: uuid(),
+                    type: 'text',
+                    blockId: block.id,
+                    text: { symbolic: contentSymbolic, semantic: contentSemantic },
+                    position: { start: contentStart, end: contentEnd },
+                }
+
                 const inlines: Inline[] = [
-                    {
-                        id: uuid(),
-                        type: 'marker',
-                        blockId: block.id,
-                        text: { symbolic: open, semantic: '' },
-                        position: { start: openStart, end: openEnd },
-                    },
-                    {
-                        id: uuid(),
-                        type: 'text',
-                        blockId: block.id,
-                        text: { symbolic: contentSymbolic, semantic: contentSemantic },
-                        position: { start: contentStart, end: contentEnd },
-                    },
+                    openerMarker,
+                    textInline,
                 ]
 
                 if (close.length > 0) {
                     const closeStart = contentEnd
                     const closeEnd = closeStart + close.length
+
+                    textInline.text.symbolic = textInline.text.symbolic + '\n'
+                    textInline.text.semantic = textInline.text.semantic + '\n'
+                    textInline.position.end = textInline.position.end + '\n'.length
+
+                    block.text = block.text + '\n'
 
                     inlines.push({
                         id: uuid(),

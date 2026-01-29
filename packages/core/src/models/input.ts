@@ -1,7 +1,7 @@
 import Ast from './ast/ast'
 import Caret from './caret'
 import Select from './select/select'
-import { SelectionRange, EditEffect, InputEvent } from '../types'
+import { SelectionRange, EditEffect, InputEvent, Block, Inline } from '../types'
 
 class Input {
     constructor(
@@ -101,27 +101,27 @@ class Input {
     }
 
     private resolveCodeBlockInsert(text: string, block: any, inline: any, range: SelectionRange): EditEffect | null {
-        if (inline.type !== 'text') {
-            const textInline = block.inlines.find((i: any) => i.type === 'text')
-            if (!textInline) return null
+        // if (inline.type !== 'text') {
+        //     const textInline = block.inlines.find((i: any) => i.type === 'text')
+        //     if (!textInline) return null
             
-            const currentText = textInline.text.symbolic
-            const hasLeadingNewline = currentText.startsWith('\n')
-            const insertPos = hasLeadingNewline ? 1 : 0
-            const newText = currentText.slice(0, insertPos) + text + currentText.slice(insertPos)
-            const newCaretPosition = insertPos + text.length
+        //     const currentText = textInline.text.symbolic
+        //     const hasLeadingNewline = currentText.startsWith('\n')
+        //     const insertPos = hasLeadingNewline ? 1 : 0
+        //     const newText = currentText.slice(0, insertPos) + text + currentText.slice(insertPos)
+        //     const newCaretPosition = insertPos + text.length
             
-            return {
-                preventDefault: true,
-                ast: [{
-                    type: 'inputCodeBlock',
-                    blockId: block.id,
-                    inlineId: textInline.id,
-                    text: newText,
-                    caretPosition: newCaretPosition,
-                }],
-            }
-        }
+        //     return {
+        //         preventDefault: true,
+        //         ast: [{
+        //             type: 'inputCodeBlock',
+        //             text: newText,
+        //             blockId: block.id,
+        //             inlineId: textInline.id,
+        //             caretPosition: newCaretPosition,
+        //         }],
+        //     }
+        // }
 
         const currentText = inline.text.symbolic
         const newText = currentText.slice(0, range.start.position) + text + currentText.slice(range.end.position)
@@ -131,9 +131,9 @@ class Input {
             preventDefault: true,
             ast: [{
                 type: 'inputCodeBlock',
+                text: newText,
                 blockId: block.id,
                 inlineId: inline.id,
-                text: newText,
                 caretPosition: newCaretPosition,
             }],
         }
@@ -231,7 +231,7 @@ class Input {
         }
     }
 
-    private resolveCodeBlockDelete(direction: 'backward' | 'forward', block: any, inline: any, range: SelectionRange): EditEffect | null {
+    private resolveCodeBlockDelete(direction: 'backward' | 'forward', block: Block, inline: Inline, range: SelectionRange): EditEffect | null {
         const position = range.start.position
         const currentText = inline.text.symbolic
 
@@ -240,26 +240,41 @@ class Input {
             .replace(/\r$/, '')
 
         if (direction === 'backward') {
-            if (inline.type === 'marker') {
-                return {
-                    preventDefault: true,
-                    ast: [{
-                        type: 'inputCodeBlock',
-                        blockId: block.id,
-                        inlineId: inline.id,
-                        text: cleanedText,
-                        caretPosition: position,
-                    }],
-                }
-            }
-                    
+            // if (inline.type === 'marker') {
+            //     if (inline === block.inlines[0] && inline.text.symbolic.replace('\n', '').length === 3) {
+            //         return {
+            //             preventDefault: true,
+            //             ast: [{
+            //                 type: 'exitCodeBlock',
+            //                 blockId: block.id,
+            //                 direction: 'current',
+            //             }],
+            //         }
+            //     }
+
+            //     return {
+            //         preventDefault: true,
+            //         ast: [{
+            //             type: 'inputCodeBlock',
+            //             blockId: block.id,
+            //             inlineId: inline.id,
+            //             text: cleanedText,
+            //             caretPosition: position,
+            //         }],
+            //     }
+            // }
+
+            const newText = currentText.slice(0, position - 1) + currentText.slice(position)
+            const newCaretPosition = position - 1
+
             return {
                 preventDefault: true,
                 ast: [{
-                    type: 'mergeCodeBlockContent',
+                    type: 'inputCodeBlock',
+                    text: newText,
                     blockId: block.id,
                     inlineId: inline.id,
-                    caretPosition: position,
+                    caretPosition: newCaretPosition,
                 }],
             }
         } else {

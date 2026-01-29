@@ -1,8 +1,12 @@
-import type { AstApplyEffect, Block } from '../../../types'
+import type { AstApplyEffect, Block, RenderInsert, RenderInput } from '../../../types'
 
 class Effect {
-    update(insert: AstApplyEffect['renderEffect']['render']['insert'], remove: Block[] = []): AstApplyEffect['renderEffect'] {
+    update(insert: RenderInsert[], remove: Block[] = []): AstApplyEffect['renderEffect'] {
         return { type: 'update', render: { insert, remove } }
+    }
+
+    input(input: RenderInput[]): AstApplyEffect['renderEffect'] {
+        return { type: 'input', input }
     }
 
     caret(blockId: string, inlineId: string, position: number, affinity: 'start' | 'end' = 'start'): AstApplyEffect['caretEffect'] {

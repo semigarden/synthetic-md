@@ -385,7 +385,7 @@ class Intent {
         }
     }
 
-    private resolveExitCodeBlock(context: EditContext, direction: 'above' | 'below'): EditEffect {
+    private resolveExitCodeBlock(context: EditContext, direction: 'above' | 'below' | 'current'): EditEffect {
         if (context.block.type !== 'codeBlock') {
             return { preventDefault: false }
         }

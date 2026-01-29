@@ -138,7 +138,7 @@ class AstQuery {
             acc += len
         }
 
-        const last = inlines.at(-1)
+        const last = inlines[inlines.length - 1]
         if (!last) return null
 
         return {
